@@ -3,7 +3,7 @@
 
 import { TUNING } from '../content/tuning';
 import { clamp, seasonOfTurn } from './types';
-import type { GameState, GoodId, Season } from './types';
+import type { GameState, GoodId, LocationDef, MarketGoodState, Season } from './types';
 import type { Rng } from './rng';
 
 export interface GoodDef {
@@ -14,25 +14,49 @@ export interface GoodDef {
   note: string;
 }
 
-export function priceOf(state: GameState, def: GoodDef): number {
+function computePrice(
+  state: GameState,
+  def: GoodDef,
+  market: MarketGoodState,
+  bias: number,
+): number {
   const season = seasonOfTurn(state.turn);
-  const market = state.market[def.id];
-  const raw = def.basePrice * def.seasonalMods[season] * market.supplyDemandMod * market.eventMod;
+  const raw =
+    def.basePrice * def.seasonalMods[season] * market.supplyDemandMod * market.eventMod * bias;
   return Math.max(1, Math.round(raw));
+}
+
+/** Price at the post market. */
+export function priceOf(state: GameState, def: GoodDef): number {
+  return computePrice(state, def, state.market[def.id], 1);
+}
+
+/** Price at a remote location's market (applies the location's static bias). */
+export function priceAt(state: GameState, def: GoodDef, location: LocationDef): number {
+  const market = state.locations[location.id]?.market?.[def.id] ?? state.market[def.id];
+  return computePrice(state, def, market, location.priceBias?.[def.id] ?? 1);
 }
 
 /** Random-walk drift of supply/demand mods; event shocks decay toward 1. */
 export function driftMarket(state: GameState, rng: Rng): void {
   const { supplyDemandMin, supplyDemandMax, supplyDemandStep, eventModDecay } = TUNING.economy;
-  for (const market of Object.values(state.market)) {
-    const step = rng.int(-1, 1) * supplyDemandStep;
-    market.supplyDemandMod = clamp(
-      Math.round((market.supplyDemandMod + step) * 100) / 100,
-      supplyDemandMin,
-      supplyDemandMax,
-    );
-    market.eventMod = 1 + (market.eventMod - 1) * eventModDecay;
-    if (Math.abs(market.eventMod - 1) < 0.05) market.eventMod = 1;
+  const markets = [
+    state.market,
+    ...Object.values(state.locations)
+      .map((loc) => loc.market)
+      .filter((m) => m !== undefined),
+  ];
+  for (const perGood of markets) {
+    for (const market of Object.values(perGood)) {
+      const step = rng.int(-1, 1) * supplyDemandStep;
+      market.supplyDemandMod = clamp(
+        Math.round((market.supplyDemandMod + step) * 100) / 100,
+        supplyDemandMin,
+        supplyDemandMax,
+      );
+      market.eventMod = 1 + (market.eventMod - 1) * eventModDecay;
+      if (Math.abs(market.eventMod - 1) < 0.05) market.eventMod = 1;
+    }
   }
 }
 

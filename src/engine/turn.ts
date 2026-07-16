@@ -3,30 +3,41 @@
 // advances (with season-end skill growth every 6th turn).
 
 import { TUNING } from '../content/tuning';
-import { checkBreakdown, isSuccess, resolveCheck, traitModifiers } from './checks';
+import {
+  bestGoverningStat,
+  checkBreakdown,
+  isSuccess,
+  markSkill,
+  resolveCheck,
+  traitModifiers,
+} from './checks';
 import type { CheckResult } from './checks';
 import { driftMarket, priceOf, prosperity } from './economy';
 import type { GoodDef } from './economy';
+import { advanceExpeditions } from './expeditions';
 import { applyOutcomes } from './events/outcomes';
 import type { OutcomeContext } from './events/outcomes';
 import { selectEvents } from './events/selection';
 import type { Choice, GameEvent, TierResult } from './events/types';
 import { Rng } from './rng';
 import {
-  SKILL_GOVERNING,
   clamp,
   getHero,
+  heroesAtPost,
   isSeasonEnd,
   livingHeroes,
 } from './types';
 import type {
+  ExpeditionState,
   GameState,
   GoodId,
   Hero,
-  SkillId,
-  StatId,
+  LocationDef,
+  LocationId,
   TraitDef,
 } from './types';
+
+export { bestGoverningStat } from './checks';
 
 export interface TurnContext {
   events: ReadonlyMap<string, GameEvent>;
@@ -35,25 +46,23 @@ export interface TurnContext {
   goodNames: ReadonlyMap<GoodId, string>;
   factionNames: ReadonlyMap<string, string>;
   traitNames: ReadonlyMap<string, string>;
+  locationDefs: ReadonlyMap<LocationId, LocationDef>;
+  locationNames: ReadonlyMap<LocationId, string>;
 }
 
-function outcomeCtx(ctx: TurnContext, heroId: string): OutcomeContext {
+function outcomeCtx(
+  ctx: TurnContext,
+  heroId: string,
+  expedition?: ExpeditionState,
+): OutcomeContext {
   return {
     heroId,
+    expedition,
     goodNames: ctx.goodNames,
     factionNames: ctx.factionNames,
     traitNames: ctx.traitNames,
+    locationNames: ctx.locationNames,
   };
-}
-
-/** Of a skill's governing stats, the hero's best (activity checks use this). */
-export function bestGoverningStat(hero: Hero, skill: SkillId): StatId {
-  const options = SKILL_GOVERNING[skill];
-  return options.reduce((a, b) => (hero.stats[b] > hero.stats[a] ? b : a));
-}
-
-function markSkill(hero: Hero, skill: SkillId): void {
-  if (!hero.skillMarks.includes(skill)) hero.skillMarks.push(skill);
 }
 
 // ---------------------------------------------------------------- resolution
@@ -79,13 +88,17 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
     return;
   }
 
-  // 2. Activity results.
-  for (const hero of livingHeroes(state)) {
+  // 2. Expeditions move (and may resolve) before at-post activities.
+  advanceExpeditions(state, ctx, rng, report);
+
+  // 3. Activity results for heroes present at the post.
+  for (const hero of heroesAtPost(state)) {
     resolveActivity(state, ctx, hero, rng, report);
   }
 
-  // 3. Stress breakdowns queue their event for immediate selection.
-  for (const hero of livingHeroes(state)) {
+  // 4. Stress breakdowns queue their event for immediate selection
+  //    (heroes away break down once they are home to do it).
+  for (const hero of heroesAtPost(state)) {
     if (
       hero.stress >= TUNING.stress.breakdownThreshold &&
       !state.queuedEvents.some((q) => q.heroId === hero.id)
@@ -99,8 +112,8 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
     }
   }
 
-  // 4. Event selection.
-  const selected = selectEvents(state, ctx.events, rng);
+  // 5. Event selection.
+  const selected = selectEvents(state, ctx.events, ctx.locationDefs, rng);
   state.pendingEvents = selected;
   for (const active of selected) {
     const event = ctx.events.get(active.eventId);
@@ -257,11 +270,15 @@ export function resolveChoice(
   event: GameEvent,
   choiceIndex: number,
   heroId: string,
+  expeditionId?: string,
 ): ChoiceResolution {
   const rng = new Rng(state.rngState);
   const hero = getHero(state, heroId);
   const choice = event.choices[choiceIndex];
   if (!choice) throw new Error(`Event ${event.id} has no choice ${choiceIndex}`);
+  const expedition = expeditionId
+    ? state.expeditions.find((e) => e.id === expeditionId)
+    : undefined;
 
   let check: CheckResult | null = null;
   let tier: keyof Choice['outcomes'] = 'success';
@@ -278,7 +295,7 @@ export function resolveChoice(
   }
 
   const result = pickTierResult(choice, tier);
-  const log = applyOutcomes(state, result.outcomes, outcomeCtx(ctx, heroId));
+  const log = applyOutcomes(state, result.outcomes, outcomeCtx(ctx, heroId, expedition));
 
   state.rngState = rng.getState();
   checkBrokenCompany(state);

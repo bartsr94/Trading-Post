@@ -3,7 +3,8 @@
 
 import { FACTIONS } from '../../content/factions';
 import { GOODS } from '../../content/goods';
-import { priceOf, prosperity } from '../../engine/economy';
+import { LOCATION_NAMES } from '../../content/locations';
+import { prosperity } from '../../engine/economy';
 import { CONTENT } from '../../content/registry';
 import { stanceOf } from '../../engine/types';
 import type { GameState } from '../../engine/types';
@@ -32,9 +33,7 @@ function AxisIndicator({
 }
 
 export function PostOverview({ game }: { game: GameState }) {
-  const buy = useGameStore((s) => s.buy);
-  const sell = useGameStore((s) => s.sell);
-  const canTrade = game.phase === 'assignment';
+  const setScreen = useGameStore((s) => s.setScreen);
 
   return (
     <div>
@@ -80,48 +79,52 @@ export function PostOverview({ game }: { game: GameState }) {
         </div>
 
         <div className="panel">
-          <h3>Post Market</h3>
+          <h3>Stores</h3>
           <table className="market">
-            <thead>
-              <tr>
-                <th>Good</th>
-                <th style={{ textAlign: 'right' }}>Stock</th>
-                <th style={{ textAlign: 'right' }}>Price</th>
-                <th />
-              </tr>
-            </thead>
             <tbody>
-              {GOODS.map((g) => {
-                const price = priceOf(game, g);
-                return (
-                  <tr key={g.id} title={g.note}>
-                    <td>{g.name}</td>
-                    <td className="num">{game.goods[g.id]}</td>
-                    <td className="num">{price}</td>
-                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <button
-                        className="small"
-                        disabled={!canTrade || game.silver < price}
-                        onClick={() => buy(g.id, 1)}
-                      >
-                        Buy
-                      </button>{' '}
-                      <button
-                        className="small"
-                        disabled={!canTrade || game.goods[g.id] < 1}
-                        onClick={() => sell(g.id, 1)}
-                      >
-                        Sell
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
+              {GOODS.filter((g) => game.goods[g.id] > 0).map((g) => (
+                <tr key={g.id} title={g.note}>
+                  <td>{g.name}</td>
+                  <td className="num">{game.goods[g.id]}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
-          <p className="dim" style={{ fontSize: '0.78rem', marginTop: 8 }}>
-            Prices drift with season and local supply. Caravans to other markets arrive with MVP 2.
+          <p className="dim" style={{ fontSize: '0.78rem', margin: '8px 0 0' }}>
+            Buy and sell — and plan caravans — on the{' '}
+            <a
+              style={{ color: 'var(--accent)', cursor: 'pointer' }}
+              onClick={() => setScreen('market')}
+            >
+              Market screen
+            </a>
+            .
           </p>
+
+          <h3 style={{ marginTop: 16 }}>Comings &amp; Goings</h3>
+          {game.expeditions.length === 0 ? (
+            <p className="dim" style={{ fontSize: '0.85rem' }}>
+              Everyone is at the post. The road waits.
+            </p>
+          ) : (
+            game.expeditions.map((exp) => {
+              const dest = LOCATION_NAMES.get(exp.destination) ?? exp.destination;
+              const names = exp.heroIds
+                .map((id) => game.heroes.find((h) => h.id === id)?.name ?? id)
+                .join(' & ');
+              return (
+                <div key={exp.id} className="faction-row">
+                  <span>
+                    {exp.kind === 'caravan' ? '🐴' : '🗺️'} {names}
+                  </span>
+                  <span className="dim">
+                    {exp.leg === 'outbound' ? `→ ${dest}` : `${dest} → home`} ({exp.turnsLeft}{' '}
+                    turn{exp.turnsLeft === 1 ? '' : 's'})
+                  </span>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

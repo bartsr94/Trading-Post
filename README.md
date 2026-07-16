@@ -2,7 +2,7 @@
 
 A single-player, browser-based narrative management game inspired by *King of Dragon Pass*, set in the frontier world of Palusteria. You lead a company of six named heroes founding a trading post in the wilderness — assigning them to work each turn, resolving illustrated story events with visible dice rolls, and shaping what the post becomes: aloof or integrated with the native peoples, a pure trading venture or a living settlement.
 
-**Working title. Early development (MVP 1).**
+**Working title. Early development (MVP 2 underway).**
 
 ## Design pillars
 
@@ -27,7 +27,11 @@ Progress autosaves to localStorage each turn; saves can also be exported and imp
 
 ## How a turn plays
 
-One turn is two weeks; six turns make a season, four seasons a year. Each turn you review your **standing orders** (assignments persist — a well-running post advances in seconds), confirm, and watch the resolution: prices drift, the company eats, activities pay off, and one or two story events fire. Events are where the game lives: choices phrased as intentions, resolved by open dice, with outcomes that ripple through heroes, factions, and the post itself.
+One turn is two weeks; six turns make a season, four seasons a year. Each turn you review your **standing orders** (assignments persist — a well-running post advances in seconds), confirm, and watch the resolution: prices drift, the company eats, activities pay off, expeditions move a leg closer to home or away, and one or two story events fire — plus a possible travel event for any party on the road. Events are where the game lives: choices phrased as intentions, resolved by open dice, with outcomes that ripple through heroes, factions, and the post itself.
+
+## The map
+
+The post sits at the center of a **node graph** of ten locations — four faction seats and five wilderness sites, each with a one-way travel time from the post. Places start `unknown`, `rumored`, or `visited`; sending an **Explore** party (1–2 heroes, from the Map screen) rolls Survival to push discovery forward and spreads rumors of a place's immediate neighbours. Once a market is **visited**, the Market screen's caravan planner can send a party there with cargo, a buy order, and carried silver — profit (or loss) happens on the road, resolved by a Bargain check on arrival, and the party walks home with whatever it earned. Both kinds of expedition can trigger **travel events** along the way — fords washed out, tolls demanded, wolves at dusk — bound only to heroes in that party.
 
 ## Project layout
 
@@ -35,22 +39,23 @@ One turn is two weeks; six turns make a season, four seasons a year. Each turn y
 src/
   engine/      # pure game logic — no React, fully unit-tested
     checks.ts      # 2d6 skill check resolution
-    turn.ts        # turn pipeline: economy → activities → events
-    economy.ts     # prices, drift, trade math
+    turn.ts        # turn pipeline: economy → expeditions → activities → events
+    economy.ts     # prices, drift, trade math (post market + per-location markets)
+    expeditions.ts # caravan & explore dispatch and per-turn resolution
     events/        # event selection, conditions, hero binding, outcomes
     rng.ts         # seeded PRNG (runs are reproducible)
-    save.ts        # versioned JSON saves + migration stub
-  content/     # pure data — heroes, traits, goods, factions, events, tuning
+    save.ts        # versioned JSON saves + migrations
+  content/     # pure data — heroes, traits, goods, factions, locations, events, tuning
   ui/          # React screens & components
   store/       # Zustand store wrapping the serializable GameState
 ```
 
-The engine never hardcodes content: new events, heroes, or traits are data entries in `src/content/`, and every balance number lives in [`src/content/tuning.ts`](src/content/tuning.ts).
+The engine never hardcodes content: new events, heroes, traits, or locations are data entries in `src/content/`, and every balance number lives in [`src/content/tuning.ts`](src/content/tuning.ts).
 
 ## Roadmap
 
-- **MVP 1 — the loop works** *(current)*: core turn loop, heroes, visible checks, event engine, post market, saves.
-- **MVP 2 — the world exists**: factions & diplomacy, the map, caravans & exploration, buildings & post tiers, settlement axes in full, roster churn & recruitment, ~60 events, failure states with narrative endings.
+- **MVP 1 — the loop works** *(complete)*: core turn loop, heroes, visible checks, event engine, post market, saves.
+- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; still open — factions & diplomacy (Charter quota), buildings & post tiers, settlement axes in full, roster churn & recruitment, event count to ~60 (27 so far), failure states with narrative endings.
 - **MVP 3 — it's a game**: balance pass, seasonal content, endgame variants, art, audio, onboarding.
 
-Current hero names, cultures, and faction identities are placeholders pending Palusteria lore.
+Current hero names, cultures, faction identities, and location names are placeholders pending Palusteria lore.

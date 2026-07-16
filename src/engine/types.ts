@@ -66,6 +66,56 @@ export type ActivityId = (typeof ACTIVITY_IDS)[number];
 
 export type TraitId = string; // trait ids are defined by content
 
+export type LocationId = string; // location ids are defined by content
+
+export const DISCOVERY_STATES = ['unknown', 'rumored', 'visited', 'known'] as const;
+export type DiscoveryState = (typeof DISCOVERY_STATES)[number];
+
+/** A map node (spec §10). Content provides instances; engine only consumes. */
+export interface LocationDef {
+  id: LocationId;
+  name: string;
+  blurb: string;
+  /** Faction seat, if any — standing there gates trade and events. */
+  faction?: FactionId;
+  hasMarket: boolean;
+  /** Static local price multiplier per good (what's cheap or dear here). */
+  priceBias?: Partial<Record<GoodId, number>>;
+  /** One-way travel turns from the post. */
+  travelTurns: number;
+  initialDiscovery: DiscoveryState;
+  /** Adjacent nodes; exploring here turns unknown neighbours to rumored. */
+  connections: LocationId[];
+  /** Matched by travel event conditions and trait check tags. */
+  tags: string[];
+  /** Map screen position, 0–100 in both axes. */
+  mapX: number;
+  mapY: number;
+}
+
+export interface LocationState {
+  discovery: DiscoveryState;
+  /** Per-good market state; only for locations with a market (not the post — that's `GameState.market`). */
+  market?: Record<GoodId, MarketGoodState>;
+}
+
+export type ExpeditionKind = 'caravan' | 'explore';
+
+export interface ExpeditionState {
+  id: string;
+  kind: ExpeditionKind;
+  destination: LocationId;
+  heroIds: string[]; // 1–2 heroes, away from the post while en route
+  leg: 'outbound' | 'returning';
+  turnsLeft: number; // turns left in the current leg
+  /** Goods carried (caravan cargo; explore finds ride home here too). */
+  cargo: Partial<Record<GoodId, number>>;
+  /** Silver carried (buy-order funds out, sale proceeds home). */
+  silver: number;
+  /** Standing buy orders filled at the destination market. */
+  buyOrders: Partial<Record<GoodId, number>>;
+}
+
 export type FactionStance = 'Hostile' | 'Wary' | 'Neutral' | 'Friendly' | 'Allied';
 
 export type HeroStatus = 'active' | 'dead' | 'departed';
@@ -129,6 +179,8 @@ export interface QueuedEvent {
 export interface ActiveEvent {
   eventId: string;
   heroId: string;
+  /** Set for travel events: the expedition this event happened to. */
+  expeditionId?: string;
 }
 
 export interface ReportLine {
@@ -162,6 +214,10 @@ export interface GameState {
   silver: number;
   goods: Record<GoodId, number>;
   market: Record<GoodId, MarketGoodState>;
+  locations: Record<LocationId, LocationState>;
+  expeditions: ExpeditionState[];
+  /** Monotonic counter for expedition ids. */
+  nextExpeditionId: number;
   factions: Record<FactionId, FactionState>;
   axes: Record<AxisId, number>; // −10..+10
   postTier: number; // 1–4
@@ -204,6 +260,28 @@ export function stanceOf(standing: number): FactionStance {
 
 export function livingHeroes(state: GameState): Hero[] {
   return state.heroes.filter((h) => h.status === 'active');
+}
+
+/** Hero ids currently away on an expedition. */
+export function awayHeroIds(state: GameState): Set<string> {
+  return new Set(state.expeditions.flatMap((e) => e.heroIds));
+}
+
+/** Living heroes present at the post (assignable, bindable by post events). */
+export function heroesAtPost(state: GameState): Hero[] {
+  const away = awayHeroIds(state);
+  return livingHeroes(state).filter((h) => !away.has(h.id));
+}
+
+/** True when `state` is at least as far along as `atLeast` on the discovery ladder. */
+export function discoveryAtLeast(state: DiscoveryState, atLeast: DiscoveryState): boolean {
+  return DISCOVERY_STATES.indexOf(state) >= DISCOVERY_STATES.indexOf(atLeast);
+}
+
+/** The next discovery state up the ladder (known stays known). */
+export function nextDiscovery(state: DiscoveryState): DiscoveryState {
+  const idx = DISCOVERY_STATES.indexOf(state);
+  return DISCOVERY_STATES[Math.min(idx + 1, DISCOVERY_STATES.length - 1)];
 }
 
 export function getHero(state: GameState, heroId: string): Hero {

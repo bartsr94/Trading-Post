@@ -10,6 +10,7 @@ const NAME_CTX = {
   goodNames: TEST_CONTENT.goodNames,
   factionNames: TEST_CONTENT.factionNames,
   traitNames: TEST_CONTENT.traitNames,
+  locationNames: TEST_CONTENT.locationNames,
 };
 
 describe('condition evaluation', () => {
@@ -50,15 +51,15 @@ describe('event selection', () => {
   it('always selects at least one event', () => {
     for (let seed = 1; seed <= 20; seed++) {
       const s = testState(seed);
-      const selected = selectEvents(s, TEST_CONTENT.events, new Rng(seed));
+      const selected = selectEvents(s, TEST_CONTENT.events, TEST_CONTENT.locationDefs, new Rng(seed));
       expect(selected.length).toBeGreaterThanOrEqual(1);
       expect(selected.length).toBeLessThanOrEqual(2);
     }
   });
 
   it('is deterministic for the same seed and state', () => {
-    const a = selectEvents(testState(99), TEST_CONTENT.events, new Rng(99));
-    const b = selectEvents(testState(99), TEST_CONTENT.events, new Rng(99));
+    const a = selectEvents(testState(99), TEST_CONTENT.events, TEST_CONTENT.locationDefs, new Rng(99));
+    const b = selectEvents(testState(99), TEST_CONTENT.events, TEST_CONTENT.locationDefs, new Rng(99));
     expect(a).toEqual(b);
   });
 
@@ -80,21 +81,21 @@ describe('event selection', () => {
   it('fires due queued chain events first, pinned to their hero', () => {
     const s = testState();
     s.queuedEvents.push({ eventId: 'hero_breakdown', fireOnTurn: 1, heroId: 'p3' });
-    const selected = selectEvents(s, TEST_CONTENT.events, new Rng(1));
+    const selected = selectEvents(s, TEST_CONTENT.events, TEST_CONTENT.locationDefs, new Rng(1));
     expect(selected[0]).toEqual({ eventId: 'hero_breakdown', heroId: 'p3' });
   });
 
   it('does not fire queued events before their turn', () => {
     const s = testState();
     s.queuedEvents.push({ eventId: 'post_amber_find', fireOnTurn: 3 });
-    const selected = selectEvents(s, TEST_CONTENT.events, new Rng(1));
+    const selected = selectEvents(s, TEST_CONTENT.events, TEST_CONTENT.locationDefs, new Rng(1));
     expect(selected.some((e) => e.eventId === 'post_amber_find')).toBe(false);
   });
 
   it('never selects weight-0 chain events from the random pool', () => {
     for (let seed = 1; seed <= 30; seed++) {
       const s = testState(seed);
-      const selected = selectEvents(s, TEST_CONTENT.events, new Rng(seed));
+      const selected = selectEvents(s, TEST_CONTENT.events, TEST_CONTENT.locationDefs, new Rng(seed));
       expect(selected.some((e) => e.eventId === 'post_amber_find')).toBe(false);
       expect(selected.some((e) => e.eventId === 'hero_breakdown')).toBe(false);
     }

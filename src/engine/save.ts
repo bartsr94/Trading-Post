@@ -2,26 +2,34 @@
 // stub from day one. localStorage autosave each turn + manual export/import.
 
 import { TUNING } from '../content/tuning';
-import type { GameState } from './types';
+import { createLocationStates } from './state';
+import type { GameState, LocationDef } from './types';
+
+/** Content the migrations need; injected so the engine stays content-free. */
+export interface MigrationContext {
+  locationDefs: readonly LocationDef[];
+}
 
 export function serialize(state: GameState): string {
   return JSON.stringify(state);
 }
 
-export function deserialize(json: string): GameState {
+export function deserialize(json: string, ctx?: MigrationContext): GameState {
   const raw = JSON.parse(json) as GameState;
   if (typeof raw !== 'object' || raw === null || typeof raw.saveVersion !== 'number') {
     throw new Error('Not a valid Trading Post save.');
   }
-  return migrate(raw);
+  return migrate(raw, ctx);
 }
 
-/** Migration stub: bump TUNING.save.version and add a case when the shape changes. */
-export function migrate(save: GameState): GameState {
+/** Migration chain: bump TUNING.save.version and add a case when the shape changes. */
+export function migrate(save: GameState, ctx?: MigrationContext): GameState {
   let current = save;
   while (current.saveVersion < TUNING.save.version) {
     switch (current.saveVersion) {
-      // case 1: current = migrateV1toV2(current); break;
+      case 1:
+        current = migrateV1toV2(current, ctx);
+        break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
     }
@@ -32,6 +40,17 @@ export function migrate(save: GameState): GameState {
   return current;
 }
 
+/** v2 adds the map: locations, expeditions, and the expedition id counter. */
+function migrateV1toV2(save: GameState, ctx?: MigrationContext): GameState {
+  return {
+    ...save,
+    saveVersion: 2,
+    locations: createLocationStates(ctx?.locationDefs ?? []),
+    expeditions: [],
+    nextExpeditionId: 1,
+  };
+}
+
 export function autosave(state: GameState): void {
   try {
     localStorage.setItem(TUNING.save.autosaveKey, serialize(state));
@@ -40,10 +59,10 @@ export function autosave(state: GameState): void {
   }
 }
 
-export function loadAutosave(): GameState | null {
+export function loadAutosave(ctx?: MigrationContext): GameState | null {
   try {
     const json = localStorage.getItem(TUNING.save.autosaveKey);
-    return json ? deserialize(json) : null;
+    return json ? deserialize(json, ctx) : null;
   } catch {
     return null;
   }

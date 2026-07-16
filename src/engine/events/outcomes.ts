@@ -2,16 +2,19 @@
 // log lines for the event panel and turn report.
 
 import { TUNING } from '../../content/tuning';
-import { clamp, getHero, livingHeroes } from '../types';
-import type { GameState, GoodId } from '../types';
+import { clamp, getHero, livingHeroes, nextDiscovery } from '../types';
+import type { DiscoveryState, ExpeditionState, GameState, GoodId, LocationId } from '../types';
 import type { Outcome } from './types';
 
 export interface OutcomeContext {
   heroId: string;
+  /** Set for travel events: outcomes hit the expedition's cargo and purse. */
+  expedition?: ExpeditionState;
   /** Content-provided display names, so the engine stays content-free. */
   goodNames: ReadonlyMap<GoodId, string>;
   factionNames: ReadonlyMap<string, string>;
   traitNames: ReadonlyMap<string, string>;
+  locationNames: ReadonlyMap<LocationId, string>;
 }
 
 export function applyOutcomes(
@@ -119,6 +122,49 @@ export function applyOutcomes(
       }
       case 'history': {
         hero.history.push(outcome.text.replaceAll('{hero}', hero.name));
+        break;
+      }
+      case 'discover': {
+        const locationId = outcome.location ?? ctx.expedition?.destination;
+        if (!locationId) break;
+        const loc = state.locations[locationId];
+        if (!loc) break;
+        const target: DiscoveryState = outcome.to ?? nextDiscovery(loc.discovery);
+        // Discovery only moves forward; outcomes never re-fog the map.
+        const ladder: DiscoveryState[] = ['unknown', 'rumored', 'visited', 'known'];
+        if (ladder.indexOf(target) > ladder.indexOf(loc.discovery)) {
+          loc.discovery = target;
+          log.push(`${ctx.locationNames.get(locationId) ?? locationId} is now ${target}`);
+        }
+        break;
+      }
+      case 'cargo': {
+        const name = ctx.goodNames.get(outcome.good) ?? outcome.good;
+        if (ctx.expedition) {
+          const held = ctx.expedition.cargo[outcome.good] ?? 0;
+          ctx.expedition.cargo[outcome.good] = Math.max(0, held + outcome.delta);
+          log.push(`${signed(outcome.delta)} ${name} (cargo)`);
+        } else {
+          state.goods[outcome.good] = Math.max(0, state.goods[outcome.good] + outcome.delta);
+          log.push(`${signed(outcome.delta)} ${name}`);
+        }
+        break;
+      }
+      case 'expeditionSilver': {
+        if (ctx.expedition) {
+          ctx.expedition.silver = Math.max(0, ctx.expedition.silver + outcome.delta);
+          log.push(`${signed(outcome.delta)} silver (carried)`);
+        } else {
+          state.silver = Math.max(0, state.silver + outcome.delta);
+          log.push(`${signed(outcome.delta)} silver`);
+        }
+        break;
+      }
+      case 'delayExpedition': {
+        if (ctx.expedition) {
+          ctx.expedition.turnsLeft += outcome.turns;
+          log.push(`The party is delayed ${outcome.turns} turn${outcome.turns === 1 ? '' : 's'}`);
+        }
         break;
       }
     }

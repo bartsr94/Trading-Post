@@ -367,6 +367,97 @@ table.market td.num { text-align: right; font-variant-numeric: tabular-nums; }
   font-size: 0.9rem;
 }
 
+/* ---------- map ---------- */
+.map-layout {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 760px) {
+  .map-layout { grid-template-columns: 1fr; }
+}
+.map-svg {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background:
+    radial-gradient(ellipse at 30% 70%, rgba(51, 65, 74, 0.35), transparent 60%),
+    radial-gradient(ellipse at 75% 25%, rgba(52, 62, 44, 0.3), transparent 55%),
+    #1b1712;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.map-edge {
+  stroke: var(--border);
+  stroke-width: 0.4;
+  stroke-dasharray: 1.2 1;
+}
+.map-node { cursor: pointer; }
+.map-node circle {
+  fill: var(--panel-2);
+  stroke: var(--text-dim);
+  stroke-width: 0.5;
+}
+.map-node.rumored circle {
+  fill: transparent;
+  stroke-dasharray: 1 0.8;
+}
+.map-node.known circle {
+  fill: var(--accent-dim);
+  stroke: var(--accent);
+}
+.map-node.selected circle {
+  stroke: var(--accent);
+  stroke-width: 1;
+}
+.map-node:hover circle { stroke: var(--accent); }
+.map-label {
+  fill: var(--text);
+  font-size: 3px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(23, 19, 16, 0.85);
+  stroke-width: 0.7;
+}
+.map-node.rumored .map-label { fill: var(--text-dim); font-style: italic; }
+.map-marker { font-size: 3.2px; }
+
+.pick-row {
+  display: block;
+  font-size: 0.9rem;
+  padding: 3px 0;
+  cursor: pointer;
+}
+.cargo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 14px;
+  font-size: 0.85rem;
+}
+.cargo-grid label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.cargo-grid input { width: 64px; }
+
+input[type='number'],
+select {
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+input[type='number']:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* ---------- report / modals ---------- */
 .report-lines { margin: 10px 0 16px; }
 .report-lines .line { padding: 3px 0; font-size: 0.95rem; }

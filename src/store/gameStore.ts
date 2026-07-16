@@ -5,9 +5,13 @@
 import { create } from 'zustand';
 import { STARTING_STANDINGS } from '../content/factions';
 import { HERO_POOL, createHero } from '../content/heroes';
+import { LOCATIONS } from '../content/locations';
 import { CONTENT } from '../content/registry';
 import { buyGood, sellGood } from '../engine/economy';
+import { dispatchExpedition } from '../engine/expeditions';
+import type { DispatchParams } from '../engine/expeditions';
 import { evalConditions } from '../engine/events/conditions';
+import type { TravelContext } from '../engine/events/types';
 import { autosave, clearAutosave, deserialize, loadAutosave, serialize } from '../engine/save';
 import { createInitialState } from '../engine/state';
 import {
@@ -17,9 +21,11 @@ import {
   resolveTurn,
 } from '../engine/turn';
 import type { ChoiceResolution } from '../engine/turn';
-import type { ActivityId, GameState, GoodId } from '../engine/types';
+import type { ActiveEvent, ActivityId, GameState, GoodId } from '../engine/types';
 
-export type Screen = 'post' | 'assignments' | 'heroes';
+export type Screen = 'post' | 'assignments' | 'heroes' | 'map' | 'market';
+
+const MIGRATION_CTX = { locationDefs: LOCATIONS };
 
 interface GameStore {
   game: GameState | null;
@@ -49,6 +55,8 @@ interface GameStore {
 
   buy: (good: GoodId, qty: number) => void;
   sell: (good: GoodId, qty: number) => void;
+  /** Dispatch a caravan or explore party. Returns false if the dispatch is invalid. */
+  dispatch: (params: DispatchParams) => boolean;
 }
 
 function draft(game: GameState): GameState {
@@ -62,7 +70,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   lastResolution: null,
   growthLines: [],
 
-  hasAutosave: () => loadAutosave() !== null,
+  hasAutosave: () => loadAutosave(MIGRATION_CTX) !== null,
 
   newGame: (heroIds) => {
     const heroes = heroIds
@@ -70,14 +78,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
       .filter((t) => t !== undefined)
       .map(createHero);
     const seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
-    const game = createInitialState({ seed, heroes, startingStandings: STARTING_STANDINGS });
+    const game = createInitialState({
+      seed,
+      heroes,
+      startingStandings: STARTING_STANDINGS,
+      locationDefs: LOCATIONS,
+    });
     for (const hero of heroes) game.assignments[hero.id] = 'trade';
     autosave(game);
     set({ game, screen: 'assignments', lastResolution: null, growthLines: [] });
   },
 
   continueGame: () => {
-    const game = loadAutosave();
+    const game = loadAutosave(MIGRATION_CTX);
     if (game) set({ game, screen: 'post', lastResolution: null, growthLines: [] });
   },
 
@@ -93,7 +106,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   importSave: (json) => {
     try {
-      const game = deserialize(json);
+      const game = deserialize(json, MIGRATION_CTX);
       autosave(game);
       set({ game, screen: 'post', lastResolution: null, growthLines: [] });
       return null;
@@ -129,7 +142,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const event = CONTENT.events.get(active.eventId);
     if (!event) return;
     const next = draft(game);
-    const resolution = resolveChoice(next, CONTENT, event, choiceIndex, active.heroId);
+    const resolution = resolveChoice(
+      next,
+      CONTENT,
+      event,
+      choiceIndex,
+      active.heroId,
+      active.expeditionId,
+    );
     set({ game: next, lastResolution: resolution });
   },
 
@@ -168,9 +188,32 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const next = draft(game);
     if (sellGood(next, def, qty)) set({ game: next });
   },
+
+  dispatch: (params) => {
+    const { game } = get();
+    if (!game || game.phase !== 'assignment') return false;
+    const next = draft(game);
+    if (!dispatchExpedition(next, params, CONTENT.locationDefs)) return false;
+    autosave(next);
+    set({ game: next });
+    return true;
+  },
 }));
 
+/** Travel context for the active event, so travel conditions can evaluate. */
+export function travelContextOf(game: GameState, active: ActiveEvent): TravelContext | undefined {
+  if (!active.expeditionId) return undefined;
+  const expedition = game.expeditions.find((e) => e.id === active.expeditionId);
+  if (!expedition) return undefined;
+  const destination = CONTENT.locationDefs.get(expedition.destination);
+  return destination ? { expedition, destination } : undefined;
+}
+
 /** Whether a choice's requirements are met right now (locked choices show why). */
-export function choiceAvailable(game: GameState, requires?: Parameters<typeof evalConditions>[1]) {
-  return !requires || evalConditions(game, requires);
+export function choiceAvailable(
+  game: GameState,
+  requires?: Parameters<typeof evalConditions>[1],
+  travel?: TravelContext,
+) {
+  return !requires || evalConditions(game, requires, travel);
 }

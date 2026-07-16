@@ -1,8 +1,13 @@
-import { livingHeroes, seasonOfTurn } from '../types';
+import { discoveryAtLeast, livingHeroes, seasonOfTurn } from '../types';
+import { cargoUnits } from '../expeditions';
 import type { GameState } from '../types';
-import type { Condition } from './types';
+import type { Condition, TravelContext } from './types';
 
-export function evalCondition(state: GameState, cond: Condition): boolean {
+export function evalCondition(
+  state: GameState,
+  cond: Condition,
+  travel?: TravelContext,
+): boolean {
   switch (cond.type) {
     case 'minTurn':
       return state.turn >= cond.value;
@@ -40,9 +45,27 @@ export function evalCondition(state: GameState, cond: Condition): boolean {
       return state.flags[cond.flag] !== true;
     case 'partySizeAtLeast':
       return livingHeroes(state).length >= cond.value;
+    case 'locationDiscovery': {
+      const loc = state.locations[cond.location];
+      return loc !== undefined && discoveryAtLeast(loc.discovery, cond.atLeast);
+    }
+    case 'expeditionKind':
+      return travel !== undefined && travel.expedition.kind === cond.kind;
+    case 'expeditionLeg':
+      return travel !== undefined && travel.expedition.leg === cond.leg;
+    case 'destinationIs':
+      return travel !== undefined && travel.destination.id === cond.location;
+    case 'destinationTag':
+      return travel !== undefined && travel.destination.tags.includes(cond.tag);
+    case 'cargoUnitsAtLeast':
+      return travel !== undefined && cargoUnits(travel.expedition.cargo) >= cond.qty;
   }
 }
 
-export function evalConditions(state: GameState, conds: readonly Condition[]): boolean {
-  return conds.every((c) => evalCondition(state, c));
+export function evalConditions(
+  state: GameState,
+  conds: readonly Condition[],
+  travel?: TravelContext,
+): boolean {
+  return conds.every((c) => evalCondition(state, c, travel));
 }

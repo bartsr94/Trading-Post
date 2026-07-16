@@ -3,7 +3,7 @@
 
 export const TUNING = {
   save: {
-    version: 1,
+    version: 2,
     autosaveKey: 'trading-post-save',
   },
 
@@ -74,10 +74,32 @@ export const TUNING = {
   },
 
   events: {
-    /** Events fired per turn: always at least min, at most max. */
+    /** Events fired per turn: always at least min, at most max (travel events are extra). */
     minPerTurn: 1,
     maxPerTurn: 2,
     defaultCooldown: 6,
+    /** Chance per expedition per en-route turn that a travel event fires. */
+    travelEventChance: 0.5,
+  },
+
+  map: {
+    /** Location id of the post itself (its market is `GameState.market`). */
+    homeLocationId: 'post',
+    /** Heroes per expedition: at least 1, at most this. */
+    maxExpeditionHeroes: 2,
+    /** Cargo units an expedition can carry per hero. */
+    cargoCapacityPerHero: 20,
+    /** Arrival Bargain check at a destination market. */
+    caravanCheckDifficulty: 10,
+    /** Sale/purchase price swing per point of check margin (1 ± margin × this). */
+    caravanMarginRate: 0.02,
+    /** Best/worst price multiplier from the arrival check. */
+    caravanPriceMultMax: 1.3,
+    caravanPriceMultMin: 0.75,
+    /** Standing gained with a faction whose seat hosts a successful trade. */
+    caravanStandingGain: 1,
+    /** Explore progress check at the destination. */
+    exploreCheckDifficulty: 9,
   },
 
   stress: {

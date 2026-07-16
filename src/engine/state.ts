@@ -1,5 +1,5 @@
-// GameState factory. Content (heroes, standings) is injected by the caller so
-// the engine never imports content beyond tuning numbers.
+// GameState factory. Content (heroes, standings, locations) is injected by the
+// caller so the engine never imports content beyond tuning numbers.
 
 import { TUNING } from '../content/tuning';
 import { GOOD_IDS, FACTION_IDS } from './types';
@@ -9,6 +9,9 @@ import type {
   GameState,
   GoodId,
   Hero,
+  LocationDef,
+  LocationId,
+  LocationState,
   MarketGoodState,
 } from './types';
 
@@ -16,14 +19,36 @@ export interface NewGameOptions {
   seed: number;
   heroes: Hero[];
   startingStandings?: Partial<Record<FactionId, number>>;
+  locationDefs?: readonly LocationDef[];
+}
+
+function freshMarket(): Record<GoodId, MarketGoodState> {
+  const market = {} as Record<GoodId, MarketGoodState>;
+  for (const id of GOOD_IDS) market[id] = { supplyDemandMod: 1, eventMod: 1 };
+  return market;
+}
+
+/**
+ * Builds location state from defs. The post's market lives on
+ * `GameState.market`, so the home location gets none here.
+ */
+export function createLocationStates(
+  defs: readonly LocationDef[],
+): Record<LocationId, LocationState> {
+  const locations: Record<LocationId, LocationState> = {};
+  for (const def of defs) {
+    locations[def.id] = {
+      discovery: def.initialDiscovery,
+      ...(def.hasMarket && def.id !== TUNING.map.homeLocationId ? { market: freshMarket() } : {}),
+    };
+  }
+  return locations;
 }
 
 export function createInitialState(options: NewGameOptions): GameState {
   const goods = {} as Record<GoodId, number>;
-  const market = {} as Record<GoodId, MarketGoodState>;
   for (const id of GOOD_IDS) {
     goods[id] = TUNING.start.goods[id] ?? 0;
-    market[id] = { supplyDemandMod: 1, eventMod: 1 };
   }
 
   const factions = {} as Record<FactionId, FactionState>;
@@ -43,7 +68,10 @@ export function createInitialState(options: NewGameOptions): GameState {
     assignments,
     silver: TUNING.start.silver,
     goods,
-    market,
+    market: freshMarket(),
+    locations: createLocationStates(options.locationDefs ?? []),
+    expeditions: [],
+    nextExpeditionId: 1,
     factions,
     axes: { integration: 0, communal: 0 },
     postTier: 1,
