@@ -4,6 +4,8 @@ import { AssignmentBoard } from './ui/screens/AssignmentBoard';
 import { EventPanel } from './ui/screens/EventPanel';
 import { GameOver } from './ui/screens/GameOver';
 import { HeroSheet } from './ui/screens/HeroSheet';
+import { MapScreen } from './ui/screens/MapScreen';
+import { MarketScreen } from './ui/screens/MarketScreen';
 import { PartySelect } from './ui/screens/PartySelect';
 import { PostOverview } from './ui/screens/PostOverview';
 import { TurnReport } from './ui/screens/TurnReport';
@@ -105,11 +107,19 @@ export function App() {
         <button className={screen === 'heroes' ? 'active' : ''} onClick={() => setScreen('heroes')}>
           Heroes
         </button>
+        <button className={screen === 'map' ? 'active' : ''} onClick={() => setScreen('map')}>
+          Map {game.expeditions.length > 0 ? `(${game.expeditions.length} away)` : ''}
+        </button>
+        <button className={screen === 'market' ? 'active' : ''} onClick={() => setScreen('market')}>
+          Market
+        </button>
       </nav>
 
       {screen === 'post' && <PostOverview game={game} />}
       {screen === 'assignments' && <AssignmentBoard game={game} />}
       {screen === 'heroes' && <HeroesScreen />}
+      {screen === 'map' && <MapScreen game={game} />}
+      {screen === 'market' && <MarketScreen game={game} />}
 
       {game.phase === 'event' && <EventPanel game={game} />}
       {game.phase === 'report' && <TurnReport game={game} />}

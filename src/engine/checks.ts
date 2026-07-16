@@ -3,6 +3,7 @@
 // the math — visible dice are a design pillar.
 
 import { TUNING } from '../content/tuning';
+import { SKILL_GOVERNING } from './types';
 import type { Hero, SkillId, StatId, TraitDef } from './types';
 import type { Rng } from './rng';
 
@@ -30,6 +31,17 @@ export interface CheckResult {
 
 export function isSuccess(tier: CheckTier): boolean {
   return tier === 'success' || tier === 'critSuccess';
+}
+
+/** Of a skill's governing stats, the hero's best (activity checks use this). */
+export function bestGoverningStat(hero: Hero, skill: SkillId): StatId {
+  const options = SKILL_GOVERNING[skill];
+  return options.reduce((a, b) => (hero.stats[b] > hero.stats[a] ? b : a));
+}
+
+/** Skills marked by successful checks grow at season's end. */
+export function markSkill(hero: Hero, skill: SkillId): void {
+  if (!hero.skillMarks.includes(skill)) hero.skillMarks.push(skill);
 }
 
 function tierFromMargin(margin: number): CheckTier {

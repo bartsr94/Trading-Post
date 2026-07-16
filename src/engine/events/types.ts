@@ -3,14 +3,25 @@
 
 import type {
   AxisId,
+  DiscoveryState,
+  ExpeditionKind,
+  ExpeditionState,
   FactionId,
   GameState,
   GoodId,
+  LocationDef,
+  LocationId,
   Season,
   SkillId,
   StatId,
   TraitId,
 } from '../types';
+
+/** Present while evaluating travel events: the expedition they happen to. */
+export interface TravelContext {
+  expedition: ExpeditionState;
+  destination: LocationDef;
+}
 
 export type EventCategory = 'post' | 'travel' | 'faction' | 'hero' | 'season' | 'chain';
 
@@ -34,7 +45,14 @@ export type Condition =
   | { type: 'axisAtMost'; axis: AxisId; value: number }
   | { type: 'flag'; flag: string }
   | { type: 'notFlag'; flag: string }
-  | { type: 'partySizeAtLeast'; value: number };
+  | { type: 'partySizeAtLeast'; value: number }
+  | { type: 'locationDiscovery'; location: LocationId; atLeast: DiscoveryState }
+  // Travel-only conditions (false outside an expedition context):
+  | { type: 'expeditionKind'; kind: ExpeditionKind }
+  | { type: 'expeditionLeg'; leg: 'outbound' | 'returning' }
+  | { type: 'destinationIs'; location: LocationId }
+  | { type: 'destinationTag'; tag: string }
+  | { type: 'cargoUnitsAtLeast'; qty: number };
 
 // ---------- Hero binding (which hero the event features) ----------
 
@@ -63,7 +81,13 @@ export type Outcome =
   | { type: 'setFlag'; flag: string; value?: boolean }
   | { type: 'priceShock'; good: GoodId; mod: number }
   | { type: 'heroDeparts' }
-  | { type: 'history'; text: string };
+  | { type: 'history'; text: string }
+  /** Advance a location's discovery (default: the expedition's destination). */
+  | { type: 'discover'; location?: LocationId; to?: DiscoveryState }
+  // Travel-only outcomes (fall back to post stock/silver outside an expedition):
+  | { type: 'cargo'; good: GoodId; delta: number }
+  | { type: 'expeditionSilver'; delta: number }
+  | { type: 'delayExpedition'; turns: number };
 
 /** Narrative text + effects for one result tier. */
 export interface TierResult {

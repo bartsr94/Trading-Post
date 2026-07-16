@@ -8,7 +8,7 @@ import { interpolate } from '../../engine/events/text';
 import type { Choice } from '../../engine/events/types';
 import { getHero } from '../../engine/types';
 import type { GameState } from '../../engine/types';
-import { useGameStore } from '../../store/gameStore';
+import { travelContextOf, useGameStore } from '../../store/gameStore';
 import { DiceRoll } from '../components/DiceRoll';
 import { Illustration } from '../components/Illustration';
 
@@ -33,7 +33,8 @@ export function EventPanel({ game }: { game: GameState }) {
   const event = CONTENT.events.get(active.eventId);
   if (!event) return null;
   const hero = getHero(game, active.heroId);
-  const ctx = { heroName: hero.name };
+  const travel = travelContextOf(game, active);
+  const ctx = { heroName: hero.name, destinationName: travel?.destination.name };
   const showResult = resolution !== null && (resolution.check === null || diceSettled);
 
   return (
@@ -47,7 +48,7 @@ export function EventPanel({ game }: { game: GameState }) {
               <div className="text">{interpolate(event.text, ctx)}</div>
               <div className="choice-list">
                 {event.choices.map((choice, i) => {
-                  const available = !choice.requires || evalConditions(game, choice.requires);
+                  const available = !choice.requires || evalConditions(game, choice.requires, travel);
                   const hint = checkHint(game, choice);
                   return (
                     <button

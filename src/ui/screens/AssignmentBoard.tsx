@@ -3,7 +3,8 @@
 
 import { useGameStore } from '../../store/gameStore';
 import type { GameState, ActivityId } from '../../engine/types';
-import { livingHeroes } from '../../engine/types';
+import { awayHeroIds, heroesAtPost, livingHeroes } from '../../engine/types';
+import { LOCATION_NAMES } from '../../content/locations';
 import { ConditionBars } from '../components/ConditionBars';
 
 const ACTIVITIES: { id: ActivityId; label: string; hint: string; enabled: boolean }[] = [
@@ -11,7 +12,6 @@ const ACTIVITIES: { id: ActivityId; label: string; hint: string; enabled: boolea
   { id: 'provision', label: 'Provision', hint: 'Hunt and forage — offsets food costs (Survival).', enabled: true },
   { id: 'rest', label: 'Rest', hint: 'Recover health and stress; a chance to shake bad traits.', enabled: true },
   { id: 'build', label: 'Build', hint: 'Construction arrives with MVP 2.', enabled: false },
-  { id: 'explore', label: 'Explore', hint: 'The map arrives with MVP 2.', enabled: false },
   { id: 'diplomacy', label: 'Diplomacy', hint: 'Faction visits arrive with MVP 2.', enabled: false },
 ];
 
@@ -20,7 +20,9 @@ export function AssignmentBoard({ game }: { game: GameState }) {
   const confirmTurn = useGameStore((s) => s.confirmTurn);
   const selectHero = useGameStore((s) => s.selectHero);
   const growthLines = useGameStore((s) => s.growthLines);
-  const heroes = livingHeroes(game);
+  const heroes = heroesAtPost(game);
+  const away = awayHeroIds(game);
+  const awayHeroes = livingHeroes(game).filter((h) => away.has(h.id));
 
   return (
     <div>
@@ -63,6 +65,30 @@ export function AssignmentBoard({ game }: { game: GameState }) {
           </div>
         );
       })}
+      {awayHeroes.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 14 }}>On the Road</h3>
+          {awayHeroes.map((hero) => {
+            const exp = game.expeditions.find((e) => e.heroIds.includes(hero.id));
+            const dest = exp ? LOCATION_NAMES.get(exp.destination) ?? exp.destination : '';
+            return (
+              <div key={hero.id} className="assign-row">
+                <div className="who">
+                  <div className="name" onClick={() => selectHero(hero.id)}>
+                    {hero.name} <span className="dim">{hero.epithet}</span>
+                  </div>
+                  <ConditionBars hero={hero} />
+                </div>
+                <span className="dim" style={{ fontSize: '0.85rem' }}>
+                  {exp?.kind === 'caravan' ? '🐴 Caravan' : '🗺️ Scouting'} —{' '}
+                  {exp?.leg === 'outbound' ? `bound for ${dest}` : `returning from ${dest}`},{' '}
+                  {exp?.turnsLeft} turn{exp?.turnsLeft === 1 ? '' : 's'} out
+                </span>
+              </div>
+            );
+          })}
+        </>
+      )}
       <div style={{ marginTop: 16 }}>
         <button className="primary" disabled={game.phase !== 'assignment'} onClick={confirmTurn}>
           Confirm Orders — Let Two Weeks Pass ▸

@@ -1,13 +1,22 @@
 // Resolves which hero an event features. Returns null when no hero fits,
 // which makes the event ineligible this turn.
 
-import { livingHeroes } from '../types';
+import { heroesAtPost } from '../types';
 import type { GameState, Hero } from '../types';
 import type { Rng } from '../rng';
 import type { GameEvent, HeroBinding } from './types';
 
-export function bindHero(state: GameState, event: GameEvent, rng: Rng): Hero | null {
-  const pool = livingHeroes(state);
+/**
+ * Picks the featured hero. The default pool is heroes present at the post;
+ * travel events pass the expedition's party instead.
+ */
+export function bindHero(
+  state: GameState,
+  event: GameEvent,
+  rng: Rng,
+  poolOverride?: Hero[],
+): Hero | null {
+  const pool = poolOverride ?? heroesAtPost(state);
   if (pool.length === 0) return null;
   const binding: HeroBinding = event.binding ?? { type: 'random' };
 
