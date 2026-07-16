@@ -1,0 +1,132 @@
+// Applies typed outcome effects to the game state and returns human-readable
+// log lines for the event panel and turn report.
+
+import { TUNING } from '../../content/tuning';
+import { clamp, getHero, livingHeroes } from '../types';
+import type { GameState, GoodId } from '../types';
+import type { Outcome } from './types';
+
+export interface OutcomeContext {
+  heroId: string;
+  /** Content-provided display names, so the engine stays content-free. */
+  goodNames: ReadonlyMap<GoodId, string>;
+  factionNames: ReadonlyMap<string, string>;
+  traitNames: ReadonlyMap<string, string>;
+}
+
+export function applyOutcomes(
+  state: GameState,
+  outcomes: readonly Outcome[],
+  ctx: OutcomeContext,
+): string[] {
+  const log: string[] = [];
+  const hero = getHero(state, ctx.heroId);
+
+  for (const outcome of outcomes) {
+    switch (outcome.type) {
+      case 'silver': {
+        state.silver = Math.max(0, state.silver + outcome.delta);
+        log.push(`${signed(outcome.delta)} silver`);
+        break;
+      }
+      case 'good': {
+        state.goods[outcome.good] = Math.max(0, state.goods[outcome.good] + outcome.delta);
+        log.push(`${signed(outcome.delta)} ${ctx.goodNames.get(outcome.good) ?? outcome.good}`);
+        break;
+      }
+      case 'standing': {
+        const faction = state.factions[outcome.faction];
+        faction.standing = clamp(faction.standing + outcome.delta, -100, 100);
+        log.push(
+          `${ctx.factionNames.get(outcome.faction) ?? outcome.faction} standing ${signed(outcome.delta)}`,
+        );
+        break;
+      }
+      case 'axis': {
+        state.axes[outcome.axis] = clamp(state.axes[outcome.axis] + outcome.delta, -10, 10);
+        const label =
+          outcome.axis === 'integration'
+            ? outcome.delta > 0
+              ? 'The post grows more integrated'
+              : 'The post grows more aloof'
+            : outcome.delta > 0
+              ? 'The post feels more like a home'
+              : 'The post grows more mercantile';
+        log.push(label);
+        break;
+      }
+      case 'addTrait': {
+        if (!hero.traits.includes(outcome.trait)) {
+          hero.traits.push(outcome.trait);
+          log.push(`${hero.name} gains ${ctx.traitNames.get(outcome.trait) ?? outcome.trait}`);
+        }
+        break;
+      }
+      case 'removeTrait': {
+        const idx = hero.traits.indexOf(outcome.trait);
+        if (idx >= 0) {
+          hero.traits.splice(idx, 1);
+          log.push(`${hero.name} loses ${ctx.traitNames.get(outcome.trait) ?? outcome.trait}`);
+        }
+        break;
+      }
+      case 'health': {
+        hero.health = clamp(hero.health + outcome.delta, 0, TUNING.condition.maxHealth);
+        log.push(`${hero.name}: ${signed(outcome.delta)} health`);
+        if (hero.health === 0 && hero.status === 'active') {
+          hero.status = 'dead';
+          hero.history.push(`Died in turn ${state.turn}.`);
+          log.push(`☠ ${hero.name} has died.`);
+        }
+        break;
+      }
+      case 'stress': {
+        const targets = outcome.allHeroes ? livingHeroes(state) : [hero];
+        for (const t of targets) {
+          t.stress = clamp(t.stress + outcome.delta, 0, TUNING.condition.maxStress);
+        }
+        log.push(
+          `${outcome.allHeroes ? 'Everyone' : hero.name}: ${signed(outcome.delta)} stress`,
+        );
+        break;
+      }
+      case 'queueEvent': {
+        state.queuedEvents.push({
+          eventId: outcome.eventId,
+          fireOnTurn: state.turn + outcome.delayTurns,
+          ...(outcome.sameHero ? { heroId: hero.id } : {}),
+        });
+        break;
+      }
+      case 'setFlag': {
+        state.flags[outcome.flag] = outcome.value ?? true;
+        break;
+      }
+      case 'priceShock': {
+        state.market[outcome.good].eventMod = outcome.mod;
+        log.push(
+          `${ctx.goodNames.get(outcome.good) ?? outcome.good} prices ${outcome.mod > 1 ? 'surge' : 'slump'}`,
+        );
+        break;
+      }
+      case 'heroDeparts': {
+        if (hero.status === 'active') {
+          hero.status = 'departed';
+          hero.history.push(`Left the company in turn ${state.turn}.`);
+          log.push(`${hero.name} leaves the company.`);
+        }
+        break;
+      }
+      case 'history': {
+        hero.history.push(outcome.text.replaceAll('{hero}', hero.name));
+        break;
+      }
+    }
+  }
+
+  return log;
+}
+
+function signed(n: number): string {
+  return n >= 0 ? `+${n}` : `${n}`;
+}
