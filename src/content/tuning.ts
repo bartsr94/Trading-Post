@@ -3,7 +3,7 @@
 
 export const TUNING = {
   save: {
-    version: 2,
+    version: 3,
     autosaveKey: 'trading-post-save',
   },
 
@@ -107,5 +107,39 @@ export const TUNING = {
     breakdownThreshold: 10,
     /** Content event fired when a hero breaks down. */
     breakdownEventId: 'hero_breakdown',
+  },
+
+  diplomacy: {
+    /** At-post: hosting the Company's factor (Assignment Board activity). */
+    atPostCheckDifficulty: 9,
+    atPostStandingGainSuccess: 2,
+    atPostStandingGainCrit: 4,
+    atPostStandingLossFailure: 0,
+    atPostStandingLossCritFailure: 2,
+    /** Expedition: visiting a faction seat in person (spec §8). */
+    expeditionCheckDifficulty: 10,
+    expeditionStandingGainSuccess: 4,
+    expeditionStandingGainCrit: 8,
+    expeditionStandingLossFailure: 1,
+    expeditionStandingLossCritFailure: 4,
+    expeditionFailureStress: 1,
+    expeditionCritFailureStress: 2,
+  },
+
+  charter: {
+    /** Silver shipment the Company expects every season end (spec §8). */
+    quotaSilver: 120,
+    /** Standing lost on a missed quota, before streak escalation. */
+    standingLossPerMiss: 8,
+    /** Multiplies the standing loss for each additional consecutive miss. */
+    streakEscalation: 1.5,
+    /** Stress added to every hero when the quota is missed. */
+    missedQuotaStress: 1,
+    /** Consecutive misses before inspectors start seizing silver outright. */
+    seizureStreakThreshold: 2,
+    /** Fraction of remaining silver seized once past the threshold. */
+    seizureFraction: 0.25,
+    /** Standing gained with the Company for meeting the quota. */
+    metStandingGain: 1,
   },
 } as const;

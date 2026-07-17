@@ -12,7 +12,12 @@ const ACTIVITIES: { id: ActivityId; label: string; hint: string; enabled: boolea
   { id: 'provision', label: 'Provision', hint: 'Hunt and forage — offsets food costs (Survival).', enabled: true },
   { id: 'rest', label: 'Rest', hint: 'Recover health and stress; a chance to shake bad traits.', enabled: true },
   { id: 'build', label: 'Build', hint: 'Construction arrives with MVP 2.', enabled: false },
-  { id: 'diplomacy', label: 'Diplomacy', hint: 'Faction visits arrive with MVP 2.', enabled: false },
+  {
+    id: 'diplomacy',
+    label: 'Diplomacy',
+    hint: "Host the Company's factor at the post (Diplomacy check vs Ansberry standing).",
+    enabled: true,
+  },
 ];
 
 export function AssignmentBoard({ game }: { game: GameState }) {
@@ -80,8 +85,8 @@ export function AssignmentBoard({ game }: { game: GameState }) {
                   <ConditionBars hero={hero} />
                 </div>
                 <span className="dim" style={{ fontSize: '0.85rem' }}>
-                  {exp?.kind === 'caravan' ? '🐴 Caravan' : '🗺️ Scouting'} —{' '}
-                  {exp?.leg === 'outbound' ? `bound for ${dest}` : `returning from ${dest}`},{' '}
+                  {exp?.kind === 'caravan' ? '🐴 Caravan' : exp?.kind === 'explore' ? '🗺️ Scouting' : '🤝 Envoy'}{' '}
+                  — {exp?.leg === 'outbound' ? `bound for ${dest}` : `returning from ${dest}`},{' '}
                   {exp?.turnsLeft} turn{exp?.turnsLeft === 1 ? '' : 's'} out
                 </span>
               </div>

@@ -59,6 +59,12 @@ export function PostOverview({ game }: { game: GameState }) {
                 at 3.
               </div>
             )}
+            {game.charterMissedStreak > 0 && (
+              <div className="bad">
+                ⚠ Charter quota unmet {game.charterMissedStreak} season
+                {game.charterMissedStreak > 1 ? 's' : ''} running.
+              </div>
+            )}
           </div>
           <h3 style={{ marginTop: 16 }}>Factions</h3>
           {FACTIONS.map((f) => {
@@ -115,7 +121,7 @@ export function PostOverview({ game }: { game: GameState }) {
               return (
                 <div key={exp.id} className="faction-row">
                   <span>
-                    {exp.kind === 'caravan' ? '🐴' : '🗺️'} {names}
+                    {exp.kind === 'caravan' ? '🐴' : exp.kind === 'explore' ? '🗺️' : '🤝'} {names}
                   </span>
                   <span className="dim">
                     {exp.leg === 'outbound' ? `→ ${dest}` : `${dest} → home`} ({exp.turnsLeft}{' '}

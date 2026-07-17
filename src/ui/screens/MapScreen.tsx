@@ -27,6 +27,8 @@ export function MapScreen({ game }: { game: GameState }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [party, setParty] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [envoyParty, setEnvoyParty] = useState<string[]>([]);
+  const [envoyError, setEnvoyError] = useState<string | null>(null);
 
   const available = heroesAtPost(game);
   const selected = selectedId ? LOCATION_DEFS.get(selectedId) ?? null : null;
@@ -35,6 +37,17 @@ export function MapScreen({ game }: { game: GameState }) {
   const toggleHero = (heroId: string) => {
     setError(null);
     setParty((prev) =>
+      prev.includes(heroId)
+        ? prev.filter((id) => id !== heroId)
+        : prev.length < TUNING.map.maxExpeditionHeroes
+          ? [...prev, heroId]
+          : prev,
+    );
+  };
+
+  const toggleEnvoy = (heroId: string) => {
+    setEnvoyError(null);
+    setEnvoyParty((prev) =>
       prev.includes(heroId)
         ? prev.filter((id) => id !== heroId)
         : prev.length < TUNING.map.maxExpeditionHeroes
@@ -57,12 +70,33 @@ export function MapScreen({ game }: { game: GameState }) {
     }
   };
 
+  const sendEnvoy = () => {
+    if (!selected) return;
+    const params = { kind: 'diplomacy' as const, destination: selected.id, heroIds: envoyParty };
+    const reason = dispatchError(game, params, LOCATION_DEFS);
+    if (reason) {
+      setEnvoyError(reason);
+      return;
+    }
+    if (dispatch(params)) {
+      setEnvoyParty([]);
+      setEnvoyError(null);
+    }
+  };
+
   const canExplore =
     selected !== undefined &&
     selected !== null &&
     selectedLoc !== undefined &&
     selected.id !== TUNING.map.homeLocationId &&
     selectedLoc.discovery !== 'known';
+
+  const canSendEnvoy =
+    selected !== undefined &&
+    selected !== null &&
+    selectedLoc !== undefined &&
+    selected.faction !== undefined &&
+    discoveryAtLeast(selectedLoc.discovery, 'visited');
 
   return (
     <div className="map-layout">
@@ -92,7 +126,7 @@ export function MapScreen({ game }: { game: GameState }) {
             if (!loc || loc.discovery === 'unknown') return null;
             const isHome = def.id === TUNING.map.homeLocationId;
             const isSelected = selectedId === def.id;
-            const expeditionHere = game.expeditions.some((e) => e.destination === def.id);
+            const expeditionHere = game.expeditions.find((e) => e.destination === def.id);
             return (
               <g
                 key={def.id}
@@ -108,7 +142,7 @@ export function MapScreen({ game }: { game: GameState }) {
                 </text>
                 {expeditionHere && (
                   <text x={def.mapX + 3.5} y={def.mapY + 1.4} className="map-marker">
-                    🐴
+                    {expeditionHere.kind === 'caravan' ? '🐴' : expeditionHere.kind === 'explore' ? '🗺️' : '🤝'}
                   </text>
                 )}
               </g>
@@ -131,7 +165,7 @@ export function MapScreen({ game }: { game: GameState }) {
               return (
                 <div key={exp.id} className="faction-row">
                   <span>
-                    {exp.kind === 'caravan' ? '🐴' : '🗺️'}{' '}
+                    {exp.kind === 'caravan' ? '🐴' : exp.kind === 'explore' ? '🗺️' : '🤝'}{' '}
                     {exp.heroIds
                       .map((id) => game.heroes.find((h) => h.id === id)?.name ?? id)
                       .join(' & ')}
@@ -208,6 +242,43 @@ export function MapScreen({ game }: { game: GameState }) {
                 {game.phase !== 'assignment' && (
                   <div className="dim" style={{ fontSize: '0.78rem', marginTop: 4 }}>
                     Parties set out during the assignment phase.
+                  </div>
+                )}
+              </>
+            )}
+
+            {canSendEnvoy && (
+              <>
+                <h3 style={{ marginTop: 14 }}>Send Envoy</h3>
+                <p className="dim" style={{ fontSize: '0.8rem', margin: '0 0 6px' }}>
+                  Pick up to {TUNING.map.maxExpeditionHeroes} heroes to treat with{' '}
+                  {FACTION_DEFS.get(selected.faction!)?.name}. They will be away{' '}
+                  {selected.travelTurns * 2} turns or more.
+                </p>
+                {available.map((hero) => (
+                  <label key={hero.id} className="pick-row">
+                    <input
+                      type="checkbox"
+                      checked={envoyParty.includes(hero.id)}
+                      onChange={() => toggleEnvoy(hero.id)}
+                    />{' '}
+                    {hero.name} <span className="dim">(Diplomacy {hero.skills.diplomacy})</span>
+                  </label>
+                ))}
+                {envoyError && (
+                  <div className="bad" style={{ fontSize: '0.85rem', margin: '6px 0' }}>{envoyError}</div>
+                )}
+                <button
+                  className="primary"
+                  style={{ marginTop: 8 }}
+                  disabled={game.phase !== 'assignment' || envoyParty.length === 0}
+                  onClick={sendEnvoy}
+                >
+                  Send the Envoy ▸
+                </button>
+                {game.phase !== 'assignment' && (
+                  <div className="dim" style={{ fontSize: '0.78rem', marginTop: 4 }}>
+                    Envoys set out during the assignment phase.
                   </div>
                 )}
               </>

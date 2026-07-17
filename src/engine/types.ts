@@ -99,7 +99,7 @@ export interface LocationState {
   market?: Record<GoodId, MarketGoodState>;
 }
 
-export type ExpeditionKind = 'caravan' | 'explore';
+export type ExpeditionKind = 'caravan' | 'explore' | 'diplomacy';
 
 export interface ExpeditionState {
   id: string;
@@ -233,6 +233,8 @@ export interface GameState {
   pendingEvents: ActiveEvent[];
   /** Consecutive turns upkeep went unpaid; 3 = bankruptcy. */
   bankruptcyClock: number;
+  /** Consecutive seasons the Charter Company's profit quota went unmet. */
+  charterMissedStreak: number;
   report: TurnReport;
   gameOver: GameOverInfo | null;
 }
