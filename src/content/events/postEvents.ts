@@ -63,7 +63,7 @@ export const POST_EVENTS: GameEvent[] = [
     category: 'faction',
     illustration: 'river_canoes',
     title: 'Canoes at Dawn',
-    text: 'Four canoes ground on the mud below the post, low in the water with bales of winter furs. The River Clans have decided you are worth a look. Their trade-speaker waits at the fire, studying your tents, your goods, your faces — pricing all of it.',
+    text: 'Four canoes ground on the mud below the post, low in the water with bales of winter furs. Njaro-Matu has decided you are worth a look. Their trade-speaker waits at the fire, studying your tents, your goods, your faces — pricing all of it.',
     conditions: [{ type: 'standingAtMost', faction: 'RIVER_CLANS', value: 80 }],
     weight: 12,
     cooldownTurns: 5,
@@ -191,7 +191,7 @@ export const POST_EVENTS: GameEvent[] = [
     category: 'faction',
     illustration: 'wax_seal',
     title: 'A Letter Under Seal',
-    text: 'A homeland packet-boat leaves mail: one letter, heavy paper, the Charter Company’s seal in blue wax. The Directors "note with interest" your establishment and "anticipate the first remittance of proceeds." Between the courtesies sits a blade: they are counting weeks. {hero} reads it twice and sets it down carefully.',
+    text: 'A boat up from Thornwatch leaves mail: one letter, heavy paper, the Ansberry Company’s seal in blue wax. The Directors "note with interest" your establishment and "anticipate the first remittance of proceeds." Between the courtesies sits a blade: they are counting weeks. {hero} reads it twice and sets it down carefully.',
     conditions: [{ type: 'minTurn', value: 3 }],
     weight: 10,
     cooldownTurns: 7,
@@ -305,7 +305,7 @@ export const POST_EVENTS: GameEvent[] = [
     category: 'post',
     illustration: 'amber_map',
     title: 'The Amber Seller’s Map',
-    text: 'A toothless trapper trades at your fire and pays for his salt with talk: a stream-cut in the eastern woods where amber washes out after hard rain, marked on a scrap of hide he’ll part with — for silver. The Old People, he says, don’t go there anymore. He doesn’t say why. {hero} turns the hide scrap over, weighing it.',
+    text: 'A toothless trapper trades at your fire and pays for his salt with talk: a stream-cut in the eastern woods where amber washes out after hard rain, marked on a scrap of hide he’ll part with — for silver. The Bejasi Hills folk, he says, don’t go there anymore. He doesn’t say why. {hero} turns the hide scrap over, weighing it.',
     conditions: [{ type: 'silverAtLeast', value: 20 }],
     weight: 8,
     once: true,
@@ -339,7 +339,7 @@ export const POST_EVENTS: GameEvent[] = [
     category: 'chain',
     illustration: 'amber_stream',
     title: 'The Stream-Cut',
-    text: 'The map is honest after all: a raw gully in the eastern woods, banks slumping after rain, and in the gravel — a gleam like trapped sunlight. But the trees here are hung with knotted cords, old and new, and small bones. The Old People marked this place. {hero} crouches at the water’s edge, deciding how far to press this.',
+    text: 'The map is honest after all: a raw gully in the eastern woods, banks slumping after rain, and in the gravel — a gleam like trapped sunlight. But the trees here are hung with knotted cords, old and new, and small bones. The Bejasi Hills folk marked this place. {hero} crouches at the water’s edge, deciding how far to press this.',
     conditions: [],
     weight: 0,
     once: true,
@@ -350,7 +350,7 @@ export const POST_EVENTS: GameEvent[] = [
         check: { skill: 'lore', stat: 'wits', difficulty: 11, tags: ['ritual'] },
         outcomes: {
           critSuccess: {
-            text: 'The knots are a grave-warning — and a boundary. {hero} works only the gravel outside the marked line, taking what the water already carried out. Amber in hand, taboo unbroken, and knowledge of the Old People’s marks that few strangers hold.',
+            text: 'The knots are a grave-warning — and a boundary. {hero} works only the gravel outside the marked line, taking what the water already carried out. Amber in hand, taboo unbroken, and knowledge of the Bejasi Hills folk’s marks that few strangers hold.',
             outcomes: [
               { type: 'good', good: 'amber', delta: 4 },
               { type: 'standing', faction: 'OLD_PEOPLE', delta: 3 },
@@ -440,7 +440,7 @@ export const POST_EVENTS: GameEvent[] = [
         },
       },
       {
-        label: 'Pay a River Clans healer to come. Swallow the pride.',
+        label: 'Pay a healer from Njaro-Matu to come. Swallow the pride.',
         requires: [{ type: 'silverAtLeast', value: 25 }],
         outcomes: {
           success: {

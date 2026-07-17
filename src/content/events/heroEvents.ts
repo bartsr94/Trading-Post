@@ -96,7 +96,7 @@ export const HERO_EVENTS: GameEvent[] = [
     category: 'hero',
     illustration: 'poachers_hills',
     title: 'Snares in the High Country',
-    text: 'Dagny comes back from the hills at a run. She found a poaching camp — homeland men, not natives — working the Hill Tribes’ fur grounds with wire snares, the kind that waste half of what they kill. If the Tribes find that camp first, they will not care much about which homeland men set the snares and which ones run a trading post.',
+    text: 'Dagny comes back from the drylands at a run. She found a poaching camp — homeland men, not natives — working the Dustwalkers’ hunting range with wire snares, the kind that waste half of what they kill. If the Dustwalkers find that camp first, they will not care much about which homeland men set the snares and which ones run a trading post.',
     conditions: [{ type: 'heroInParty', heroId: 'p5' }],
     weight: 12,
     once: true,
@@ -123,10 +123,10 @@ export const HERO_EVENTS: GameEvent[] = [
         },
       },
       {
-        label: 'Send word to the Hill Tribes and let them handle their own grounds.',
+        label: 'Send word to the Dustwalkers and let them handle their own grounds.',
         outcomes: {
           success: {
-            text: 'You send Dagny with the camp’s location and no apology for the men in it. The Tribes handle it in their own way, which you do not ask about. That you told them — and what you didn’t ask — is noted.',
+            text: 'You send Dagny with the camp’s location and no apology for the men in it. The Dustwalkers handle it in their own way, which you do not ask about. That you told them — and what you didn’t ask — is noted.',
             outcomes: [
               { type: 'standing', faction: 'HILL_TRIBES', delta: 5 },
               { type: 'axis', axis: 'integration', delta: 1 },
@@ -139,7 +139,7 @@ export const HERO_EVENTS: GameEvent[] = [
         label: 'Quietly buy their furs. Poached pelts weigh the same.',
         outcomes: {
           success: {
-            text: 'Cheap furs, no questions, and Dagny’s open disgust. If the Hill Tribes ever trace those pelts to your scales, no palisade will be tall enough.',
+            text: 'Cheap furs, no questions, and Dagny’s open disgust. If the Dustwalkers ever trace those pelts to your scales, no palisade will be tall enough.',
             outcomes: [
               { type: 'good', good: 'furs', delta: 5 },
               { type: 'silver', delta: -10 },

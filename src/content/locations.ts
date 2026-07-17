@@ -1,6 +1,6 @@
-// The map (spec §10): a node graph of ~10 locations. Names and flavour are
-// [PALUSTERIA LORE] placeholders unless noted. Travel turns are one-way from
-// the post; connections drive the map drawing and rumor spread.
+// The map (spec §10): a node graph of ~10 locations. Ashmark grounding per
+// docs/ASHMARK_LORE_SPEC.md. Travel turns are one-way from the post;
+// connections drive the map drawing and rumor spread.
 
 import type { LocationDef, LocationId } from '../engine/types';
 
@@ -21,8 +21,9 @@ export const LOCATIONS: LocationDef[] = [
   // ------------------------------------------------------------ faction seats
   {
     id: 'river_meet',
-    name: 'Riversmeet', // [PALUSTERIA LORE]
-    blurb: 'Stilt-houses and fish smoke where two rivers join. Seat of the River Clans.',
+    name: 'Njaro-Matu',
+    blurb:
+      'Stilt-houses and fish smoke at the tributary\'s mouth. Pragmatic and calculating, seat of the Tributary Towns.',
     faction: 'RIVER_CLANS',
     hasMarket: true,
     priceBias: { grain: 0.8, hides: 0.7, furs: 0.9, salt: 1.2, tools: 1.4, cloth: 1.3 },
@@ -35,8 +36,9 @@ export const LOCATIONS: LocationDef[] = [
   },
   {
     id: 'hill_fort',
-    name: 'The Hill Fort', // [PALUSTERIA LORE]
-    blurb: 'A ringwall of old stone above the fur routes. The Hill Tribes hold it.',
+    name: 'The Ashcircle',
+    blurb:
+      'A ring of standing stones and old fire-scars where Dustwalker bands convene between migrations. No walls — the horse-herds are the only defense this country needs.',
     faction: 'HILL_TRIBES',
     hasMarket: true,
     priceBias: { furs: 0.6, hides: 0.8, grain: 1.2, salt: 1.3, tools: 1.5, cloth: 1.4 },
@@ -49,8 +51,9 @@ export const LOCATIONS: LocationDef[] = [
   },
   {
     id: 'elder_grove',
-    name: 'The Elder Grove', // [PALUSTERIA LORE]
-    blurb: 'Trees older than any kingdom. The Old People trade here, when they choose to.',
+    name: "Themba's Town",
+    blurb:
+      'Jungle-swallowed ruins and a settlement that studies them as much as it lives among them. The Bejasi Hills folk trade here, when they choose to.',
     faction: 'OLD_PEOPLE',
     hasMarket: true,
     priceBias: { amber: 0.6, herbs: 0.7, salt: 1.2, tools: 1.3, cloth: 1.3 },
@@ -63,8 +66,9 @@ export const LOCATIONS: LocationDef[] = [
   },
   {
     id: 'charter_landing',
-    name: 'Charter Landing',
-    blurb: 'The company pier where homeland ships put in. Imports, inspectors, and news.',
+    name: 'Thornwatch',
+    blurb:
+      'The nearest Ansberry Company garrison, where river barges up from Port Iron put in. Imports, inspectors, and news.',
     faction: 'CHARTER_COMPANY',
     hasMarket: true,
     priceBias: {
@@ -80,7 +84,7 @@ export const LOCATIONS: LocationDef[] = [
     travelTurns: 3,
     initialDiscovery: 'visited',
     connections: ['post', 'amber_shore'],
-    tags: ['homeland', 'sea'],
+    tags: ['homeland', 'river'],
     mapX: 74,
     mapY: 82,
   },
@@ -88,8 +92,9 @@ export const LOCATIONS: LocationDef[] = [
   // ------------------------------------------------------------- wilderness
   {
     id: 'old_road',
-    name: 'The Old Road', // [PALUSTERIA LORE]
-    blurb: 'A paved road from before the Old People went quiet. It leads into the hills.',
+    name: 'The Shattered Road',
+    blurb:
+      'A paved road from some empire that predates the Sauromatian tribes themselves, broken now into causeways of tilted stone. It leads west toward the Dustwalker range.',
     hasMarket: false,
     travelTurns: 2,
     initialDiscovery: 'rumored',
@@ -100,8 +105,9 @@ export const LOCATIONS: LocationDef[] = [
   },
   {
     id: 'drowned_ruins',
-    name: 'The Drowned Ruins', // [PALUSTERIA LORE]
-    blurb: 'Roofless halls sunk to the lintels in marsh water. The River Clans avoid them.',
+    name: 'The Drowned Weir',
+    blurb:
+      'Roofless halls sunk to the lintels where the tributary runs its worst rapids. Even the Tributary Towns give the old weir a wide berth.',
     hasMarket: false,
     travelTurns: 3,
     initialDiscovery: 'rumored',
@@ -112,8 +118,9 @@ export const LOCATIONS: LocationDef[] = [
   },
   {
     id: 'black_mere',
-    name: 'The Black Mere', // [PALUSTERIA LORE]
-    blurb: 'A lake like spilled ink. Greyleaf grows thick on its margins.',
+    name: 'The Black Mere',
+    blurb:
+      'A lake like spilled ink below the Bejasi Hills, where the boundary between the living country and whatever the Veil touches runs thin. Greyleaf grows thick on its margins.',
     hasMarket: false,
     travelTurns: 4,
     initialDiscovery: 'unknown',
@@ -124,8 +131,8 @@ export const LOCATIONS: LocationDef[] = [
   },
   {
     id: 'high_pass',
-    name: 'The High Pass', // [PALUSTERIA LORE]
-    blurb: 'The only way over the mountains, when it is open at all.',
+    name: 'The Stormwall Pass',
+    blurb: 'The only way over the Stormwall Mountains, when it is open at all.',
     hasMarket: false,
     travelTurns: 4,
     initialDiscovery: 'unknown',
@@ -136,13 +143,14 @@ export const LOCATIONS: LocationDef[] = [
   },
   {
     id: 'amber_shore',
-    name: 'The Amber Shore', // [PALUSTERIA LORE]
-    blurb: 'After a storm, the sand here glitters. The Old People gather it by moonlight.',
+    name: 'The Amber Cut',
+    blurb:
+      'An old dig cut into the jungle rock, amber-veined and half-swallowed by vines. The Bejasi Hills folk still visit it by moonlight, though no one will say what for.',
     hasMarket: false,
     travelTurns: 4,
     initialDiscovery: 'unknown',
     connections: ['elder_grove', 'charter_landing'],
-    tags: ['shore'],
+    tags: ['ruin', 'jungle'],
     mapX: 92,
     mapY: 52,
   },

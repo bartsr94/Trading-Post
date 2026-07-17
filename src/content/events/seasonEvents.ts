@@ -8,7 +8,7 @@ export const SEASON_EVENTS: GameEvent[] = [
     category: 'season',
     illustration: 'flood_river',
     title: 'The River Rises',
-    text: 'Snowmelt from the far hills arrives all at once. The river climbs its banks overnight, brown and fast and full of whole trees. The lower stores stand a hand-span from the waterline and the water is still coming. The River Clans are already gone to high ground — they knew to the day.',
+    text: 'Snowmelt from the Stormwall Mountains arrives all at once. The river climbs its banks overnight, brown and fast and full of whole trees. The lower stores stand a hand-span from the waterline and the water is still coming. The river towns are already gone to high ground — they knew to the day.',
     conditions: [{ type: 'season', value: 'spring' }],
     weight: 10,
     cooldownTurns: 12,
@@ -26,7 +26,7 @@ export const SEASON_EVENTS: GameEvent[] = [
             ],
           },
           failure: {
-            text: 'The river takes the dike apart with something like contempt, and the low stores with it. Downstream, some River Clan child is about to find a crate of good homeland cloth.',
+            text: 'The river takes the dike apart with something like contempt, and the low stores with it. Downstream, some river-town child is about to find a crate of good homeland cloth.',
             outcomes: [
               { type: 'good', good: 'timber', delta: -3 },
               { type: 'good', good: 'cloth', delta: -2 },
@@ -80,12 +80,12 @@ export const SEASON_EVENTS: GameEvent[] = [
         check: { skill: 'diplomacy', stat: 'charm', difficulty: 10, tags: ['RIVER_CLANS', 'natives'] },
         outcomes: {
           critSuccess: {
-            text: '{hero} judges the wrestling, drinks what is offered, and answers the clan-mothers’ questions with exactly the right mixture of honesty and flattery. By week’s end the post has a nickname in the river-tongue — an affectionate one, mostly.',
+            text: '{hero} judges the wrestling, drinks what is offered, and answers the clan-mothers’ questions with exactly the right mixture of honesty and flattery. By week’s end the post has a nickname in Kiswani — an affectionate one, mostly.',
             outcomes: [
               { type: 'good', good: 'tools', delta: -1 },
               { type: 'standing', faction: 'RIVER_CLANS', delta: 12 },
               { type: 'axis', axis: 'integration', delta: 2 },
-              { type: 'history', text: 'Earned the post its river-tongue name at the Midsummer Gathering.' },
+              { type: 'history', text: 'Earned the post its Kiswani name at the Midsummer Gathering.' },
             ],
           },
           success: {

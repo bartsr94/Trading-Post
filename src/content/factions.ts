@@ -1,4 +1,4 @@
-// Factions (spec §8). Names and cultures are [PALUSTERIA LORE] placeholders.
+// Factions (spec §8). Ashmark grounding per docs/ASHMARK_LORE_SPEC.md.
 
 import type { FactionId } from '../engine/types';
 
@@ -12,26 +12,30 @@ export interface FactionDef {
 export const FACTIONS: FactionDef[] = [
   {
     id: 'RIVER_CLANS',
-    name: 'The River Clans', // [PALUSTERIA LORE]
-    blurb: 'Trade-friendly boat people of the lowland rivers. Quick to deal, quicker to feud.',
+    name: 'The Tributary Towns',
+    blurb:
+      'Independent Kiswani river towns strung along the tributary above Thornwatch — Njaro-Matu chief among them. Trade-friendly, matriarchal, quick to deal and quicker to feud.',
     startingStanding: 10,
   },
   {
     id: 'HILL_TRIBES',
-    name: 'The Hill Tribes', // [PALUSTERIA LORE]
-    blurb: 'Wary, martial herders of the high country. They control the fur routes.',
+    name: 'The Dustwalkers',
+    blurb:
+      'A Hanjoda-descended nomadic tribe, horse-herders ranging the drylands west of the tributary. Wary of every outside power and answerable to none — they broker the overland trade routes by right of mobility, not walls.',
     startingStanding: -10,
   },
   {
     id: 'OLD_PEOPLE',
-    name: 'The Old People', // [PALUSTERIA LORE]
-    blurb: 'A remnant folk of the deep woods. Ritual, riddles, and the only known amber.',
+    name: 'The Bejasi Hills Folk',
+    blurb:
+      'Isolated settlements — Themba\'s Town chief among them — built among pre-Sauromatian ruins deep in the jungle interior. Ritual, riddles, and the only known amber workings.',
     startingStanding: 0,
   },
   {
     id: 'CHARTER_COMPANY',
-    name: 'The Charter Company',
-    blurb: 'Your homeland sponsors. They want profit shipments and send inspectors to make sure.',
+    name: 'The Ansberry Company',
+    blurb:
+      'Your charter sponsor, seated at the Thornwatch garrison downriver. They want profit shipments and send inspectors to make sure.',
     startingStanding: 25,
   },
 ];
