@@ -31,8 +31,8 @@ export function PartySelect() {
     <div>
       <h1>The Trading Post</h1>
       <p className="dim">
-        Choose six heroes to found a trading post on the Palusterian frontier. Who you bring
-        determines what stories find you.
+        Choose six heroes to found an Ansberry Company trading post on the Ashmark frontier. Who
+        you bring determines what stories find you.
       </p>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0 16px' }}>
         <button

@@ -1,6 +1,6 @@
-// The pregenerated 12-hero pool (spec §4). Names/bios are [PALUSTERIA LORE]
-// placeholders (P1–P12); Bartosz supplies final identities. Each hero's
-// hookHint teases their personal event chain without spelling it out.
+// The pregenerated 12-hero pool (spec §4). Ashmark grounding per
+// docs/ASHMARK_LORE_SPEC.md. Each hero's hookHint teases their personal
+// event chain without spelling it out.
 
 import type { Hero, SkillId, StatId } from '../engine/types';
 
@@ -47,9 +47,9 @@ export function createHero(template: HeroTemplate): Hero {
 export const HERO_POOL: HeroTemplate[] = [
   {
     id: 'p1',
-    name: 'Berrin', // [P1]
+    name: 'Berrin',
     epithet: 'the Old Sergeant',
-    bio: 'Twenty years under the Charter banner, mustered out with a limp and a pension he drank. The frontier is his last posting, and he knows it.',
+    bio: 'Twenty years in Ansberry auxiliary service, most of them patrolling the Bleak Hills line against the Cult of the Black Sun. Mustered out with a limp and a pension he drank. The frontier is his last posting, and he knows it.',
     hookHint: 'Someone from the old campaigns remembers what he owes.',
     stats: { might: 4, agility: 2, wits: 3, charm: 2, resolve: 4 },
     skills: { combat: 3, leadership: 2, survival: 1 },
@@ -57,19 +57,19 @@ export const HERO_POOL: HeroTemplate[] = [
   },
   {
     id: 'p2',
-    name: 'Maela', // [P2]
+    name: 'Maela',
     epithet: "the Factor's Daughter",
-    bio: 'Raised over a counting house, fluent in three tongues and every kind of ledger. Came out here to prove she is more than her father’s name.',
-    hookHint: 'The Charter Company takes an unusual interest in her reports.',
+    bio: 'Raised over a Port Iron counting house, fluent in three tongues and every kind of ledger. Came out here to prove she is more than her father’s name.',
+    hookHint: 'The Ansberry Company takes an unusual interest in her reports.',
     stats: { might: 1, agility: 2, wits: 4, charm: 4, resolve: 3 },
     skills: { bargain: 3, diplomacy: 2, lore: 1 },
     traits: ['silver_tongued'],
   },
   {
     id: 'p3',
-    name: 'Tobin', // [P3]
+    name: 'Tobin',
     epithet: 'the Homesick Scholar',
-    bio: 'Signed on to write the definitive natural history of Palusteria. Weeps over his letters, then fills the margins with brilliant observations.',
+    bio: 'Signed on to write the definitive natural history of the Ashmark for the Brotherhood of the Sacred Word. Weeps over his letters home to Imani, then fills the margins with brilliant observations.',
     hookHint: 'His letters home may matter more than he knows.',
     stats: { might: 1, agility: 2, wits: 5, charm: 2, resolve: 2 },
     skills: { lore: 3, craft: 2, diplomacy: 1 },
@@ -77,29 +77,29 @@ export const HERO_POOL: HeroTemplate[] = [
   },
   {
     id: 'p4',
-    name: 'Sela', // [P4]
+    name: 'Sela',
     epithet: 'the River Guide',
-    bio: 'Born on the water to a clan mother and a homeland trader. Both worlds claim her; neither fully trusts her.',
-    hookHint: 'Her river kin will come asking for things.',
+    bio: 'Born on the tributary to a Kiswani clan-mother of Njaro-Matu and an Ansberrian trader. Both worlds claim her; neither fully trusts her.',
+    hookHint: 'Her mother’s kin in Njaro-Matu will come asking for things.',
     stats: { might: 2, agility: 4, wits: 3, charm: 3, resolve: 2 },
     skills: { survival: 3, stealth: 2, diplomacy: 1 },
     traits: ['friend_river_clans'],
   },
   {
     id: 'p5',
-    name: 'Dagny', // [P5]
+    name: 'Dagny',
     epithet: 'the Huntress',
-    bio: 'Took her first elk at eleven and has fed whole villages since. Distrusts walls, ledgers, and anyone who smiles while bargaining.',
-    hookHint: 'The hills hold hunters less honest than she is.',
+    bio: 'Dustwalker-born, she left the horse-herds young to hunt alone. Took her first elk at eleven and has fed whole villages since. Distrusts walls, ledgers, and anyone who smiles while bargaining.',
+    hookHint: 'The drylands hold hunters less honest than she is.',
     stats: { might: 3, agility: 4, wits: 3, charm: 1, resolve: 3 },
     skills: { survival: 3, combat: 2, stealth: 1 },
     traits: ['renowned_hunter'],
   },
   {
     id: 'p6',
-    name: 'Corvin', // [P6]
+    name: 'Corvin',
     epithet: 'the Quartermaster',
-    bio: 'Kept a garrison fed through a two-year siege by counting everything twice and trusting no one once. Retired, allegedly.',
+    bio: 'Kept an Ansberry garrison fed through a two-year siege on the Bleak Hills line by counting everything twice and trusting no one once. Retired, allegedly.',
     hookHint: 'Old habits: he keeps a second ledger nobody has seen.',
     stats: { might: 2, agility: 2, wits: 4, charm: 2, resolve: 4 },
     skills: { craft: 3, bargain: 2, leadership: 1 },
@@ -107,9 +107,9 @@ export const HERO_POOL: HeroTemplate[] = [
   },
   {
     id: 'p7',
-    name: 'Jusk', // [P7]
+    name: 'Jusk',
     epithet: 'the Gambler',
-    bio: 'Charming, quick-fingered, and one bad night from ruin at all times. Swears the frontier is his fresh start. He has said that before.',
+    bio: 'Charming, quick-fingered, and one bad night from ruin at all times. Owes the Emerald Syndicate more than he has told anyone. Swears the frontier is his fresh start. He has said that before.',
     hookHint: 'His luck draws games, and games draw trouble.',
     stats: { might: 2, agility: 3, wits: 3, charm: 4, resolve: 1 },
     skills: { bargain: 2, stealth: 2, diplomacy: 1 },
@@ -117,29 +117,29 @@ export const HERO_POOL: HeroTemplate[] = [
   },
   {
     id: 'p8',
-    name: 'Wren', // [P8]
+    name: 'Wren',
     epithet: 'the Chaplain',
-    bio: 'Tends the company’s souls and its wounds with the same steady hands. Believes the frontier is a test set for her personally.',
-    hookHint: 'The Old People’s rites trouble her sleep — and call to her.',
+    bio: 'Tends the company’s souls and its wounds with the same steady hands, in the name of the Brotherhood of the Sacred Word. Believes the frontier is a test set for her personally.',
+    hookHint: 'The Bejasi Hills folk’s rites trouble her sleep — and call to her.',
     stats: { might: 1, agility: 2, wits: 3, charm: 3, resolve: 4 },
     skills: { lore: 3, diplomacy: 2, leadership: 1 },
     traits: ['pious', 'kindhearted'],
   },
   {
     id: 'p9',
-    name: 'Halvar', // [P9]
+    name: 'Halvar',
     epithet: 'the Brawler',
-    bio: 'Dockside enforcer who got on the wrong boat on purpose. Loyal as a hound to anyone who feeds him and doesn’t lie to him.',
-    hookHint: 'The people he worked for do not consider the account settled.',
+    bio: 'Port Iron dockside enforcer who got on the wrong boat on purpose. Loyal as a hound to anyone who feeds him and doesn’t lie to him.',
+    hookHint: 'The Emerald Syndicate does not consider the account settled.',
     stats: { might: 5, agility: 3, wits: 2, charm: 2, resolve: 3 },
     skills: { combat: 3, craft: 1, survival: 1 },
     traits: ['brawler', 'brave'],
   },
   {
     id: 'p10',
-    name: 'Isolde', // [P10]
+    name: 'Isolde',
     epithet: 'the Widow',
-    bio: 'Her husband’s trading house died with him; his partners saw to that. She sold the rings, bought passage, and intends to build something they can’t take.',
+    bio: 'Her husband’s Port Iron trading house died with him; his Company partners saw to that. She sold the rings, bought passage, and intends to build something they can’t take.',
     hookHint: 'Grief is patient. So are her husband’s partners.',
     stats: { might: 2, agility: 1, wits: 3, charm: 4, resolve: 4 },
     skills: { leadership: 3, diplomacy: 2, bargain: 1 },
@@ -147,9 +147,9 @@ export const HERO_POOL: HeroTemplate[] = [
   },
   {
     id: 'p11',
-    name: 'Fenn', // [P11]
+    name: 'Fenn',
     epithet: 'the Scout',
-    bio: 'Poached the king’s forests until the king’s foresters made the homeland unhealthy. Moves like smoke, talks like fog.',
+    bio: 'Poached the royal forests of Imani until the king’s foresters made the homeland unhealthy. Moves like smoke, talks like fog.',
     hookHint: 'He recognizes places out here he has never been. He hates that.',
     stats: { might: 2, agility: 5, wits: 3, charm: 1, resolve: 2 },
     skills: { stealth: 3, survival: 2, combat: 1 },
@@ -157,9 +157,9 @@ export const HERO_POOL: HeroTemplate[] = [
   },
   {
     id: 'p12',
-    name: 'Ashka', // [P12]
+    name: 'Ashka',
     epithet: 'the Outcast Ritualist',
-    bio: 'Cast out of the Old People for a transgression she will not name. Knows the woods’ courtesies and the woods’ prices better than anyone living among strangers.',
+    bio: 'Cast out of Mandaro, in the Bejasi Hills, for a transgression she will not name. Knows the jungle’s courtesies and the jungle’s prices better than anyone living among strangers.',
     hookHint: 'Her people have not finished with her.',
     stats: { might: 1, agility: 3, wits: 4, charm: 2, resolve: 3 },
     skills: { lore: 3, survival: 2, stealth: 1 },

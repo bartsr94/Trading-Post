@@ -374,7 +374,7 @@ function declareGameOver(state: GameState, kind: 'bankrupt' | 'brokenCompany'): 
       ? {
           kind,
           title: 'The Ledger Closes',
-          text: 'Three turns without pay or provisions. The laborers drift away first, then the heroes. One grey morning the post is simply empty — a clearing with tents rotting back into the frontier, and a debt entered in a Charter Company ledger far away.',
+          text: 'Three turns without pay or provisions. The laborers drift away first, then the heroes. One grey morning the post is simply empty — a clearing with tents rotting back into the frontier, and a debt entered in an Ansberry Company ledger far away.',
         }
       : {
           kind,

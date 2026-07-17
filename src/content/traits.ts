@@ -110,7 +110,7 @@ export const TRAITS: TraitDef[] = [
   {
     id: 'cursed',
     name: 'Cursed',
-    description: 'The Old People look at them and make signs.',
+    description: 'The Bejasi Hills folk look at them and make signs.',
     checkMods: [
       { tag: 'gamble', value: -1, label: 'Cursed' },
       { tag: 'ritual', value: 1, label: 'Cursed' },
@@ -149,20 +149,20 @@ export const TRAITS: TraitDef[] = [
   },
   {
     id: 'friend_river_clans',
-    name: 'Friend of the River Clans',
+    name: 'Friend of the Tributary Towns',
     description: 'Welcome at their fires; watched by their rivals.',
     checkMods: [
-      { tag: 'RIVER_CLANS', value: 2, label: 'Friend of the River Clans' },
-      { tag: 'HILL_TRIBES', value: -1, label: 'Friend of the River Clans' },
+      { tag: 'RIVER_CLANS', value: 2, label: 'Friend of the Tributary Towns' },
+      { tag: 'HILL_TRIBES', value: -1, label: 'Friend of the Tributary Towns' },
     ],
   },
   {
     id: 'friend_hill_tribes',
-    name: 'Friend of the Hill Tribes',
-    description: 'Welcome in the high country; watched on the river.',
+    name: 'Friend of the Dustwalkers',
+    description: 'Welcome at their fires; watched on the river.',
     checkMods: [
-      { tag: 'HILL_TRIBES', value: 2, label: 'Friend of the Hill Tribes' },
-      { tag: 'RIVER_CLANS', value: -1, label: 'Friend of the Hill Tribes' },
+      { tag: 'HILL_TRIBES', value: 2, label: 'Friend of the Dustwalkers' },
+      { tag: 'RIVER_CLANS', value: -1, label: 'Friend of the Dustwalkers' },
     ],
   },
 ];

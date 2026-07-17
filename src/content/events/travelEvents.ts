@@ -62,7 +62,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     category: 'travel',
     illustration: 'hill_toll',
     title: 'The Price of the Path',
-    text: 'They are waiting where the trail narrows between two boulders — five of the Hill Tribes with spears grounded, not raised. Their leader holds up a flat palm: the old sign for toll. This is their country, the gesture says, and your goods move through it at their pleasure.',
+    text: 'They are waiting where the trail narrows between two boulders — five Dustwalkers with spears grounded, not raised. Their leader holds up a flat palm: the old sign for toll. This is their country, the gesture says, and your goods move through it at their pleasure.',
     conditions: [{ type: 'destinationTag', tag: 'hills' }],
     weight: 12,
     cooldownTurns: 8,
@@ -85,7 +85,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
         check: { skill: 'diplomacy', stat: 'charm', difficulty: 10, tags: ['HILL_TRIBES', 'natives'] },
         outcomes: {
           success: {
-            text: '{hero} admires the leader’s dogs, asks after the high pastures, and somehow the toll becomes a gift of a few coins between almost-friends.',
+            text: '{hero} admires the leader’s horses, asks after the herds, and somehow the toll becomes a gift of a few coins between almost-friends.',
             outcomes: [
               { type: 'expeditionSilver', delta: -4 },
               { type: 'standing', faction: 'HILL_TRIBES', delta: 1 },
@@ -232,7 +232,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
         check: { skill: 'diplomacy', stat: 'charm', difficulty: 9, tags: ['strangers', 'natives'] },
         outcomes: {
           critSuccess: {
-            text: 'The kettle goes round past midnight. They talk of a shore east of the old wood where the sand gives up amber after storms, and trace the way in the dirt for {hero} twice.',
+            text: 'The kettle goes round past midnight. They talk of an old dig cut into the jungle rock east of here, amber-veined and vine-choked, and trace the way in the dirt for {hero} twice.',
             outcomes: [
               { type: 'discover', location: 'amber_shore', to: 'rumored' },
               { type: 'stress', delta: -1 },
@@ -323,7 +323,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
         check: { skill: 'lore', stat: 'wits', difficulty: 10, tags: ['ritual'] },
         outcomes: {
           critSuccess: {
-            text: '{hero} watches until the pattern shows itself: the lights walk the old causeways, sunk since before the Old People went quiet. By morning {hero} has sketched a dry line through the marsh no trader has used in a hundred years.',
+            text: '{hero} watches until the pattern shows itself: the lights walk the old causeways, sunk since before the Bejasi Hills folk withdrew into their jungle. By morning {hero} has sketched a dry line through the marsh no trader has used in a hundred years.',
             outcomes: [
               { type: 'history', text: 'Read the marsh lights and found the old causeway.' },
               { type: 'stress', delta: -1 },
@@ -359,7 +359,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     category: 'travel',
     illustration: 'ruin_stones',
     title: 'The Standing Stones',
-    text: 'The trail bends around them as if the ground itself gives way: a ring of grey stones, shoulder-high, older than the trees that lean over them. Something is carved on the leeward faces, worn soft by rain. The Old People leave offerings at such places. {hero} has already stopped walking.',
+    text: 'The trail bends around them as if the ground itself gives way: a ring of grey stones, shoulder-high, older than the trees that lean over them. Something is carved on the leeward faces, worn soft by rain. The Bejasi Hills folk leave offerings at such places. {hero} has already stopped walking.',
     conditions: [{ type: 'destinationTag', tag: 'ruin' }],
     weight: 8,
     cooldownTurns: 12,
@@ -370,7 +370,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
         check: { skill: 'lore', stat: 'wits', difficulty: 10, tags: ['ritual'] },
         outcomes: {
           critSuccess: {
-            text: 'Under the moss, a map — or a boast. Rivers, hills, and a mark {hero} recognises: the amber sign of the Old People, set against a shore to the east. {hero} copies every line.',
+            text: 'Under the moss, a map — or a boast. Rivers, hills, and a mark {hero} recognises: the amber sign of the Bejasi Hills folk, set against a vine-choked cut to the east. {hero} copies every line.',
             outcomes: [
               { type: 'discover', location: 'amber_shore', to: 'rumored' },
               { type: 'history', text: 'Copied the carvings of the standing stones.' },

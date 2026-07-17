@@ -58,14 +58,14 @@ export const GOODS: GoodDef[] = [
     name: 'Amber',
     basePrice: 40,
     seasonalMods: { spring: 1.0, summer: 1.0, autumn: 1.0, winter: 1.0 },
-    note: 'Luxury. Event-driven finds; the Old People know its sources.',
+    note: 'Luxury. Jungle resin dug from old workings; the Bejasi Hills folk know its sources.',
   },
   {
     id: 'herbs',
-    name: 'Greyleaf', // [PALUSTERIA LORE] setting-specific luxury, rename per lore
+    name: 'Greyleaf',
     basePrice: 20,
     seasonalMods: { spring: 1.2, summer: 1.0, autumn: 0.8, winter: 1.1 },
-    note: 'Rare herb of the deep marsh. [PALUSTERIA LORE placeholder]',
+    note: 'A bitter marsh herb from the Black Mere margins; rivermen chew it against fever.',
   },
 ];
 
