@@ -78,7 +78,7 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   state.report = { turn: state.turn, lines: [], silverDelta: 0, goodsDelta: {} };
   const report = (icon: string, text: string) => state.report.lines.push({ icon, text });
 
-  // 1. Economy tick: price drift, then food + upkeep.
+  // 1. Economy tick: price drift, then food + upkeep + the Charter quota.
   driftMarket(state, rng);
   payUpkeep(state, ctx, report);
 
@@ -87,6 +87,8 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
     state.rngState = rng.getState();
     return;
   }
+
+  payCharterQuota(state, report);
 
   // 2. Expeditions move (and may resolve) before at-post activities.
   advanceExpeditions(state, ctx, rng, report);
@@ -183,6 +185,46 @@ function payUpkeep(
   }
 }
 
+/** Quarterly (season-end) profit shipment to the Ansberry Company (spec §8). */
+function payCharterQuota(
+  state: GameState,
+  report: (icon: string, text: string) => void,
+): void {
+  if (!isSeasonEnd(state.turn)) return;
+  const c = TUNING.charter;
+  const faction = state.factions.CHARTER_COMPANY;
+
+  if (state.silver >= c.quotaSilver) {
+    state.silver -= c.quotaSilver;
+    state.charterMissedStreak = 0;
+    faction.standing = clamp(faction.standing + c.metStandingGain, -100, 100);
+    report('📦', `The season's profit shipment (${c.quotaSilver} silver) goes out to Thornwatch.`);
+    return;
+  }
+
+  state.charterMissedStreak += 1;
+  const loss = Math.round(
+    c.standingLossPerMiss * c.streakEscalation ** (state.charterMissedStreak - 1),
+  );
+  faction.standing = clamp(faction.standing - loss, -100, 100);
+  for (const hero of livingHeroes(state)) {
+    hero.stress = clamp(hero.stress + c.missedQuotaStress, 0, TUNING.condition.maxStress);
+  }
+  report(
+    '📜',
+    `No profit shipment for Thornwatch — the charter quota goes unmet ` +
+      `(${state.charterMissedStreak} season${state.charterMissedStreak === 1 ? '' : 's'} running). Standing -${loss}.`,
+  );
+
+  if (state.charterMissedStreak >= c.seizureStreakThreshold) {
+    const seized = Math.round(state.silver * c.seizureFraction);
+    if (seized > 0) {
+      state.silver -= seized;
+      report('⚠️', `Company inspectors seize ${seized} silver from the stores in lieu of payment.`);
+    }
+  }
+}
+
 function resolveActivity(
   state: GameState,
   ctx: TurnContext,
@@ -244,11 +286,31 @@ function resolveActivity(
       report('🛌', line);
       break;
     }
+    case 'diplomacy': {
+      const dip = TUNING.diplomacy;
+      const stat = bestGoverningStat(hero, 'diplomacy');
+      const mods = traitModifiers(hero, ctx.traitDefs, 'diplomacy', ['diplomacy', 'CHARTER_COMPANY']);
+      const check = resolveCheck(rng, hero, 'diplomacy', stat, dip.atPostCheckDifficulty, mods);
+      const faction = state.factions.CHARTER_COMPANY;
+      let delta = 0;
+      if (check.tier === 'critSuccess') delta = dip.atPostStandingGainCrit;
+      else if (check.tier === 'success') delta = dip.atPostStandingGainSuccess;
+      else if (check.tier === 'failure') delta = -dip.atPostStandingLossFailure;
+      else delta = -dip.atPostStandingLossCritFailure;
+      if (isSuccess(check.tier)) markSkill(hero, 'diplomacy');
+      faction.standing = clamp(faction.standing + delta, -100, 100);
+      report(
+        '🤝',
+        `${hero.name} hosts the Company's factor: ${checkBreakdown(check)}. ` +
+          `Ansberry standing ${delta >= 0 ? '+' : ''}${delta}.`,
+      );
+      break;
+    }
     case 'unassigned':
       report('❔', `${hero.name} idles about the post.`);
       break;
     default:
-      // explore / diplomacy / build arrive with MVP 2; UI keeps them locked.
+      // build arrives later in MVP 2; UI keeps it locked.
       report('❔', `${hero.name} has nothing to do (${activity} not yet available).`);
       break;
   }

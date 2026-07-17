@@ -81,6 +81,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     queuedEvents: [],
     pendingEvents: [],
     bankruptcyClock: 0,
+    charterMissedStreak: 0,
     report: { turn: 1, lines: [], silverDelta: 0, goodsDelta: {} },
     gameOver: null,
   };

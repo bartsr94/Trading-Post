@@ -29,6 +29,7 @@ import type {
   Hero,
   LocationDef,
   LocationId,
+  SkillId,
   TraitDef,
 } from './types';
 
@@ -83,6 +84,9 @@ export function dispatchError(
   if (params.kind === 'explore') {
     if (!discoveryAtLeast(discovery, 'rumored')) return 'You have heard of no such place.';
     if (discovery === 'known') return 'There is nothing left to learn there.';
+  } else if (params.kind === 'diplomacy') {
+    if (!def.faction) return 'There is no one there to treat with.';
+    if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way there yet.';
   } else {
     if (!def.hasMarket) return 'There is no market there.';
     if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to that market yet.';
@@ -182,7 +186,8 @@ export function advanceExpeditions(
 
     if (exp.leg === 'outbound') {
       if (exp.kind === 'caravan') resolveCaravanArrival(state, ctx, exp, def, rng, report);
-      else resolveExploreArrival(state, ctx, exp, def, rng, report);
+      else if (exp.kind === 'explore') resolveExploreArrival(state, ctx, exp, def, rng, report);
+      else resolveDiplomacyArrival(state, ctx, exp, def, rng, report);
       exp.leg = 'returning';
       exp.turnsLeft = Math.max(1, def.travelTurns);
     } else {
@@ -199,7 +204,7 @@ function partyNames(state: GameState, exp: ExpeditionState): string {
 }
 
 /** The expedition hero best suited to lead a check of this skill. */
-function leadHero(state: GameState, exp: ExpeditionState, skill: 'bargain' | 'survival'): Hero {
+function leadHero(state: GameState, exp: ExpeditionState, skill: SkillId): Hero {
   const heroes = exp.heroIds.map((id) => getHero(state, id));
   return heroes.reduce((a, b) => (b.skills[skill] > a.skills[skill] ? b : a));
 }
@@ -312,6 +317,49 @@ function resolveExploreArrival(
   }
 }
 
+function resolveDiplomacyArrival(
+  state: GameState,
+  ctx: ExpeditionContext,
+  exp: ExpeditionState,
+  def: LocationDef,
+  rng: Rng,
+  report: (icon: string, text: string) => void,
+): void {
+  const dip = TUNING.diplomacy;
+  const hero = leadHero(state, exp, 'diplomacy');
+  const tags = ['diplomacy', ...def.tags, ...(def.faction ? [def.faction] : [])];
+  const mods = traitModifiers(hero, ctx.traitDefs, 'diplomacy', tags);
+  const stat = bestGoverningStat(hero, 'diplomacy');
+  const check = resolveCheck(rng, hero, 'diplomacy', stat, dip.expeditionCheckDifficulty, mods);
+  if (isSuccess(check.tier)) markSkill(hero, 'diplomacy');
+
+  let delta = 0;
+  if (check.tier === 'critSuccess') delta = dip.expeditionStandingGainCrit;
+  else if (check.tier === 'success') delta = dip.expeditionStandingGainSuccess;
+  else if (check.tier === 'failure') delta = -dip.expeditionStandingLossFailure;
+  else delta = -dip.expeditionStandingLossCritFailure;
+
+  if (def.faction) {
+    const faction = state.factions[def.faction];
+    faction.standing = clamp(faction.standing + delta, -100, 100);
+  }
+
+  if (!isSuccess(check.tier)) {
+    const stressGain =
+      check.tier === 'critFailure' ? dip.expeditionCritFailureStress : dip.expeditionFailureStress;
+    for (const id of exp.heroIds) {
+      const h = getHero(state, id);
+      h.stress = clamp(h.stress + stressGain, 0, TUNING.condition.maxStress);
+    }
+  }
+
+  report(
+    '🤝',
+    `${hero.name} treats with ${def.name}: ${checkBreakdown(check)}. ` +
+      `Standing ${delta >= 0 ? '+' : ''}${delta}.`,
+  );
+}
+
 /** Word of neighbouring places reaches the party once a node is truly visited. */
 function spreadRumors(
   state: GameState,
@@ -343,9 +391,10 @@ function resolveHomecoming(
   const haul: string[] = [];
   if (exp.silver > 0) haul.push(`${exp.silver} silver`);
   if (goodsBrought.length > 0) haul.push(goodsBrought.join(', '));
+  const tail =
+    haul.length > 0 ? ` with ${haul.join(' and ')}.` : exp.kind === 'diplomacy' ? '.' : ' with empty hands.';
   report(
     '🏠',
-    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${def.name}` +
-      (haul.length > 0 ? ` with ${haul.join(' and ')}.` : ' with empty hands.'),
+    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${def.name}${tail}`,
   );
 }

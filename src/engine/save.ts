@@ -30,6 +30,9 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
       case 1:
         current = migrateV1toV2(current, ctx);
         break;
+      case 2:
+        current = migrateV2toV3(current);
+        break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
     }
@@ -48,6 +51,15 @@ function migrateV1toV2(save: GameState, ctx?: MigrationContext): GameState {
     locations: createLocationStates(ctx?.locationDefs ?? []),
     expeditions: [],
     nextExpeditionId: 1,
+  };
+}
+
+/** v3 adds the Charter Company profit-quota clock. */
+function migrateV2toV3(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 3,
+    charterMissedStreak: 0,
   };
 }
 

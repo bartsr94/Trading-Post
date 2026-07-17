@@ -33,7 +33,12 @@ function maybeDispatch(state: GameState, rng: Rng): void {
     const loc = state.locations[d.id];
     return d.id !== 'post' && loc && (loc.discovery === 'rumored' || loc.discovery === 'visited');
   });
-  if (rng.next() < 0.5 && caravanTargets.length > 0) {
+  const envoyTargets = defs.filter((d) => {
+    const loc = state.locations[d.id];
+    return d.faction !== undefined && loc && discoveryAtLeast(loc.discovery, 'visited');
+  });
+  const roll = rng.next();
+  if (roll < 0.4 && caravanTargets.length > 0) {
     dispatchExpedition(
       state,
       {
@@ -44,6 +49,12 @@ function maybeDispatch(state: GameState, rng: Rng): void {
         buyOrders: { furs: 3 },
         silver: Math.min(20, state.silver),
       },
+      TEST_CONTENT.locationDefs,
+    );
+  } else if (roll < 0.7 && envoyTargets.length > 0) {
+    dispatchExpedition(
+      state,
+      { kind: 'diplomacy', destination: rng.pick(envoyTargets).id, heroIds },
       TEST_CONTENT.locationDefs,
     );
   } else if (exploreTargets.length > 0) {
@@ -62,7 +73,8 @@ function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
     // Standing orders: a sensible default spread.
     const party = heroesAtPost(state);
     party.forEach((hero, idx) => {
-      state.assignments[hero.id] = idx % 3 === 0 ? 'provision' : idx % 3 === 1 ? 'trade' : 'rest';
+      state.assignments[hero.id] =
+        idx % 4 === 0 ? 'provision' : idx % 4 === 1 ? 'trade' : idx % 4 === 2 ? 'rest' : 'diplomacy';
     });
     resolveTurn(state, TEST_CONTENT);
     while (state.phase === 'event' && state.pendingEvents.length > 0) {
