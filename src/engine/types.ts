@@ -68,6 +68,14 @@ export type TraitId = string; // trait ids are defined by content
 
 export type LocationId = string; // location ids are defined by content
 
+/** Unnamed-population roles (spec: RESIDENTS_SPEC.md §2). */
+export const RESIDENT_ROLES = ['farmers', 'porters', 'guards', 'craftsfolk'] as const;
+export type ResidentRole = (typeof RESIDENT_ROLES)[number];
+
+/** Transient outsiders we neither feed nor pay (RESIDENTS_SPEC.md §3, Phase B). */
+export const TRANSIENT_KINDS = ['visitorGuards', 'companyAgents', 'supplierCrew'] as const;
+export type TransientKind = (typeof TRANSIENT_KINDS)[number];
+
 export const DISCOVERY_STATES = ['unknown', 'rumored', 'visited', 'known'] as const;
 export type DiscoveryState = (typeof DISCOVERY_STATES)[number];
 
@@ -114,6 +122,13 @@ export interface ExpeditionState {
   silver: number;
   /** Standing buy orders filled at the destination market. */
   buyOrders: Partial<Record<GoodId, number>>;
+  /**
+   * Residents seconded to the party (porters add cargo, guards add escort).
+   * Removed from `residents.roles` at dispatch and returned on homecoming;
+   * still count for upkeep while away (RESIDENTS_SPEC.md §8). Optional so
+   * pre-v4 in-flight expeditions deserialize without migration.
+   */
+  residentEscort?: Partial<Record<ResidentRole, number>>;
 }
 
 export type FactionStance = 'Hostile' | 'Wary' | 'Neutral' | 'Friendly' | 'Allied';
@@ -168,6 +183,27 @@ export interface FactionState {
   standing: number; // −100..+100
 }
 
+/** The post's unnamed population (RESIDENTS_SPEC.md §3). */
+export interface ResidentState {
+  /** Per-role counts of residents doing that standing work (excludes away escorts). */
+  roles: Record<ResidentRole, number>;
+  /** Arrived-but-unassigned residents; eat & are paid, produce nothing. */
+  idle: number;
+  /** Pool-wide mood, 0–10. Gates output, growth, desertion, unrest events. */
+  contentment: number;
+  /** Composition flavor for conditions/text (e.g. 'native-kin', 'settlers'). */
+  tags: string[];
+}
+
+/** A transient group of outsiders present at the post (Phase B). */
+export interface TransientGroup {
+  id: string;
+  kind: TransientKind;
+  count: number;
+  /** Turns until they leave; -1 = indefinite (e.g. Charter-imposed agents). */
+  turnsLeft: number;
+}
+
 export interface QueuedEvent {
   eventId: string;
   fireOnTurn: number;
@@ -219,6 +255,12 @@ export interface GameState {
   /** Monotonic counter for expedition ids. */
   nextExpeditionId: number;
   factions: Record<FactionId, FactionState>;
+  /** The post's unnamed population (RESIDENTS_SPEC.md). */
+  residents: ResidentState;
+  /** Transient outsiders (Phase B); empty until spawn hooks land. */
+  transients: TransientGroup[];
+  /** Monotonic counter for transient group ids. */
+  nextTransientId: number;
   axes: Record<AxisId, number>; // −10..+10
   postTier: number; // 1–4
   /** World flags set by event outcomes, checked by conditions. */

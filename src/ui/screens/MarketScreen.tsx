@@ -7,8 +7,9 @@ import { LOCATIONS, LOCATION_DEFS } from '../../content/locations';
 import { TUNING } from '../../content/tuning';
 import { priceAt, priceOf } from '../../engine/economy';
 import { cargoCapacity, cargoUnits, dispatchError } from '../../engine/expeditions';
+import { residentsAvailable } from '../../engine/residents';
 import { discoveryAtLeast, heroesAtPost } from '../../engine/types';
-import type { GameState, GoodId } from '../../engine/types';
+import type { GameState, GoodId, ResidentRole } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 
 export function MarketScreen({ game }: { game: GameState }) {
@@ -22,6 +23,7 @@ export function MarketScreen({ game }: { game: GameState }) {
   const [cargo, setCargo] = useState<Partial<Record<GoodId, number>>>({});
   const [buyOrders, setBuyOrders] = useState<Partial<Record<GoodId, number>>>({});
   const [silverCarried, setSilverCarried] = useState(0);
+  const [escort, setEscort] = useState<Partial<Record<ResidentRole, number>>>({});
   const [error, setError] = useState<string | null>(null);
 
   const destinations = LOCATIONS.filter((def) => {
@@ -31,8 +33,16 @@ export function MarketScreen({ game }: { game: GameState }) {
   });
   const destination = destinationId ? LOCATION_DEFS.get(destinationId) ?? null : null;
   const available = heroesAtPost(game);
-  const capacity = cargoCapacity(Math.max(1, party.length));
+  const capacity = cargoCapacity(Math.max(1, party.length), escort);
   const loaded = cargoUnits(cargo);
+  const portersFree = residentsAvailable(game, 'porters');
+  const guardsFree = residentsAvailable(game, 'guards');
+
+  const setEscortQty = (role: ResidentRole, raw: string, max: number) => {
+    setError(null);
+    const qty = Math.max(0, Math.min(max, Math.floor(Number(raw) || 0)));
+    setEscort((prev) => ({ ...prev, [role]: qty }));
+  };
 
   const setQty = (
     setter: typeof setCargo,
@@ -65,6 +75,7 @@ export function MarketScreen({ game }: { game: GameState }) {
       cargo,
       silver: silverCarried,
       buyOrders,
+      residents: escort,
     };
     const reason = dispatchError(game, params, LOCATION_DEFS);
     if (reason) {
@@ -76,6 +87,7 @@ export function MarketScreen({ game }: { game: GameState }) {
       setCargo({});
       setBuyOrders({});
       setSilverCarried(0);
+      setEscort({});
       setError(null);
     }
   };
@@ -172,6 +184,41 @@ export function MarketScreen({ game }: { game: GameState }) {
                     {hero.name} <span className="dim">(Bargain {hero.skills.bargain})</span>
                   </label>
                 ))}
+
+                {(portersFree > 0 || guardsFree > 0) && (
+                  <>
+                    <h3 style={{ marginTop: 12 }}>Escort</h3>
+                    <p className="dim" style={{ fontSize: '0.78rem', margin: '0 0 6px' }}>
+                      Porters carry more; guards steady the bargaining.
+                    </p>
+                    <div className="cargo-grid">
+                      {portersFree > 0 && (
+                        <label className="dim">
+                          Porters <span style={{ fontSize: '0.75rem' }}>(of {portersFree})</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={portersFree}
+                            value={escort.porters ?? 0}
+                            onChange={(e) => setEscortQty('porters', e.target.value, portersFree)}
+                          />
+                        </label>
+                      )}
+                      {guardsFree > 0 && (
+                        <label className="dim">
+                          Guards <span style={{ fontSize: '0.75rem' }}>(of {guardsFree})</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={guardsFree}
+                            value={escort.guards ?? 0}
+                            onChange={(e) => setEscortQty('guards', e.target.value, guardsFree)}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <h3 style={{ marginTop: 12 }}>
                   Cargo <span className="dim" style={{ fontSize: '0.8rem' }}>({loaded}/{capacity})</span>

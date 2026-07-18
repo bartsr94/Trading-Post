@@ -2,6 +2,7 @@
 // stub from day one. localStorage autosave each turn + manual export/import.
 
 import { TUNING } from '../content/tuning';
+import { freshResidents } from './residents';
 import { createLocationStates } from './state';
 import type { GameState, LocationDef } from './types';
 
@@ -33,6 +34,9 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
       case 2:
         current = migrateV2toV3(current);
         break;
+      case 3:
+        current = migrateV3toV4(current);
+        break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
     }
@@ -60,6 +64,17 @@ function migrateV2toV3(save: GameState): GameState {
     ...save,
     saveVersion: 3,
     charterMissedStreak: 0,
+  };
+}
+
+/** v4 adds the resident population and the (empty) transient layer. */
+function migrateV3toV4(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 4,
+    residents: freshResidents(),
+    transients: [],
+    nextTransientId: 1,
   };
 }
 

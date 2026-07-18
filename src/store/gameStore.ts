@@ -10,6 +10,7 @@ import { CONTENT } from '../content/registry';
 import { buyGood, sellGood } from '../engine/economy';
 import { dispatchExpedition } from '../engine/expeditions';
 import type { DispatchParams } from '../engine/expeditions';
+import { hireResidents, reallocate } from '../engine/residents';
 import { evalConditions } from '../engine/events/conditions';
 import type { TravelContext } from '../engine/events/types';
 import { autosave, clearAutosave, deserialize, loadAutosave, serialize } from '../engine/save';
@@ -21,7 +22,7 @@ import {
   resolveTurn,
 } from '../engine/turn';
 import type { ChoiceResolution } from '../engine/turn';
-import type { ActiveEvent, ActivityId, GameState, GoodId } from '../engine/types';
+import type { ActiveEvent, ActivityId, GameState, GoodId, ResidentRole } from '../engine/types';
 
 export type Screen = 'post' | 'assignments' | 'map' | 'market';
 
@@ -57,6 +58,14 @@ interface GameStore {
   sell: (good: GoodId, qty: number) => void;
   /** Dispatch a caravan or explore party. Returns false if the dispatch is invalid. */
   dispatch: (params: DispatchParams) => boolean;
+  /** Hire residents of a role from the neighbouring towns. Returns false if invalid. */
+  hire: (role: ResidentRole, count: number) => boolean;
+  /** Move residents between roles/idle at the post. Returns false if invalid. */
+  reallocateResidents: (
+    from: ResidentRole | 'idle',
+    to: ResidentRole | 'idle',
+    count: number,
+  ) => boolean;
 }
 
 function draft(game: GameState): GameState {
@@ -194,6 +203,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!game || game.phase !== 'assignment') return false;
     const next = draft(game);
     if (!dispatchExpedition(next, params, CONTENT.locationDefs)) return false;
+    autosave(next);
+    set({ game: next });
+    return true;
+  },
+
+  hire: (role, count) => {
+    const { game } = get();
+    if (!game || game.phase !== 'assignment') return false;
+    const next = draft(game);
+    if (!hireResidents(next, role, count)) return false;
+    autosave(next);
+    set({ game: next });
+    return true;
+  },
+
+  reallocateResidents: (from, to, count) => {
+    const { game } = get();
+    if (!game || game.phase !== 'assignment') return false;
+    const next = draft(game);
+    if (!reallocate(next, from, to, count)) return false;
     autosave(next);
     set({ game: next });
     return true;

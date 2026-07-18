@@ -38,6 +38,10 @@ The post sits at the center of a **node graph** of ten locations — four factio
 
 Faction standing moves two ways: a hero on the **Diplomacy** standing order hosts the Ansberry Company's factor at the post each turn (Company standing only), or a party can be sent as an **envoy** to any faction's seat for a bigger, riskier swing with that faction specifically. Separately, the Company expects a profit shipment every season (quarterly) — pay it and standing nudges up; miss it and the consequences escalate turn over turn: standing losses compound, the company grows more stressed, and persistent non-payment eventually gets silver seized outright.
 
+## The post's people
+
+Beyond the six named heroes, the post gathers an **unnamed population** — farmers, porters, guards, and craftsfolk you feed, pay, and put to work. It's a pool you shape rather than a roster you command: farmers grow grain, porters haul more cargo when seconded to a caravan, guards steady a party on the road and hold the palisade, craftsfolk keep the place mended. Hire hands from the neighbouring towns, draw them in as the post prospers or as it grows more integrated with the native peoples, and assign idle newcomers to a trade. They eat every turn and draw wages every season; let either run short and **contentment** slides from content to grumbling to open unrest — output falls, then people desert. Manage it all from the Post screen's *People* panel.
+
 ## Interface
 
 The game runs as a fixed full-viewport shell, King of Dragon Pass style: a
@@ -57,6 +61,7 @@ src/
     turn.ts        # turn pipeline: economy → expeditions → activities → events
     economy.ts     # prices, drift, trade math (post market + per-location markets)
     expeditions.ts # caravan, explore & envoy dispatch and per-turn resolution
+    residents.ts   # unnamed population: roles, contentment, upkeep, escorts
     events/        # event selection, conditions, hero binding, outcomes
     rng.ts         # seeded PRNG (runs are reproducible)
     save.ts        # versioned JSON saves + migrations
@@ -75,7 +80,7 @@ The engine never hardcodes content: new events, heroes, traits, or locations are
 ## Roadmap
 
 - **MVP 1 — the loop works** *(complete)*: core turn loop, heroes, visible checks, event engine, post market, saves.
-- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; faction diplomacy & the Charter quota ✅; still open — buildings & post tiers, settlement axes in full, roster churn & recruitment, event count to ~60 (27 so far), failure states with narrative endings.
+- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅; still open — buildings & post tiers, settlement axes in full, roster churn & recruitment, event count to ~60 (27 so far), failure states with narrative endings.
 - **MVP 3 — it's a game**: balance pass, seasonal content, endgame variants, art, audio, onboarding.
 
 Hero names, cultures, faction identities, and location names are grounded in the Ashmark region of Palusteria; a handful of minor wilderness-node names and one trait name are still open.

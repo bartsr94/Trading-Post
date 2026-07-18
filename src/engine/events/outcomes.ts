@@ -2,6 +2,7 @@
 // log lines for the event panel and turn report.
 
 import { TUNING } from '../../content/tuning';
+import { addResidents, adjustContentment, loseResidents } from '../residents';
 import { clamp, getHero, livingHeroes, nextDiscovery } from '../types';
 import type { DiscoveryState, ExpeditionState, GameState, GoodId, LocationId } from '../types';
 import type { Outcome } from './types';
@@ -110,6 +111,32 @@ export function applyOutcomes(
         log.push(
           `${ctx.goodNames.get(outcome.good) ?? outcome.good} prices ${outcome.mod > 1 ? 'surge' : 'slump'}`,
         );
+        break;
+      }
+      case 'addResidents': {
+        const added = addResidents(state, outcome.role, outcome.count, outcome.tag);
+        if (added > 0) log.push(`+${added} resident${added === 1 ? '' : 's'}`);
+        else log.push('No room for newcomers');
+        break;
+      }
+      case 'loseResidents': {
+        const lost = loseResidents(state, outcome.role, outcome.count);
+        if (lost > 0) log.push(`−${lost} resident${lost === 1 ? '' : 's'}`);
+        break;
+      }
+      case 'contentment': {
+        adjustContentment(state, outcome.delta);
+        log.push(`Residents ${outcome.delta >= 0 ? 'heartened' : 'discontented'}`);
+        break;
+      }
+      case 'addTransient': {
+        state.transients.push({
+          id: `tr_${state.nextTransientId}`,
+          kind: outcome.kind,
+          count: outcome.count,
+          turnsLeft: outcome.turns,
+        });
+        state.nextTransientId += 1;
         break;
       }
       case 'heroDeparts': {

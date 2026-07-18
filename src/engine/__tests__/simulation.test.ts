@@ -6,8 +6,15 @@ import { evalConditions } from '../events/conditions';
 import { dispatchExpedition } from '../expeditions';
 import type { TravelContext } from '../events/types';
 import { Rng } from '../rng';
+import {
+  hireResidents,
+  reallocate,
+  residentCap,
+  residentsAvailable,
+  residentTotal,
+} from '../residents';
 import { advancePendingEvent, advanceTurn, resolveChoice, resolveTurn } from '../turn';
-import { discoveryAtLeast, heroesAtPost } from '../types';
+import { discoveryAtLeast, heroesAtPost, RESIDENT_ROLES } from '../types';
 import type { ActiveEvent, GameState } from '../types';
 import { TEST_CONTENT, testState } from './helpers';
 
@@ -48,6 +55,10 @@ function maybeDispatch(state: GameState, rng: Rng): void {
         cargo: { tools: Math.min(2, state.goods.tools), salt: Math.min(2, state.goods.salt) },
         buyOrders: { furs: 3 },
         silver: Math.min(20, state.silver),
+        residents: {
+          porters: Math.min(2, residentsAvailable(state, 'porters')),
+          guards: Math.min(1, residentsAvailable(state, 'guards')),
+        },
       },
       TEST_CONTENT.locationDefs,
     );
@@ -69,6 +80,11 @@ function maybeDispatch(state: GameState, rng: Rng): void {
 function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
   for (let i = 0; i < turns; i++) {
     if (state.gameOver) return;
+    // Take on a few hands when there's room and coin, and put idle ones to work.
+    if (state.turn % 2 === 0 && state.silver > 80 && residentTotal(state) < residentCap(state)) {
+      hireResidents(state, choiceRng.next() < 0.5 ? 'farmers' : 'porters', 1);
+    }
+    if (state.residents.idle > 0) reallocate(state, 'idle', 'guards', state.residents.idle);
     maybeDispatch(state, choiceRng);
     // Standing orders: a sensible default spread.
     const party = heroesAtPost(state);
@@ -119,6 +135,12 @@ describe('full-season simulation', () => {
         expect(exp.silver).toBeGreaterThanOrEqual(0);
         for (const qty of Object.values(exp.cargo)) expect(qty).toBeGreaterThanOrEqual(0);
       }
+      // Resident pool invariants: non-negative, within cap, mood in band.
+      for (const role of RESIDENT_ROLES) expect(s.residents.roles[role]).toBeGreaterThanOrEqual(0);
+      expect(s.residents.idle).toBeGreaterThanOrEqual(0);
+      expect(residentTotal(s)).toBeLessThanOrEqual(residentCap(s));
+      expect(s.residents.contentment).toBeGreaterThanOrEqual(0);
+      expect(s.residents.contentment).toBeLessThanOrEqual(10);
     }
   });
 

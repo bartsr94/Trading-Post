@@ -11,10 +11,12 @@ import type {
   GoodId,
   LocationDef,
   LocationId,
+  ResidentRole,
   Season,
   SkillId,
   StatId,
   TraitId,
+  TransientKind,
 } from '../types';
 
 /** Present while evaluating travel events: the expedition they happen to. */
@@ -46,6 +48,10 @@ export type Condition =
   | { type: 'flag'; flag: string }
   | { type: 'notFlag'; flag: string }
   | { type: 'partySizeAtLeast'; value: number }
+  | { type: 'residentsAtLeast'; role?: ResidentRole; value: number }
+  | { type: 'residentsBelow'; role?: ResidentRole; value: number }
+  | { type: 'contentmentAtLeast'; value: number }
+  | { type: 'contentmentAtMost'; value: number }
   | { type: 'locationDiscovery'; location: LocationId; atLeast: DiscoveryState }
   // Travel-only conditions (false outside an expedition context):
   | { type: 'expeditionKind'; kind: ExpeditionKind }
@@ -80,6 +86,10 @@ export type Outcome =
   | { type: 'queueEvent'; eventId: string; delayTurns: number; sameHero?: boolean }
   | { type: 'setFlag'; flag: string; value?: boolean }
   | { type: 'priceShock'; good: GoodId; mod: number }
+  | { type: 'addResidents'; role: ResidentRole | 'idle'; count: number; tag?: string }
+  | { type: 'loseResidents'; role?: ResidentRole; count: number }
+  | { type: 'contentment'; delta: number }
+  | { type: 'addTransient'; kind: TransientKind; count: number; turns: number }
   | { type: 'heroDeparts' }
   | { type: 'history'; text: string }
   /** Advance a location's discovery (default: the expedition's destination). */

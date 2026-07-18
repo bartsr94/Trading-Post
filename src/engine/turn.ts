@@ -15,6 +15,15 @@ import type { CheckResult } from './checks';
 import { driftMarket, priceOf, prosperity } from './economy';
 import type { GoodDef } from './economy';
 import { advanceExpeditions } from './expeditions';
+import {
+  applyAxisArrivals,
+  applyDesertion,
+  applyGrowth,
+  outputMultiplier,
+  residentsAvailable,
+  residentTotal,
+  updateContentment,
+} from './residents';
 import { applyOutcomes } from './events/outcomes';
 import type { OutcomeContext } from './events/outcomes';
 import { selectEvents } from './events/selection';
@@ -80,7 +89,7 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
 
   // 1. Economy tick: price drift, then food + upkeep + the Charter quota.
   driftMarket(state, rng);
-  payUpkeep(state, ctx, report);
+  const missedFood = payUpkeep(state, ctx, report);
 
   if (state.bankruptcyClock >= TUNING.economy.bankruptcyTurns) {
     declareGameOver(state, 'bankrupt');
@@ -89,6 +98,7 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   }
 
   payCharterQuota(state, report);
+  const missedWages = payResidentWages(state, report);
 
   // 2. Expeditions move (and may resolve) before at-post activities.
   advanceExpeditions(state, ctx, rng, report);
@@ -97,6 +107,9 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   for (const hero of heroesAtPost(state)) {
     resolveActivity(state, ctx, hero, rng, report);
   }
+
+  // 3b. The resident society settles: mood, desertion, growth, arrivals.
+  resolveResidentSociety(state, ctx, rng, report, { missedFood, missedWages });
 
   // 4. Stress breakdowns queue their event for immediate selection
   //    (heroes away break down once they are home to do it).
@@ -137,19 +150,33 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   state.rngState = rng.getState();
 }
 
+/** Food + post upkeep for heroes and residents. Returns whether food ran short. */
 function payUpkeep(
   state: GameState,
   ctx: TurnContext,
   report: (icon: string, text: string) => void,
-): void {
+): boolean {
   const party = livingHeroes(state);
-  const grainNeeded = party.length * TUNING.economy.grainPerHeroPerTurn;
+  const res = TUNING.residents;
+
+  // Farmers work their plots before the post eats (mood scales the yield).
+  const farmers = residentsAvailable(state, 'farmers');
+  const grown = Math.round(farmers * res.effects.grainPerFarmerPerTurn * outputMultiplier(state));
+  if (grown > 0) {
+    state.goods.grain += grown;
+    report('🌾', `The fields yield ${grown} grain.`);
+  }
+
+  const mouths = residentTotal(state);
+  const grainNeeded =
+    party.length * TUNING.economy.grainPerHeroPerTurn + mouths * res.grainPerResidentPerTurn;
   const grainDef = ctx.goodDefs.get('grain');
   let missed = false;
+  let missedFood = false;
 
   if (state.goods.grain >= grainNeeded) {
     state.goods.grain -= grainNeeded;
-    report('🍞', `The company eats ${grainNeeded} grain.`);
+    report('🍞', `The post eats ${grainNeeded} grain.`);
   } else if (grainDef) {
     const shortfall = grainNeeded - state.goods.grain;
     const cost = shortfall * priceOf(state, grainDef);
@@ -160,12 +187,20 @@ function payUpkeep(
     } else {
       state.goods.grain = 0;
       missed = true;
+      missedFood = true;
       report('⚠️', 'Not enough food. Bellies are empty and tempers fray.');
     }
   }
 
-  if (!missed && state.silver >= TUNING.economy.postUpkeepSilver) {
-    state.silver -= TUNING.economy.postUpkeepSilver;
+  // Craftsfolk keep the place mended, easing the silver upkeep.
+  const craftsfolk = residentsAvailable(state, 'craftsfolk');
+  const relief = Math.round(
+    craftsfolk * res.effects.upkeepReliefPerCraftsperson * outputMultiplier(state),
+  );
+  const upkeep = Math.max(0, TUNING.economy.postUpkeepSilver - relief);
+
+  if (!missed && state.silver >= upkeep) {
+    state.silver -= upkeep;
   } else if (!missed) {
     missed = true;
     report('⚠️', 'The post’s upkeep goes unpaid.');
@@ -182,6 +217,79 @@ function payUpkeep(
     );
   } else {
     state.bankruptcyClock = 0;
+  }
+
+  return missedFood;
+}
+
+/** Quarterly (season-end) wages for the resident pool. Returns whether they went short. */
+function payResidentWages(
+  state: GameState,
+  report: (icon: string, text: string) => void,
+): boolean {
+  if (!isSeasonEnd(state.turn)) return false;
+  const total = residentTotal(state);
+  if (total === 0) return false;
+
+  const bill = total * TUNING.residents.seasonWagePerResident;
+  if (state.silver >= bill) {
+    state.silver -= bill;
+    report('🪙', `The season's wages (${bill} silver) go out to the post's people.`);
+    return false;
+  }
+
+  state.silver = 0;
+  report('⚠️', `Wages go unpaid this season — ${total} mouths and an empty strongbox.`);
+  return true;
+}
+
+/** Mood, desertion, growth, and axis-driven arrivals for the resident pool. */
+function resolveResidentSociety(
+  state: GameState,
+  ctx: TurnContext,
+  rng: Rng,
+  report: (icon: string, text: string) => void,
+  flags: { missedFood: boolean; missedWages: boolean },
+): void {
+  advanceTransients(state, report);
+  if (residentTotal(state) === 0) return;
+
+  updateContentment(state, flags);
+
+  const deserted = applyDesertion(state);
+  if (deserted > 0) {
+    report('🚪', `${deserted} resident${deserted === 1 ? '' : 's'} desert the post in the unrest.`);
+  }
+
+  const grew = applyGrowth(state, rng, prosperity(state, ctx.goodDefs));
+  if (grew > 0) report('👪', 'A new pair of hands drifts in to join the post.');
+
+  if (isSeasonEnd(state.turn)) {
+    for (const arrival of applyAxisArrivals(state)) {
+      report(
+        arrival.tag === 'native-kin' ? '🪶' : '🏡',
+        arrival.tag === 'native-kin'
+          ? `Native kin settle at the post (${arrival.count}).`
+          : `Settler families put down roots (${arrival.count}).`,
+      );
+    }
+  }
+}
+
+/** Transient outsiders count down and leave (Phase B spawns them). */
+function advanceTransients(
+  state: GameState,
+  report: (icon: string, text: string) => void,
+): void {
+  const leaving: string[] = [];
+  for (const t of state.transients) {
+    if (t.turnsLeft < 0) continue; // indefinite
+    t.turnsLeft -= 1;
+    if (t.turnsLeft <= 0) leaving.push(t.id);
+  }
+  if (leaving.length > 0) {
+    state.transients = state.transients.filter((t) => !leaving.includes(t.id));
+    report('👋', 'Visitors take their leave of the post.');
   }
 }
 

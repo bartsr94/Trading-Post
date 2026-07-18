@@ -3,7 +3,7 @@
 
 export const TUNING = {
   save: {
-    version: 3,
+    version: 4,
     autosaveKey: 'trading-post-save',
   },
 
@@ -124,6 +124,69 @@ export const TUNING = {
     expeditionStandingLossCritFailure: 4,
     expeditionFailureStress: 1,
     expeditionCritFailureStress: 2,
+  },
+
+  residents: {
+    /** Provisional cap by post tier; buildings add to this later (Phase C). */
+    capByTier: { 1: 4, 2: 10, 3: 20, 4: 40 } as Record<number, number>,
+    /** Grain eaten per resident per turn (heroes eat separately). */
+    grainPerResidentPerTurn: 1,
+    /** Silver wage per resident, paid at each season end (Charter cadence). */
+    seasonWagePerResident: 6,
+    contentment: {
+      start: 7,
+      min: 0,
+      max: 10,
+      /** ≥ this = content (full output, may grow). */
+      contentThreshold: 7,
+      /** ≤ this = unrest (output penalty, desertion, unrest events). */
+      unrestThreshold: 3,
+      /** Upward drift when fed, paid, roomy, and not idle-heavy. */
+      fedPaidDrift: 1,
+      missedFoodPenalty: 2,
+      missedWagePenalty: 2,
+      /** Per resident over cap, per turn. */
+      overCapPenalty: 1,
+      /** Idle residents beyond this many start dragging contentment. */
+      idleTolerance: 2,
+      idlePenalty: 1,
+      /** Role output multipliers by band. */
+      grumblingOutputMult: 0.75,
+      unrestOutputMult: 0.4,
+    },
+    desertion: {
+      /** Fraction of the pool that deserts each unrest turn. */
+      unrestDesertRate: 0.2,
+      /** Desertion rate reduced per point of post defense (guards). */
+      guardSuppressionPerPoint: 0.02,
+    },
+    growth: {
+      /** Per-turn chance of +1 idle resident when content and under cap. */
+      baseGrowthChance: 0.15,
+      /** Added to the chance per point of prosperity. */
+      prosperityBonus: 0.01,
+    },
+    effects: {
+      grainPerFarmerPerTurn: 2,
+      cargoPerPorter: 15,
+      /** Escort bonus to a caravan/explore/envoy arrival check when guards ride along. */
+      guardEscortBonus: 2,
+      postDefensePerGuard: 1,
+      /** Silver upkeep relief per craftsperson (repairs). */
+      upkeepReliefPerCraftsperson: 1,
+    },
+    hire: {
+      costPerHead: { farmers: 20, porters: 15, guards: 30, craftsfolk: 40 } as Record<
+        string,
+        number
+      >,
+    },
+    axisGrowth: {
+      integrationThreshold: 4,
+      communalThreshold: 4,
+      /** Residents added per qualifying axis at each season end. */
+      arrivalsPerSeason: 1,
+    },
   },
 
   charter: {
