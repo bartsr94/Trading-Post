@@ -4,12 +4,14 @@
 import type { GameState } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import type { Screen } from '../../store/gameStore';
+import { Icon } from './Icon';
+import type { IconName } from './Icon';
 
-const NAV_ITEMS: { screen: Screen; icon: string; label: string }[] = [
-  { screen: 'post', icon: '🏕️', label: 'Post' },
-  { screen: 'assignments', icon: '📜', label: 'Assignments' },
-  { screen: 'map', icon: '🗺️', label: 'Map' },
-  { screen: 'market', icon: '⚖️', label: 'Market' },
+const NAV_ITEMS: { screen: Screen; icon: IconName; label: string }[] = [
+  { screen: 'post', icon: 'post', label: 'Post' },
+  { screen: 'assignments', icon: 'assignments', label: 'Assignments' },
+  { screen: 'map', icon: 'map', label: 'Map' },
+  { screen: 'market', icon: 'market', label: 'Market' },
 ];
 
 export function Sidebar({ game }: { game: GameState }) {
@@ -46,7 +48,7 @@ export function Sidebar({ game }: { game: GameState }) {
             onClick={() => setScreen(item.screen)}
           >
             <span className="icon" aria-hidden="true">
-              {item.icon}
+              <Icon name={item.icon} />
             </span>
             <span className="label">
               {item.label}
