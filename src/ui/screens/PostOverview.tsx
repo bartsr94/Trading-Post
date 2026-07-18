@@ -7,11 +7,19 @@ import { LOCATION_NAMES } from '../../content/locations';
 import { prosperity } from '../../engine/economy';
 import { CONTENT } from '../../content/registry';
 import { stanceOf } from '../../engine/types';
-import type { GameState } from '../../engine/types';
+import type { ExpeditionState, GameState } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
+import { Icon } from '../components/Icon';
+import type { IconName } from '../components/Icon';
 import { ResidentsPanel } from '../components/ResidentsPanel';
 
 const TIER_NAMES = ['The Clearing', 'Palisade Post', 'Established Post', 'Thriving Settlement'];
+
+const EXPEDITION_KIND_ICONS: Record<ExpeditionState['kind'], IconName> = {
+  caravan: 'caravan',
+  explore: 'explore',
+  diplomacy: 'diplomacy',
+};
 
 function AxisIndicator({
   value,
@@ -67,7 +75,7 @@ export function PostOverview({ game }: { game: GameState }) {
               </div>
             )}
           </div>
-          <h3 style={{ marginTop: 16 }}>Factions</h3>
+          <h4 style={{ marginTop: 16 }}>Factions</h4>
           {FACTIONS.map((f) => {
             const standing = game.factions[f.id].standing;
             return (
@@ -108,7 +116,7 @@ export function PostOverview({ game }: { game: GameState }) {
             .
           </p>
 
-          <h3 style={{ marginTop: 16 }}>Comings &amp; Goings</h3>
+          <h4 style={{ marginTop: 16 }}>Comings &amp; Goings</h4>
           {game.expeditions.length === 0 ? (
             <p className="dim" style={{ fontSize: '0.85rem' }}>
               Everyone is at the post. The road waits.
@@ -122,7 +130,12 @@ export function PostOverview({ game }: { game: GameState }) {
               return (
                 <div key={exp.id} className="faction-row">
                   <span>
-                    {exp.kind === 'caravan' ? '🐴' : exp.kind === 'explore' ? '🗺️' : '🤝'} {names}
+                    <Icon
+                      name={EXPEDITION_KIND_ICONS[exp.kind]}
+                      size={14}
+                      style={{ verticalAlign: '-2px', marginRight: 4 }}
+                    />
+                    {names}
                   </span>
                   <span className="dim">
                     {exp.leg === 'outbound' ? `→ ${dest}` : `${dest} → home`} ({exp.turnsLeft}{' '}
@@ -133,9 +146,9 @@ export function PostOverview({ game }: { game: GameState }) {
             })
           )}
         </div>
-
-        <ResidentsPanel game={game} />
       </div>
+
+      <ResidentsPanel game={game} />
     </div>
   );
 }

@@ -67,7 +67,7 @@ src/
     save.ts        # versioned JSON saves + migrations
   content/     # pure data — heroes, traits, goods, factions, locations, events, tuning
   ui/          # React screens & components
-    components/    # Sidebar, HeroBar, Portrait, ConditionBars, Illustration
+    components/    # Sidebar, HeroBar, Portrait, Icon, ConditionBars, Illustration
     screens/       # one component per Screen (Post, Assignments, Map, Market, Hero Sheet, ...)
     portraits.ts    # portraitKey → bundled asset URL registry (see assets/portraits/)
   assets/

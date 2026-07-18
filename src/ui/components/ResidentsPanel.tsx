@@ -83,43 +83,45 @@ export function ResidentsPanel({ game }: { game: GameState }) {
         </>
       )}
 
-      <h3 style={{ marginTop: 14 }}>Hands</h3>
-      {RESIDENT_ROLES.map((role) => {
-        const reason = hireError(game, role, 1);
-        return (
-          <div key={role} className="faction-row" title={ROLE_NOTES[role]}>
-            <span>
-              {ROLE_LABELS[role]} <b>{r.roles[role]}</b>
-            </span>
-            <span style={{ whiteSpace: 'nowrap' }}>
-              {r.roles[role] > 0 && (
+      <h4 style={{ marginTop: 14 }}>Hands</h4>
+      <div className="hands-grid">
+        {RESIDENT_ROLES.map((role) => {
+          const reason = hireError(game, role, 1);
+          return (
+            <div key={role} className="hand-cell" title={ROLE_NOTES[role]}>
+              <div>
+                {ROLE_LABELS[role]} <b>{r.roles[role]}</b>
+              </div>
+              <div className="hand-cell-actions">
+                {r.roles[role] > 0 && (
+                  <button
+                    className="small"
+                    disabled={!canAct}
+                    title="Send to the idle pool"
+                    onClick={() => reallocate(role, 'idle', 1)}
+                  >
+                    Release
+                  </button>
+                )}
                 <button
-                  className="small"
-                  disabled={!canAct}
-                  title="Send to the idle pool"
-                  onClick={() => reallocate(role, 'idle', 1)}
+                  className="small primary"
+                  disabled={!canAct || reason !== null}
+                  title={reason ?? `Hire for ${TUNING.residents.hire.costPerHead[role]} silver`}
+                  onClick={() => hire(role, 1)}
                 >
-                  Release
+                  Hire ({TUNING.residents.hire.costPerHead[role]})
                 </button>
-              )}{' '}
-              <button
-                className="small"
-                disabled={!canAct || reason !== null}
-                title={reason ?? `Hire for ${TUNING.residents.hire.costPerHead[role]} silver`}
-                onClick={() => hire(role, 1)}
-              >
-                Hire ({TUNING.residents.hire.costPerHead[role]})
-              </button>
-            </span>
-          </div>
-        );
-      })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       {r.idle > 0 && (
         <>
-          <h3 style={{ marginTop: 14 }}>
+          <h4 style={{ marginTop: 14 }}>
             Idle Hands <span className="dim" style={{ fontSize: '0.8rem' }}>({r.idle})</span>
-          </h3>
+          </h4>
           <p className="dim" style={{ fontSize: '0.78rem', margin: '0 0 6px' }}>
             Newcomers with nothing to do yet. Put them to work — idle hands sour the mood.
           </p>

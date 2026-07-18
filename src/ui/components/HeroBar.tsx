@@ -8,26 +8,39 @@ import { livingHeroes } from '../../engine/types';
 import type { ExpeditionState, GameState, Hero } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from './ConditionBars';
+import { Icon } from './Icon';
+import type { IconName } from './Icon';
 import { Portrait } from './Portrait';
 
-const KIND_ICONS: Record<ExpeditionState['kind'], string> = {
-  caravan: '🐴',
-  explore: '🗺️',
-  diplomacy: '🤝',
+const KIND_ICONS: Record<ExpeditionState['kind'], IconName> = {
+  caravan: 'caravan',
+  explore: 'explore',
+  diplomacy: 'diplomacy',
 };
 
-function statusLine(game: GameState, hero: Hero, expedition: ExpeditionState | undefined): string {
+function StatusLine({
+  game,
+  hero,
+  expedition,
+}: {
+  game: GameState;
+  hero: Hero;
+  expedition: ExpeditionState | undefined;
+}) {
   if (expedition) {
     const dest = LOCATION_NAMES.get(expedition.destination) ?? expedition.destination;
     const turns = `${expedition.turnsLeft} turn${expedition.turnsLeft === 1 ? '' : 's'}`;
-    return expedition.leg === 'outbound'
-      ? `${KIND_ICONS[expedition.kind]} → ${dest} (${turns})`
-      : `${KIND_ICONS[expedition.kind]} ${dest} → home (${turns})`;
+    return (
+      <>
+        <Icon name={KIND_ICONS[expedition.kind]} size={12} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+        {expedition.leg === 'outbound' ? `→ ${dest} (${turns})` : `${dest} → home (${turns})`}
+      </>
+    );
   }
   const activity = game.assignments[hero.id];
-  return activity
-    ? `Assigned: ${activity.charAt(0).toUpperCase()}${activity.slice(1)}`
-    : 'At the post.';
+  return (
+    <>{activity ? `Assigned: ${activity.charAt(0).toUpperCase()}${activity.slice(1)}` : 'At the post.'}</>
+  );
 }
 
 function HeroTile({ game, hero }: { game: GameState; hero: Hero }) {
@@ -41,7 +54,7 @@ function HeroTile({ game, hero }: { game: GameState; hero: Hero }) {
       </button>
       {expedition && (
         <span className="away-marker" aria-hidden="true">
-          {KIND_ICONS[expedition.kind]}
+          <Icon name={KIND_ICONS[expedition.kind]} size={16} />
         </span>
       )}
       <div className="hero-tooltip" role="tooltip">
@@ -49,7 +62,9 @@ function HeroTile({ game, hero }: { game: GameState; hero: Hero }) {
           {hero.name} <span className="dim">{hero.epithet}</span>
         </div>
         <ConditionBars hero={hero} />
-        <div className="status dim">{statusLine(game, hero, expedition)}</div>
+        <div className="status dim">
+          <StatusLine game={game} hero={hero} expedition={expedition} />
+        </div>
       </div>
     </div>
   );
