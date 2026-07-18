@@ -5,6 +5,7 @@ import { SKILL_IDS, STAT_IDS } from '../../engine/types';
 import type { Hero } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from '../components/ConditionBars';
+import { Portrait } from '../components/Portrait';
 
 export function HeroSheet({ hero }: { hero: Hero }) {
   const selectHero = useGameStore((s) => s.selectHero);
@@ -12,14 +13,21 @@ export function HeroSheet({ hero }: { hero: Hero }) {
   return (
     <div className="overlay" onClick={() => selectHero(null)}>
       <div className="panel hero-sheet" onClick={(e) => e.stopPropagation()}>
-        <h2>
-          {hero.name} <span className="dim">{hero.epithet}</span>
-        </h2>
-        <p className="dim" style={{ fontSize: '0.88rem' }}>{hero.bio}</p>
-        <ConditionBars hero={hero} />
-        {hero.status !== 'active' && (
-          <p className="bad">{hero.status === 'dead' ? '☠ Dead' : 'Departed'}</p>
-        )}
+        <div className="hero-sheet-head">
+          <div className="hero-sheet-portrait">
+            <Portrait hero={hero} />
+          </div>
+          <div>
+            <h2>
+              {hero.name} <span className="dim">{hero.epithet}</span>
+            </h2>
+            <p className="dim" style={{ fontSize: '0.88rem' }}>{hero.bio}</p>
+            <ConditionBars hero={hero} />
+            {hero.status !== 'active' && (
+              <p className="bad">{hero.status === 'dead' ? '☠ Dead' : 'Departed'}</p>
+            )}
+          </div>
+        </div>
 
         <h3 style={{ marginTop: 14 }}>Stats</h3>
         <div className="skill-grid">

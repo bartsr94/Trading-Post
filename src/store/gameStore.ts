@@ -23,7 +23,7 @@ import {
 import type { ChoiceResolution } from '../engine/turn';
 import type { ActiveEvent, ActivityId, GameState, GoodId } from '../engine/types';
 
-export type Screen = 'post' | 'assignments' | 'heroes' | 'map' | 'market';
+export type Screen = 'post' | 'assignments' | 'map' | 'market';
 
 const MIGRATION_CTX = { locationDefs: LOCATIONS };
 
