@@ -38,6 +38,16 @@ The post sits at the center of a **node graph** of ten locations — four factio
 
 Faction standing moves two ways: a hero on the **Diplomacy** standing order hosts the Ansberry Company's factor at the post each turn (Company standing only), or a party can be sent as an **envoy** to any faction's seat for a bigger, riskier swing with that faction specifically. Separately, the Company expects a profit shipment every season (quarterly) — pay it and standing nudges up; miss it and the consequences escalate turn over turn: standing losses compound, the company grows more stressed, and persistent non-payment eventually gets silver seized outright.
 
+## Interface
+
+The game runs as a fixed full-viewport shell, King of Dragon Pass style: a
+left sidebar (title, screen navigation, save actions), a slim top bar (turn
+and silver), a scrolling content pane for the active screen, and a bottom
+hero bar — every living hero as a portrait tile, hover for condition and
+status, click to open their sheet. Portraits are painted art where it exists
+and fall back to a deterministic placeholder tile otherwise, so new heroes
+never render blank.
+
 ## Project layout
 
 ```
@@ -52,6 +62,11 @@ src/
     save.ts        # versioned JSON saves + migrations
   content/     # pure data — heroes, traits, goods, factions, locations, events, tuning
   ui/          # React screens & components
+    components/    # Sidebar, HeroBar, Portrait, ConditionBars, Illustration
+    screens/       # one component per Screen (Post, Assignments, Map, Market, Hero Sheet, ...)
+    portraits.ts    # portraitKey → bundled asset URL registry (see assets/portraits/)
+  assets/
+    portraits/   # <race>/<race>_<gender>_<NN>.png — dropped in by key, no code changes needed
   store/       # Zustand store wrapping the serializable GameState
 ```
 
