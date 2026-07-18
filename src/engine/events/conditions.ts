@@ -1,5 +1,6 @@
 import { discoveryAtLeast, livingHeroes, seasonOfTurn } from '../types';
 import { cargoUnits } from '../expeditions';
+import { residentCount } from '../residents';
 import type { GameState } from '../types';
 import type { Condition, TravelContext } from './types';
 
@@ -45,6 +46,14 @@ export function evalCondition(
       return state.flags[cond.flag] !== true;
     case 'partySizeAtLeast':
       return livingHeroes(state).length >= cond.value;
+    case 'residentsAtLeast':
+      return residentCount(state, cond.role) >= cond.value;
+    case 'residentsBelow':
+      return residentCount(state, cond.role) < cond.value;
+    case 'contentmentAtLeast':
+      return state.residents.contentment >= cond.value;
+    case 'contentmentAtMost':
+      return state.residents.contentment <= cond.value;
     case 'locationDiscovery': {
       const loc = state.locations[cond.location];
       return loc !== undefined && discoveryAtLeast(loc.discovery, cond.atLeast);

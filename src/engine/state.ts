@@ -2,6 +2,7 @@
 // caller so the engine never imports content beyond tuning numbers.
 
 import { TUNING } from '../content/tuning';
+import { freshResidents } from './residents';
 import { GOOD_IDS, FACTION_IDS } from './types';
 import type {
   FactionId,
@@ -73,6 +74,9 @@ export function createInitialState(options: NewGameOptions): GameState {
     expeditions: [],
     nextExpeditionId: 1,
     factions,
+    residents: freshResidents(),
+    transients: [],
+    nextTransientId: 1,
     axes: { integration: 0, communal: 0 },
     postTier: 1,
     flags: {},

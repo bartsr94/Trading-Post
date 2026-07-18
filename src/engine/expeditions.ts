@@ -11,8 +11,10 @@ import {
   resolveCheck,
   traitModifiers,
 } from './checks';
+import type { CheckModifier } from './checks';
 import { priceAt } from './economy';
 import type { GoodDef } from './economy';
+import { residentsAvailable } from './residents';
 import { Rng } from './rng';
 import {
   awayHeroIds,
@@ -20,6 +22,7 @@ import {
   discoveryAtLeast,
   getHero,
   nextDiscovery,
+  RESIDENT_ROLES,
 } from './types';
 import type {
   ExpeditionKind,
@@ -29,6 +32,7 @@ import type {
   Hero,
   LocationDef,
   LocationId,
+  ResidentRole,
   SkillId,
   TraitDef,
 } from './types';
@@ -48,14 +52,27 @@ export interface DispatchParams {
   cargo?: Partial<Record<GoodId, number>>;
   silver?: number;
   buyOrders?: Partial<Record<GoodId, number>>;
+  /** Residents seconded to the party (porters add cargo, guards add escort). */
+  residents?: Partial<Record<ResidentRole, number>>;
 }
 
 export function cargoUnits(cargo: Partial<Record<GoodId, number>>): number {
   return Object.values(cargo).reduce((sum: number, qty) => sum + (qty ?? 0), 0);
 }
 
-export function cargoCapacity(heroCount: number): number {
-  return heroCount * TUNING.map.cargoCapacityPerHero;
+export function cargoCapacity(
+  heroCount: number,
+  escort?: Partial<Record<ResidentRole, number>>,
+): number {
+  const porters = escort?.porters ?? 0;
+  return heroCount * TUNING.map.cargoCapacityPerHero + porters * TUNING.residents.effects.cargoPerPorter;
+}
+
+/** Check bonus a guard escort lends to a caravan/explore/envoy arrival check. */
+function escortMods(exp: ExpeditionState): CheckModifier[] {
+  const guards = exp.residentEscort?.guards ?? 0;
+  if (guards <= 0) return [];
+  return [{ label: `Escort of ${guards}`, value: TUNING.residents.effects.guardEscortBonus }];
 }
 
 /** Why this dispatch is invalid, or null when it may proceed. */
@@ -92,8 +109,17 @@ export function dispatchError(
     if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to that market yet.';
   }
 
+  const escort = params.residents ?? {};
+  for (const role of RESIDENT_ROLES) {
+    const qty = escort[role] ?? 0;
+    if (qty < 0 || !Number.isInteger(qty)) return 'Invalid escort.';
+    if (qty > residentsAvailable(state, role)) return `Not enough ${role} to spare.`;
+  }
+
   const cargo = params.cargo ?? {};
-  if (cargoUnits(cargo) > cargoCapacity(heroIds.length)) return 'The party cannot carry that much.';
+  if (cargoUnits(cargo) > cargoCapacity(heroIds.length, escort)) {
+    return 'The party cannot carry that much.';
+  }
   for (const [good, qty] of Object.entries(cargo) as [GoodId, number][]) {
     if (qty < 0 || !Number.isInteger(qty)) return 'Invalid cargo.';
     if ((state.goods[good] ?? 0) < qty) return 'Not enough stock for that cargo.';
@@ -124,6 +150,15 @@ export function dispatchExpedition(
   const silver = params.silver ?? 0;
   state.silver -= silver;
 
+  // Second residents onto the party: they leave the post pool until homecoming.
+  const escort: Partial<Record<ResidentRole, number>> = {};
+  for (const role of RESIDENT_ROLES) {
+    const qty = params.residents?.[role] ?? 0;
+    if (qty <= 0) continue;
+    state.residents.roles[role] -= qty;
+    escort[role] = qty;
+  }
+
   state.expeditions.push({
     id: `exp_${state.nextExpeditionId}`,
     kind: params.kind,
@@ -134,6 +169,7 @@ export function dispatchExpedition(
     cargo,
     silver,
     buyOrders: { ...(params.buyOrders ?? {}) },
+    residentEscort: escort,
   });
   state.nextExpeditionId += 1;
   return true;
@@ -220,7 +256,7 @@ function resolveCaravanArrival(
   const map = TUNING.map;
   const hero = leadHero(state, exp, 'bargain');
   const tags = ['trade', ...def.tags, ...(def.faction ? [def.faction] : [])];
-  const mods = traitModifiers(hero, ctx.traitDefs, 'bargain', tags);
+  const mods = [...traitModifiers(hero, ctx.traitDefs, 'bargain', tags), ...escortMods(exp)];
   const stat = bestGoverningStat(hero, 'bargain');
   const check = resolveCheck(rng, hero, 'bargain', stat, map.caravanCheckDifficulty, mods);
   if (isSuccess(check.tier)) markSkill(hero, 'bargain');
@@ -244,7 +280,7 @@ function resolveCaravanArrival(
   // Fill buy orders with what silver and backs can carry.
   let spent = 0;
   const bought: string[] = [];
-  let capacityLeft = cargoCapacity(exp.heroIds.length);
+  let capacityLeft = cargoCapacity(exp.heroIds.length, exp.residentEscort);
   for (const [good, qty] of Object.entries(exp.buyOrders) as [GoodId, number][]) {
     const goodDef = ctx.goodDefs.get(good);
     if (!goodDef || !qty) continue;
@@ -284,7 +320,7 @@ function resolveExploreArrival(
 ): void {
   const hero = leadHero(state, exp, 'survival');
   const tags = ['exploration', ...def.tags];
-  const mods = traitModifiers(hero, ctx.traitDefs, 'survival', tags);
+  const mods = [...traitModifiers(hero, ctx.traitDefs, 'survival', tags), ...escortMods(exp)];
   const stat = bestGoverningStat(hero, 'survival');
   const check = resolveCheck(rng, hero, 'survival', stat, TUNING.map.exploreCheckDifficulty, mods);
 
@@ -328,7 +364,7 @@ function resolveDiplomacyArrival(
   const dip = TUNING.diplomacy;
   const hero = leadHero(state, exp, 'diplomacy');
   const tags = ['diplomacy', ...def.tags, ...(def.faction ? [def.faction] : [])];
-  const mods = traitModifiers(hero, ctx.traitDefs, 'diplomacy', tags);
+  const mods = [...traitModifiers(hero, ctx.traitDefs, 'diplomacy', tags), ...escortMods(exp)];
   const stat = bestGoverningStat(hero, 'diplomacy');
   const check = resolveCheck(rng, hero, 'diplomacy', stat, dip.expeditionCheckDifficulty, mods);
   if (isSuccess(check.tier)) markSkill(hero, 'diplomacy');
@@ -386,6 +422,14 @@ function resolveHomecoming(
     if (!qty) continue;
     state.goods[good] = (state.goods[good] ?? 0) + qty;
     goodsBrought.push(`${qty} ${ctx.goodNames.get(good) ?? good}`);
+  }
+
+  // Seconded residents rejoin the post pool.
+  if (exp.residentEscort) {
+    for (const role of RESIDENT_ROLES) {
+      const qty = exp.residentEscort[role] ?? 0;
+      if (qty > 0) state.residents.roles[role] += qty;
+    }
   }
 
   const haul: string[] = [];

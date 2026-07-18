@@ -9,6 +9,7 @@ import { CONTENT } from '../../content/registry';
 import { stanceOf } from '../../engine/types';
 import type { GameState } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
+import { ResidentsPanel } from '../components/ResidentsPanel';
 
 const TIER_NAMES = ['The Clearing', 'Palisade Post', 'Established Post', 'Thriving Settlement'];
 
@@ -132,6 +133,8 @@ export function PostOverview({ game }: { game: GameState }) {
             })
           )}
         </div>
+
+        <ResidentsPanel game={game} />
       </div>
     </div>
   );

@@ -30,33 +30,57 @@ describe('saves', () => {
     expect(() => migrate(s)).toThrow(/No migration path/);
   });
 
-  it('migrates v1 saves all the way to current: map state added, everything else intact', () => {
+  it('migrates v1 saves all the way to current: map + residents added, everything else intact', () => {
     const v1 = testState(555) as Partial<GameState>;
     delete v1.locations;
     delete v1.expeditions;
     delete v1.nextExpeditionId;
     delete v1.charterMissedStreak;
+    delete v1.residents;
+    delete v1.transients;
+    delete v1.nextTransientId;
     v1.saveVersion = 1;
     v1.silver = 123;
 
     const migrated = deserialize(JSON.stringify(v1), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(3);
+    expect(migrated.saveVersion).toBe(4);
     expect(migrated.silver).toBe(123);
     expect(migrated.expeditions).toEqual([]);
     expect(migrated.locations.river_meet.discovery).toBe('visited');
     expect(migrated.locations.river_meet.market).toBeDefined();
     expect(migrated.charterMissedStreak).toBe(0);
+    expect(migrated.residents.roles.farmers).toBe(0);
+    expect(migrated.transients).toEqual([]);
   });
 
-  it('migrates v2 saves: Charter quota clock added, everything else intact', () => {
+  it('migrates v2 saves: Charter quota clock + residents added, everything else intact', () => {
     const v2 = testState(556) as Partial<GameState>;
     delete v2.charterMissedStreak;
+    delete v2.residents;
+    delete v2.transients;
+    delete v2.nextTransientId;
     v2.saveVersion = 2;
     v2.silver = 77;
 
     const migrated = deserialize(JSON.stringify(v2), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(3);
+    expect(migrated.saveVersion).toBe(4);
     expect(migrated.silver).toBe(77);
     expect(migrated.charterMissedStreak).toBe(0);
+    expect(migrated.residents.contentment).toBeGreaterThan(0);
+  });
+
+  it('migrates v3 saves: resident population added, everything else intact', () => {
+    const v3 = testState(557) as Partial<GameState>;
+    delete v3.residents;
+    delete v3.transients;
+    delete v3.nextTransientId;
+    v3.saveVersion = 3;
+    v3.silver = 88;
+
+    const migrated = deserialize(JSON.stringify(v3), { locationDefs: TEST_LOCATIONS });
+    expect(migrated.saveVersion).toBe(4);
+    expect(migrated.silver).toBe(88);
+    expect(migrated.residents.idle).toBe(0);
+    expect(migrated.nextTransientId).toBe(1);
   });
 });
