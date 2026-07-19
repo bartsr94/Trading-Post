@@ -93,7 +93,8 @@ export function MarketScreen({ game }: { game: GameState }) {
   };
 
   return (
-    <div className="overview-grid">
+    <div className="overview-grid-3">
+      {/* Column 1 — the post's own market: buy and sell on the spot. */}
       <div className="panel">
         <h3>Post Market</h3>
         <table className="market">
@@ -146,13 +147,14 @@ export function MarketScreen({ game }: { game: GameState }) {
         </p>
       </div>
 
+      {/* Column 2 — the caravan: where it goes and who walks with it. */}
       <div className="panel">
-        <h3>Caravan Planner</h3>
+        <h3>Caravan</h3>
         {destinations.length === 0 ? (
           <p className="dim">No known markets yet. Explore the map to find trading partners.</p>
         ) : (
           <>
-            <label className="dim" style={{ fontSize: '0.85rem' }}>
+            <label className="dim" style={{ fontSize: '0.85rem', display: 'block' }}>
               Destination
               <select
                 value={destinationId}
@@ -173,7 +175,7 @@ export function MarketScreen({ game }: { game: GameState }) {
 
             {destination && (
               <>
-                <h3 style={{ marginTop: 12 }}>Who Goes</h3>
+                <h4 style={{ marginTop: 12 }}>Who Goes</h4>
                 {available.map((hero) => (
                   <label key={hero.id} className="pick-row">
                     <input
@@ -187,7 +189,7 @@ export function MarketScreen({ game }: { game: GameState }) {
 
                 {(portersFree > 0 || guardsFree > 0) && (
                   <>
-                    <h3 style={{ marginTop: 12 }}>Escort</h3>
+                    <h4 style={{ marginTop: 12 }}>Escort</h4>
                     <p className="dim" style={{ fontSize: '0.78rem', margin: '0 0 6px' }}>
                       Porters carry more; guards steady the bargaining.
                     </p>
@@ -219,75 +221,89 @@ export function MarketScreen({ game }: { game: GameState }) {
                     </div>
                   </>
                 )}
+              </>
+            )}
+          </>
+        )}
+      </div>
 
-                <h3 style={{ marginTop: 12 }}>
-                  Cargo <span className="dim" style={{ fontSize: '0.8rem' }}>({loaded}/{capacity})</span>
-                </h3>
-                <div className="cargo-grid">
-                  {GOODS.filter((g) => game.goods[g.id] > 0).map((g) => (
-                    <label key={g.id} className="dim">
-                      {g.name}
-                      <input
-                        type="number"
-                        min={0}
-                        max={game.goods[g.id]}
-                        value={cargo[g.id] ?? 0}
-                        onChange={(e) => setQty(setCargo, g.id, e.target.value, game.goods[g.id])}
-                      />
-                    </label>
-                  ))}
-                </div>
-
-                <h3 style={{ marginTop: 12 }}>Buy There</h3>
-                <p className="dim" style={{ fontSize: '0.78rem', margin: '0 0 6px' }}>
-                  Filled from carried silver and sale proceeds, as far as they stretch.
-                </p>
-                <div className="cargo-grid">
-                  {GOODS.map((g) => (
-                    <label key={g.id} className="dim">
-                      {g.name}
-                      <input
-                        type="number"
-                        min={0}
-                        max={capacity}
-                        value={buyOrders[g.id] ?? 0}
-                        onChange={(e) => setQty(setBuyOrders, g.id, e.target.value, capacity)}
-                      />
-                    </label>
-                  ))}
-                </div>
-                <label className="dim" style={{ fontSize: '0.85rem', display: 'block', marginTop: 8 }}>
-                  Silver carried
+      {/* Column 3 — the load: what it carries out and what it buys there. */}
+      <div className="panel">
+        <h3>The Load</h3>
+        {!destination ? (
+          <p className="dim" style={{ fontSize: '0.85rem' }}>
+            {destinations.length === 0
+              ? 'A caravan needs a known market to make for.'
+              : 'Choose a destination to load a caravan.'}
+          </p>
+        ) : (
+          <>
+            <h4 style={{ marginTop: 0 }}>
+              Cargo <span className="dim" style={{ fontSize: '0.8rem' }}>({loaded}/{capacity})</span>
+            </h4>
+            <div className="cargo-grid">
+              {GOODS.filter((g) => game.goods[g.id] > 0).map((g) => (
+                <label key={g.id} className="dim">
+                  {g.name}
                   <input
                     type="number"
                     min={0}
-                    max={game.silver}
-                    value={silverCarried}
-                    onChange={(e) => {
-                      setError(null);
-                      setSilverCarried(
-                        Math.max(0, Math.min(game.silver, Math.floor(Number(e.target.value) || 0))),
-                      );
-                    }}
-                    style={{ marginLeft: 8, width: 90 }}
+                    max={game.goods[g.id]}
+                    value={cargo[g.id] ?? 0}
+                    onChange={(e) => setQty(setCargo, g.id, e.target.value, game.goods[g.id])}
                   />
                 </label>
+              ))}
+            </div>
 
-                {error && <div className="bad" style={{ fontSize: '0.85rem', margin: '8px 0 0' }}>{error}</div>}
-                <button
-                  className="primary"
-                  style={{ marginTop: 10 }}
-                  disabled={!canAct || party.length === 0}
-                  onClick={sendCaravan}
-                >
-                  Send the Caravan ▸
-                </button>
-                {!canAct && (
-                  <div className="dim" style={{ fontSize: '0.78rem', marginTop: 4 }}>
-                    Caravans set out during the assignment phase.
-                  </div>
-                )}
-              </>
+            <h4 style={{ marginTop: 12 }}>Buy There</h4>
+            <p className="dim" style={{ fontSize: '0.78rem', margin: '0 0 6px' }}>
+              Filled from carried silver and sale proceeds, as far as they stretch.
+            </p>
+            <div className="cargo-grid">
+              {GOODS.map((g) => (
+                <label key={g.id} className="dim">
+                  {g.name}
+                  <input
+                    type="number"
+                    min={0}
+                    max={capacity}
+                    value={buyOrders[g.id] ?? 0}
+                    onChange={(e) => setQty(setBuyOrders, g.id, e.target.value, capacity)}
+                  />
+                </label>
+              ))}
+            </div>
+            <label className="dim" style={{ fontSize: '0.85rem', display: 'block', marginTop: 8 }}>
+              Silver carried
+              <input
+                type="number"
+                min={0}
+                max={game.silver}
+                value={silverCarried}
+                onChange={(e) => {
+                  setError(null);
+                  setSilverCarried(
+                    Math.max(0, Math.min(game.silver, Math.floor(Number(e.target.value) || 0))),
+                  );
+                }}
+                style={{ marginLeft: 8, width: 90 }}
+              />
+            </label>
+
+            {error && <div className="bad" style={{ fontSize: '0.85rem', margin: '8px 0 0' }}>{error}</div>}
+            <button
+              className="primary"
+              style={{ marginTop: 10 }}
+              disabled={!canAct || party.length === 0}
+              onClick={sendCaravan}
+            >
+              Send the Caravan ▸
+            </button>
+            {!canAct && (
+              <div className="dim" style={{ fontSize: '0.78rem', marginTop: 4 }}>
+                Caravans set out during the assignment phase.
+              </div>
             )}
           </>
         )}
