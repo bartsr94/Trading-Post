@@ -46,9 +46,11 @@ The named characters are more than the six on active duty at any one moment. The
 
 Beyond the named company, the post gathers an **unnamed population** — farmers, porters, guards, and craftsfolk you feed, pay, and put to work. It's a pool you shape rather than a roster you command: farmers grow grain, porters haul more cargo when seconded to a caravan, guards steady a party on the road and hold the palisade, craftsfolk keep the place mended. Hire hands from the neighbouring towns, draw them in as the post prospers or as it grows more integrated with the native peoples, and assign idle newcomers to a trade. They eat every turn and draw wages every season; let either run short and **contentment** slides from content to grumbling to open unrest — output falls, then people desert. Manage them from the **People** screen.
 
+The post also draws **outsiders** it neither feeds nor pays, passing through for a time: a faction honour-guard that rides home with a successful envoy and helps hold the walls, a supplier crew that lends its backs to your caravans for a few nights, or Company inspectors who post themselves at the gate when a profit shipment goes unpaid — and quietly sour the mood until the debt is settled.
+
 ## Raising the post
 
-The post itself grows from a clearing of tents into a walled settlement. You raise **buildings** — a storehouse, a palisade, a trade hall, a common house, a workshop — one project at a time: pay the silver and timber up front, then set heroes to **Build** and watch a Craft check each turn drive the work toward completion. Finished buildings pull their weight quietly — more room for residents, defence behind the walls, better trade, easier upkeep, deeper prosperity. And when the right walls stand and the strongbox holds, the post can **come of age**: a narrative moment — *raising the palisade* — with a real check, not a silent upgrade, that carries the clearing up to a proper Post. It's all run from the **Buildings** screen.
+The post itself grows from a clearing of tents into a walled settlement. You raise **buildings** — a storehouse, a palisade, a trade hall, a common house, a workshop — one project at a time: pay the silver and timber up front, then set heroes to **Build** and watch a Craft check each turn drive the work toward completion. Your **craftsfolk** pitch in too, pressing whatever project is underway forward on their own each turn alongside any heroes you assign. Finished buildings pull their weight quietly — more room for residents, defence behind the walls, better trade, easier upkeep, deeper prosperity. And when the right walls stand and the strongbox holds, the post can **come of age**: a narrative moment — *raising the palisade* — with a real check, not a silent upgrade, that carries the clearing up to a proper Post. It's all run from the **Buildings** screen.
 
 ## Interface
 
@@ -98,7 +100,7 @@ The engine never hardcodes content: new events, heroes, traits, or locations are
 ## Roadmap
 
 - **MVP 1 — the loop works** *(complete)*: core turn loop, heroes, visible checks, event engine, post market, saves.
-- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅; the active-party ↔ reserve character roster ✅; buildings, construction & tier 1→2 advancement ✅; still open — the rest of the buildings & post tiers 2→4, settlement axes in full, recruitment chains & marriage/dependant events, event count to ~60 (28 so far), failure states with narrative endings.
+- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅, with its transient outsiders & craftsfolk build-crews ✅; the active-party ↔ reserve character roster ✅; buildings, construction & tier 1→2 advancement ✅; still open — the rest of the buildings & post tiers 2→4, settlement axes in full, recruitment chains & marriage/dependant events, raids & their defence, event count to ~60 (29 so far), failure states with narrative endings.
 - **MVP 3 — it's a game**: balance pass, seasonal content, endgame variants, art, audio, onboarding.
 
 Hero names, cultures, faction identities, and location names are grounded in the Ashmark region of Palusteria; a handful of minor wilderness-node names and one trait name are still open.

@@ -3,9 +3,9 @@
 // mutators here are called from the turn pipeline and store actions.
 
 import { TUNING } from '../content/tuning';
-import { buildingEffect } from './buildings';
+import { addBuildProgress, buildingEffect } from './buildings';
 import { clamp, RESIDENT_ROLES } from './types';
-import type { GameState, ResidentRole, ResidentState } from './types';
+import type { GameState, ResidentRole, ResidentState, TransientKind } from './types';
 import type { Rng } from './rng';
 
 export type ContentmentBand = 'content' | 'grumbling' | 'unrest';
@@ -56,11 +56,20 @@ export function residentCap(state: GameState): number {
   return (TUNING.residents.capByTier[state.postTier] ?? 0) + buildingEffect(state, 'residentCapBonus');
 }
 
-/** Guards present + walls contribute post defense (read by raids later; suppresses unrest now). */
+export type TransientEffectField = 'defenseBonus' | 'contentmentPressure' | 'cargoBonus';
+
+/** Sums a transient effect field across every group present, weighted by head count. */
+export function transientEffect(state: GameState, field: TransientEffectField): number {
+  const effects = TUNING.residents.transients.effects;
+  return state.transients.reduce((sum, t) => sum + (effects[t.kind]?.[field] ?? 0) * t.count, 0);
+}
+
+/** Guards present + walls + visiting guards contribute post defense (read by raids later; suppresses unrest now). */
 export function postDefense(state: GameState): number {
   return (
     residentsAvailable(state, 'guards') * TUNING.residents.effects.postDefensePerGuard +
-    buildingEffect(state, 'defenseBonus')
+    buildingEffect(state, 'defenseBonus') +
+    transientEffect(state, 'defenseBonus')
   );
 }
 
@@ -187,6 +196,44 @@ export function adjustContentment(state: GameState, delta: number): void {
   state.residents.contentment = clamp(state.residents.contentment + delta, t.min, t.max);
 }
 
+// ----------------------------------------------------------------- transients
+
+/** Adds a transient group to the post. `turns` of -1 means indefinite. */
+export function addTransientGroup(
+  state: GameState,
+  kind: TransientKind,
+  count: number,
+  turns: number,
+): void {
+  if (count <= 0) return;
+  state.transients.push({ id: `tr_${state.nextTransientId}`, kind, count, turnsLeft: turns });
+  state.nextTransientId += 1;
+}
+
+/** Removes every transient group of a kind (e.g. inspectors leaving on a met quota). */
+export function removeTransients(state: GameState, kind: TransientKind): number {
+  const before = state.transients.length;
+  state.transients = state.transients.filter((t) => t.kind !== kind);
+  return before - state.transients.length;
+}
+
+// --------------------------------------------------- craftsfolk build crews
+
+/**
+ * Craftsfolk present at the post press the active construction forward each turn
+ * (passive, mood-scaled — like farmers yielding grain). Returns progress added.
+ */
+export function applyCraftsfolkConstruction(state: GameState): number {
+  if (!state.construction) return 0;
+  const crew = residentsAvailable(state, 'craftsfolk');
+  const gain = Math.round(
+    crew * TUNING.residents.effects.crewYieldPerCraftsperson * outputMultiplier(state),
+  );
+  if (gain <= 0) return 0;
+  addBuildProgress(state, gain);
+  return gain;
+}
+
 // --------------------------------------------------- per-turn society tick
 
 export interface UpkeepFlags {
@@ -209,6 +256,9 @@ export function updateContentment(state: GameState, flags: UpkeepFlags): number 
   if (over > 0) delta -= t.overCapPenalty * over;
 
   if (state.residents.idle > t.idleTolerance) delta -= t.idlePenalty;
+
+  // Company inspectors and the like weigh on the mood while they linger.
+  delta -= transientEffect(state, 'contentmentPressure');
 
   // Nothing went wrong this turn → the pool settles upward.
   if (delta === 0) delta = t.fedPaidDrift;

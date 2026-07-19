@@ -188,6 +188,8 @@ export const TUNING = {
       postDefensePerGuard: 1,
       /** Silver upkeep relief per craftsperson (repairs). */
       upkeepReliefPerCraftsperson: 1,
+      /** Build progress a craftsperson adds to the active project per turn (Phase C). */
+      crewYieldPerCraftsperson: 1,
     },
     hire: {
       costPerHead: { farmers: 20, porters: 15, guards: 30, craftsfolk: 40 } as Record<
@@ -200,6 +202,23 @@ export const TUNING = {
       communalThreshold: 4,
       /** Residents added per qualifying axis at each season end. */
       arrivalsPerSeason: 1,
+    },
+    /** Transient outsiders (Phase B): live effects + engine-spawn parameters. */
+    transients: {
+      /** Per-head effect each transient kind lends while present (summed by transientEffect). */
+      effects: {
+        visitorGuards: { defenseBonus: 1, contentmentPressure: 0, cargoBonus: 0 },
+        companyAgents: { defenseBonus: 0, contentmentPressure: 1, cargoBonus: 0 },
+        supplierCrew: { defenseBonus: 0, contentmentPressure: 0, cargoBonus: 20 },
+      } as Record<
+        string,
+        { defenseBonus: number; contentmentPressure: number; cargoBonus: number }
+      >,
+      /** A faction honour-guard that rides back with a successful envoy. */
+      visitorGuardCount: 3,
+      visitorGuardTurns: 3,
+      /** Inspectors posted (indefinitely) while the Charter quota goes unmet. */
+      companyAgentCount: 1,
     },
   },
 

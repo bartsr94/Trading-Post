@@ -14,7 +14,7 @@ import {
 import type { CheckModifier } from './checks';
 import { priceAt } from './economy';
 import type { GoodDef } from './economy';
-import { residentsAvailable } from './residents';
+import { addTransientGroup, residentsAvailable, transientEffect } from './residents';
 import { Rng } from './rng';
 import {
   awayHeroIds,
@@ -280,7 +280,9 @@ function resolveCaravanArrival(
   // Fill buy orders with what silver and backs can carry.
   let spent = 0;
   const bought: string[] = [];
-  let capacityLeft = cargoCapacity(exp.heroIds.length, exp.residentEscort);
+  // A supplier crew passing through lends extra backs to haul the load home.
+  let capacityLeft =
+    cargoCapacity(exp.heroIds.length, exp.residentEscort) + transientEffect(state, 'cargoBonus');
   for (const [good, qty] of Object.entries(exp.buyOrders) as [GoodId, number][]) {
     const goodDef = ctx.goodDefs.get(good);
     if (!goodDef || !qty) continue;
@@ -380,7 +382,13 @@ function resolveDiplomacyArrival(
     faction.standing = clamp(faction.standing + delta, -100, 100);
   }
 
-  if (!isSuccess(check.tier)) {
+  let escortLine = '';
+  if (isSuccess(check.tier)) {
+    // A pleased faction sends an honour-guard back with the envoy for a time.
+    const tr = TUNING.residents.transients;
+    addTransientGroup(state, 'visitorGuards', tr.visitorGuardCount, tr.visitorGuardTurns);
+    escortLine = ` A ${def.name} honour-guard rides back with the party.`;
+  } else {
     const stressGain =
       check.tier === 'critFailure' ? dip.expeditionCritFailureStress : dip.expeditionFailureStress;
     for (const id of exp.heroIds) {
@@ -392,7 +400,7 @@ function resolveDiplomacyArrival(
   report(
     '🤝',
     `${hero.name} treats with ${def.name}: ${checkBreakdown(check)}. ` +
-      `Standing ${delta >= 0 ? '+' : ''}${delta}.`,
+      `Standing ${delta >= 0 ? '+' : ''}${delta}.${escortLine}`,
   );
 }
 

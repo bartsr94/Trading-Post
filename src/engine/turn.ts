@@ -21,10 +21,13 @@ import { driftMarket, priceOf, prosperity } from './economy';
 import type { GoodDef } from './economy';
 import { advanceExpeditions } from './expeditions';
 import {
+  addTransientGroup,
   applyAxisArrivals,
+  applyCraftsfolkConstruction,
   applyDesertion,
   applyGrowth,
   outputMultiplier,
+  removeTransients,
   residentsAvailable,
   residentTotal,
   updateContentment,
@@ -118,14 +121,21 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
     resolveActivity(state, ctx, hero, rng, report);
   }
 
-  // 3a. A construction project that reached its mark opens for use.
+  // 3a. Craftsfolk press any active build forward on their own (mood-scaled).
+  const crewGain = applyCraftsfolkConstruction(state);
+  if (crewGain > 0 && state.construction) {
+    const name = ctx.buildingNames.get(state.construction.building) ?? state.construction.building;
+    report('🔨', `The craftsfolk press on with the ${name} — +${crewGain} progress.`);
+  }
+
+  // 3b. A construction project that reached its mark opens for use.
   const finished = completeConstructionIfDone(state);
   if (finished) {
     const name = ctx.buildingNames.get(finished) ?? finished;
     report('🏗️', `The ${name} is finished and stands ready.`);
   }
 
-  // 3b. The resident society settles: mood, desertion, growth, arrivals.
+  // 3c. The resident society settles: mood, desertion, growth, arrivals.
   resolveResidentSociety(state, ctx, rng, report, { missedFood, missedWages });
 
   // 4. Stress breakdowns queue their event for immediate selection
@@ -336,6 +346,9 @@ function payCharterQuota(
     state.charterMissedStreak = 0;
     faction.standing = clamp(faction.standing + c.metStandingGain, -100, 100);
     report('📦', `The season's profit shipment (${c.quotaSilver} silver) goes out to Thornwatch.`);
+    if (removeTransients(state, 'companyAgents') > 0) {
+      report('📜', 'The Company inspectors, satisfied, withdraw from the post.');
+    }
     return;
   }
 
@@ -352,6 +365,12 @@ function payCharterQuota(
     `No profit shipment for Thornwatch — the charter quota goes unmet ` +
       `(${state.charterMissedStreak} season${state.charterMissedStreak === 1 ? '' : 's'} running). Standing -${loss}.`,
   );
+
+  // Inspectors post themselves at the post while the debt stands, souring the mood.
+  if (!state.transients.some((t) => t.kind === 'companyAgents')) {
+    addTransientGroup(state, 'companyAgents', TUNING.residents.transients.companyAgentCount, -1);
+    report('👁️', 'Company inspectors arrive to watch over the post until the quota is paid.');
+  }
 
   if (state.charterMissedStreak >= c.seizureStreakThreshold) {
     const seized = Math.round(state.silver * c.seizureFraction);

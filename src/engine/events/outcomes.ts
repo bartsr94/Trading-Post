@@ -3,7 +3,7 @@
 
 import { TUNING } from '../../content/tuning';
 import { addBuildProgress, advanceTier, grantBuilding } from '../buildings';
-import { addResidents, adjustContentment, loseResidents } from '../residents';
+import { addResidents, addTransientGroup, adjustContentment, loseResidents } from '../residents';
 import { clamp, getHero, livingHeroes, nextDiscovery } from '../types';
 import type {
   BuildingId,
@@ -139,13 +139,7 @@ export function applyOutcomes(
         break;
       }
       case 'addTransient': {
-        state.transients.push({
-          id: `tr_${state.nextTransientId}`,
-          kind: outcome.kind,
-          count: outcome.count,
-          turnsLeft: outcome.turns,
-        });
-        state.nextTransientId += 1;
+        addTransientGroup(state, outcome.kind, outcome.count, outcome.turns);
         break;
       }
       case 'advanceTier': {
