@@ -1,6 +1,7 @@
 import { useGameStore } from './store/gameStore';
 import { seasonOfTurn, yearOfTurn } from './engine/types';
 import { AssignmentBoard } from './ui/screens/AssignmentBoard';
+import { BuildingsScreen } from './ui/screens/BuildingsScreen';
 import { CharactersScreen } from './ui/screens/CharactersScreen';
 import { EventPanel } from './ui/screens/EventPanel';
 import { GameOver } from './ui/screens/GameOver';
@@ -8,6 +9,7 @@ import { HeroSheet } from './ui/screens/HeroSheet';
 import { MapScreen } from './ui/screens/MapScreen';
 import { MarketScreen } from './ui/screens/MarketScreen';
 import { PartySelect } from './ui/screens/PartySelect';
+import { PeopleScreen } from './ui/screens/PeopleScreen';
 import { PostOverview } from './ui/screens/PostOverview';
 import { TurnReport } from './ui/screens/TurnReport';
 import { HeroBar } from './ui/components/HeroBar';
@@ -61,6 +63,8 @@ export function App() {
           {screen === 'post' && <PostOverview game={game} />}
           {screen === 'assignments' && <AssignmentBoard game={game} />}
           {screen === 'characters' && <CharactersScreen game={game} />}
+          {screen === 'buildings' && <BuildingsScreen game={game} />}
+          {screen === 'people' && <PeopleScreen game={game} />}
           {screen === 'map' && <MapScreen game={game} />}
           {screen === 'market' && <MarketScreen game={game} />}
         </div>
