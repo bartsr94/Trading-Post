@@ -2,13 +2,15 @@
 // stub from day one. localStorage autosave each turn + manual export/import.
 
 import { TUNING } from '../content/tuning';
-import { freshResidents } from './residents';
+import { freshResidents, residentTotal } from './residents';
 import { createLocationStates } from './state';
-import type { GameState, LocationDef } from './types';
+import type { GameState, Heritage, LocationDef } from './types';
 
 /** Content the migrations need; injected so the engine stays content-free. */
 export interface MigrationContext {
   locationDefs: readonly LocationDef[];
+  /** hero id → heritage, so v6→v7 can backfill each living hero (HERITAGE_SPEC.md §10). */
+  heroHeritage?: ReadonlyMap<string, Heritage>;
 }
 
 export function serialize(state: GameState): string {
@@ -42,6 +44,9 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
         break;
       case 5:
         current = migrateV5toV6(current);
+        break;
+      case 6:
+        current = migrateV6toV7(current, ctx);
         break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
@@ -103,6 +108,29 @@ function migrateV5toV6(save: GameState): GameState {
     saveVersion: 6,
     buildings: [],
     construction: null,
+  };
+}
+
+/**
+ * v7 adds the heritage system (HERITAGE_SPEC.md): the `culture` axis, the
+ * resident heritage tally, per-hero heritage, and the compromise streak.
+ * Pre-feature residents are treated as homeland founders; the tally self-corrects
+ * as the pool churns. Hero heritage comes from the injected content map.
+ */
+function migrateV6toV7(save: GameState, ctx?: MigrationContext): GameState {
+  return {
+    ...save,
+    saveVersion: 7,
+    axes: { ...save.axes, culture: 0 },
+    charterCompromisedStreak: 0,
+    residents: {
+      ...save.residents,
+      heritage: { homeland: residentTotal(save), native: 0 },
+    },
+    heroes: save.heroes.map((h) => ({
+      ...h,
+      heritage: ctx?.heroHeritage?.get(h.id) ?? 'imanian',
+    })),
   };
 }
 

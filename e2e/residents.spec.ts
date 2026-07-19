@@ -16,8 +16,9 @@ test('hiring a resident adds a hand to the pool on the People screen', async ({ 
   const panel = page.locator('.panel', { hasText: "The Post's People" });
   await expect(panel).toContainText('No one has settled here yet');
 
-  // Hire a farmer (20 of the starting 200 silver).
-  await panel.getByRole('button', { name: 'Hire (20)' }).click();
+  // Default people is Kiswani (Tributary Towns, reachable & friendly at the start).
+  // Local farmers cost the discounted rate (ceil(20 × 0.6) = 12).
+  await panel.getByRole('button', { name: 'Hire (12)' }).click();
 
   // The pool now shows one hand against the tier-1 cap, with upkeep lines.
   await expect(panel).not.toContainText('No one has settled here yet');

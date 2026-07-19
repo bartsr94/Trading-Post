@@ -297,7 +297,7 @@ export const POST_EVENTS: GameEvent[] = [
     category: 'post',
     illustration: 'drifter_gate',
     title: 'The Man at the Woodpile',
-    text: 'He is simply there one morning, splitting your firewood, a bundle of everything he owns at his feet. Homeland face, frontier hands, a soldier’s boots worn to nothing. "Heard there was work," he says to {hero}, not stopping. He has split half the pile already.',
+    text: 'He is simply there one morning, splitting your firewood, a bundle of everything he owns at his feet. Imanian face, frontier hands, a soldier’s boots worn to nothing. "Heard there was work," he says to {hero}, not stopping. He has split half the pile already.',
     conditions: [{ type: 'notFlag', flag: 'drifter_resolved' }],
     weight: 8,
     once: true,

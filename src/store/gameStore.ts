@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { STARTING_STANDINGS } from '../content/factions';
-import { HERO_POOL, createHero } from '../content/heroes';
+import { HERO_POOL, createHero, heritageOf } from '../content/heroes';
 import { LOCATIONS } from '../content/locations';
 import { CONTENT } from '../content/registry';
 import {
@@ -33,6 +33,7 @@ import type {
   BuildingId,
   GameState,
   GoodId,
+  Heritage,
   ResidentRole,
 } from '../engine/types';
 
@@ -45,7 +46,10 @@ export type Screen =
   | 'map'
   | 'market';
 
-const MIGRATION_CTX = { locationDefs: LOCATIONS };
+const MIGRATION_CTX = {
+  locationDefs: LOCATIONS,
+  heroHeritage: new Map(HERO_POOL.map((t) => [t.id, heritageOf(t)] as const)),
+};
 
 interface GameStore {
   game: GameState | null;
@@ -85,8 +89,8 @@ interface GameStore {
   startConstruction: (buildingId: BuildingId) => boolean;
   /** Abandon the active project — paid costs are forfeit. */
   cancelConstruction: () => void;
-  /** Hire residents of a role from the neighbouring towns. Returns false if invalid. */
-  hire: (role: ResidentRole, count: number) => boolean;
+  /** Hire native residents of a role from a specific people. Returns false if invalid. */
+  hire: (role: ResidentRole, count: number, people: Heritage) => boolean;
   /** Move residents between roles/idle at the post. Returns false if invalid. */
   reallocateResidents: (
     from: ResidentRole | 'idle',
@@ -274,11 +278,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ game: next });
   },
 
-  hire: (role, count) => {
+  hire: (role, count, people) => {
     const { game } = get();
     if (!game || game.phase !== 'assignment') return false;
     const next = draft(game);
-    if (!hireResidents(next, role, count)) return false;
+    if (!hireResidents(next, role, count, people)) return false;
     autosave(next);
     set({ game: next });
     return true;

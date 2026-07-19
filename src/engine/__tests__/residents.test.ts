@@ -27,6 +27,7 @@ import {
 import { Rng } from '../rng';
 import { resolveTurn } from '../turn';
 import { TEST_CONTENT, testState } from './helpers';
+import { TUNING } from '../../content/tuning';
 import type { GameState } from '../types';
 
 const noop = () => {};
@@ -128,14 +129,19 @@ describe('resident mutators', () => {
 
   it('hiring validates silver and cap', () => {
     const s = testState();
-    s.silver = 10;
-    expect(hireError(s, 'guards', 1)).toBe('Not enough silver.'); // costs 30
+    // Reach & warm to the Kiswani so the local-hire gate passes.
+    s.locations.river_meet.discovery = 'visited';
+    s.factions.RIVER_CLANS.standing = 20;
+    const guardCost = Math.ceil(TUNING.residents.hire.costPerHead.guards * TUNING.heritage.localCostMult);
+    const farmerCost = Math.ceil(TUNING.residents.hire.costPerHead.farmers * TUNING.heritage.localCostMult);
+    s.silver = guardCost - 1;
+    expect(hireError(s, 'guards', 1, 'kiswani')).toBe('Not enough silver.');
     s.silver = 500;
-    expect(hireError(s, 'farmers', 5)).toBe('No room for them yet.'); // cap 4
-    expect(hireError(s, 'farmers', 2)).toBeNull();
-    expect(hireResidents(s, 'farmers', 2)).toBe(true);
+    expect(hireError(s, 'farmers', 5, 'kiswani')).toBe('No room for them yet.'); // cap 4
+    expect(hireError(s, 'farmers', 2, 'kiswani')).toBeNull();
+    expect(hireResidents(s, 'farmers', 2, 'kiswani')).toBe(true);
     expect(s.residents.roles.farmers).toBe(2);
-    expect(s.silver).toBe(500 - 2 * 20);
+    expect(s.silver).toBe(500 - 2 * farmerCost);
   });
 });
 

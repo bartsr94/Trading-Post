@@ -51,7 +51,25 @@ export type FactionId = (typeof FACTION_IDS)[number];
 export const SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const;
 export type Season = (typeof SEASONS)[number];
 
-export type AxisId = 'integration' | 'communal'; // Aloof(−)↔Integrated(+), Mercantile(−)↔Communal(+)
+// Aloof(−)↔Integrated(+), Mercantile(−)↔Communal(+), Homeland/Imanian(−)↔Frontier/Sauromatian(+)
+export type AxisId = 'integration' | 'communal' | 'culture';
+
+/** Peoples of the Ashmark (HERITAGE_SPEC.md §2). Reuses the portrait "race"
+ *  pools, promoted to a mechanical type carried by named people & the resident
+ *  tally. `imanian` = the Company's homeland folk; the rest are native. */
+export const HERITAGES = ['imanian', 'kiswani', 'dustwalker', 'bejasi'] as const;
+export type Heritage = (typeof HERITAGES)[number];
+
+/** The coarse origin split the culture axis & Company care about. */
+export type HeritageGroup = 'homeland' | 'native';
+
+export function heritageGroup(h: Heritage): HeritageGroup {
+  return h === 'imanian' ? 'homeland' : 'native';
+}
+
+export function isNativeHeritage(h: Heritage): boolean {
+  return h !== 'imanian';
+}
 
 export const ACTIVITY_IDS = [
   'trade',
@@ -107,7 +125,7 @@ export interface LocationState {
   market?: Record<GoodId, MarketGoodState>;
 }
 
-export type ExpeditionKind = 'caravan' | 'explore' | 'diplomacy';
+export type ExpeditionKind = 'caravan' | 'explore' | 'diplomacy' | 'labor';
 
 export interface ExpeditionState {
   id: string;
@@ -129,6 +147,12 @@ export interface ExpeditionState {
    * pre-v4 in-flight expeditions deserialize without migration.
    */
   residentEscort?: Partial<Record<ResidentRole, number>>;
+  /**
+   * Homeland (Imanian) laborers a `labor` run is bringing home from Thornwatch
+   * (HERITAGE_SPEC.md §5.2). Paid for at dispatch; added to the pool on
+   * homecoming. Optional so non-labor / pre-v7 expeditions deserialize cleanly.
+   */
+  homelandLabor?: number;
 }
 
 export type FactionStance = 'Hostile' | 'Wary' | 'Neutral' | 'Friendly' | 'Allied';
@@ -148,6 +172,8 @@ export interface Dependant {
   parentId: string;
   /** Optional portrait asset key; falls back to the hash-hue tile. */
   portraitKey?: string;
+  /** People this dependant belongs to; defaults to the parent's (HERITAGE_SPEC.md §3.3). */
+  heritage?: Heritage;
   /** Turn a child was born, for aging (forward hook, Phase C). */
   bornTurn?: number;
 }
@@ -165,6 +191,9 @@ export interface Hero {
   health: number; // 0–10, 0 = death
   stress: number; // 0–10, 10 = breakdown
   status: HeroStatus;
+  /** The people this character belongs to (HERITAGE_SPEC.md §3.3). Feeds the
+   *  Company's read of the active party; runtime because recruits set it live. */
+  heritage: Heritage;
   /** Auto-appended log of notable events for the Hero Sheet. */
   history: string[];
 }
@@ -210,6 +239,12 @@ export interface ResidentState {
   contentment: number;
   /** Composition flavor for conditions/text (e.g. 'native-kin', 'settlers'). */
   tags: string[];
+  /**
+   * Coarse origin tally kept summed-equal to residentTotal(state)
+   * (HERITAGE_SPEC.md §3.2). Homeland = Imanian company folk; native =
+   * Kiswani/Dustwalker/Bejasi combined. Specific peoples ride `tags`.
+   */
+  heritage: Record<HeritageGroup, number>;
 }
 
 /** A transient group of outsiders present at the post (Phase B). */
@@ -291,7 +326,7 @@ export interface TurnReport {
 export type GamePhase = 'assignment' | 'event' | 'report' | 'gameover';
 
 export interface GameOverInfo {
-  kind: 'bankrupt' | 'brokenCompany';
+  kind: 'bankrupt' | 'brokenCompany' | 'charterRevoked';
   title: string;
   text: string;
 }
@@ -348,6 +383,12 @@ export interface GameState {
   bankruptcyClock: number;
   /** Consecutive seasons the Charter Company's profit quota went unmet. */
   charterMissedStreak: number;
+  /**
+   * Consecutive season-ends the post read as compromised to a hostile Company
+   * (HERITAGE_SPEC.md §6). Drives the `charterRevoked` ending. Used in Phase B;
+   * seeded here so Phase A's v7 migration is the only one needed.
+   */
+  charterCompromisedStreak: number;
   report: TurnReport;
   gameOver: GameOverInfo | null;
 }
@@ -384,6 +425,15 @@ export function activeHeroes(state: GameState): Hero[] {
   return state.activePartyIds
     .map((id) => byId.get(id))
     .filter((h): h is Hero => h !== undefined);
+}
+
+/** Fraction of the active party belonging to a heritage group (0 when empty).
+ *  Feeds the Company's read of the post (HERITAGE_SPEC.md §6). */
+export function partyHeritageShare(state: GameState, group: HeritageGroup): number {
+  const party = activeHeroes(state);
+  if (party.length === 0) return 0;
+  const n = party.filter((h) => heritageGroup(h.heritage) === group).length;
+  return n / party.length;
 }
 
 /** Living heroes not in the active party — the reserve bench. */

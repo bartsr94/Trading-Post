@@ -1,15 +1,19 @@
 // The Post's People (RESIDENTS_SPEC.md §9): the unnamed population — counts by
 // role, contentment, capacity, upkeep, plus hire & reallocation controls.
 
+import { useState } from 'react';
 import { TUNING } from '../../content/tuning';
 import {
   contentmentBand,
+  heritageCount,
   hireError,
+  localHireCost,
+  nativeShare,
   residentCap,
   residentTotal,
 } from '../../engine/residents';
 import { RESIDENT_ROLES } from '../../engine/types';
-import type { GameState, ResidentRole, TransientKind } from '../../engine/types';
+import type { GameState, Heritage, ResidentRole, TransientKind } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 
 const TRANSIENT_LABELS: Record<TransientKind, string> = {
@@ -17,6 +21,13 @@ const TRANSIENT_LABELS: Record<TransientKind, string> = {
   companyAgents: 'Company inspectors',
   supplierCrew: 'Supplier crew',
 };
+
+/** Native peoples hireable at their seats (HERITAGE_SPEC.md §4). */
+const NATIVE_PEOPLES: { id: Heritage; label: string }[] = [
+  { id: 'kiswani', label: 'Kiswani' },
+  { id: 'dustwalker', label: 'Dustwalker' },
+  { id: 'bejasi', label: 'Bejasi' },
+];
 
 const ROLE_LABELS: Record<ResidentRole, string> = {
   farmers: 'Farmers',
@@ -42,12 +53,16 @@ export function ResidentsPanel({ game }: { game: GameState }) {
   const hire = useGameStore((s) => s.hire);
   const reallocate = useGameStore((s) => s.reallocateResidents);
   const canAct = game.phase === 'assignment';
+  const [people, setPeople] = useState<Heritage>('kiswani');
 
   const r = game.residents;
   const total = residentTotal(game);
   const cap = residentCap(game);
   const band = contentmentBand(game);
   const bandInfo = BAND_LABEL[band];
+  const homeland = heritageCount(game, 'homeland');
+  const native = heritageCount(game, 'native');
+  const nativePct = Math.round(nativeShare(game) * 100);
 
   const grainPerTurn = total * TUNING.residents.grainPerResidentPerTurn;
   const wagePerSeason = total * TUNING.residents.seasonWagePerResident;
@@ -79,6 +94,13 @@ export function ResidentsPanel({ game }: { game: GameState }) {
             <div className="marker" style={{ left: `${(r.contentment / 10) * 100}%` }} />
           </div>
           <div className="faction-row">
+            <span>Makeup</span>
+            <span className="dim">
+              {homeland} Imanian · {native} native{' '}
+              <span className={nativePct >= 50 ? 'bad' : 'dim'}>({nativePct}% native)</span>
+            </span>
+          </div>
+          <div className="faction-row">
             <span className="dim">Food</span>
             <span className="dim">{grainPerTurn} grain / turn</span>
           </div>
@@ -107,10 +129,22 @@ export function ResidentsPanel({ game }: { game: GameState }) {
         </>
       )}
 
-      <h4 style={{ marginTop: 14 }}>Hands</h4>
+      <h4 style={{ marginTop: 14 }}>Hire Local Hands</h4>
+      <div className="people-picker" style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+        {NATIVE_PEOPLES.map((p) => (
+          <button
+            key={p.id}
+            className={people === p.id ? 'small primary' : 'small'}
+            onClick={() => setPeople(p.id)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
       <div className="hands-grid">
         {RESIDENT_ROLES.map((role) => {
-          const reason = hireError(game, role, 1);
+          const reason = hireError(game, role, 1, people);
+          const cost = localHireCost(role, 1);
           return (
             <div key={role} className="hand-cell" title={ROLE_NOTES[role]}>
               <div>
@@ -130,16 +164,20 @@ export function ResidentsPanel({ game }: { game: GameState }) {
                 <button
                   className="small primary"
                   disabled={!canAct || reason !== null}
-                  title={reason ?? `Hire for ${TUNING.residents.hire.costPerHead[role]} silver`}
-                  onClick={() => hire(role, 1)}
+                  title={reason ?? `Hire a ${people} ${ROLE_LABELS[role].toLowerCase()} for ${cost} silver`}
+                  onClick={() => hire(role, 1, people)}
                 >
-                  Hire ({TUNING.residents.hire.costPerHead[role]})
+                  Hire ({cost})
                 </button>
               </div>
             </div>
           );
         })}
       </div>
+      <p className="dim" style={{ fontSize: '0.78rem', margin: '8px 0 0' }}>
+        Local hands come cheap but pull the post toward the frontier. Homeland hands must be sent
+        for from Thornwatch — see the Map's “Call for Hands.”
+      </p>
 
       {r.idle > 0 && (
         <>

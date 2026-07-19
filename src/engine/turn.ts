@@ -24,6 +24,7 @@ import {
   addTransientGroup,
   applyAxisArrivals,
   applyCraftsfolkConstruction,
+  applyCultureDrift,
   applyDesertion,
   applyGrowth,
   outputMultiplier,
@@ -306,10 +307,19 @@ function resolveResidentSociety(
   if (isSeasonEnd(state.turn)) {
     for (const arrival of applyAxisArrivals(state)) {
       report(
-        arrival.tag === 'native-kin' ? '🪶' : '🏡',
-        arrival.tag === 'native-kin'
+        arrival.group === 'native' ? '🪶' : '🏡',
+        arrival.group === 'native'
           ? `Native kin settle at the post (${arrival.count}).`
           : `Settler families put down roots (${arrival.count}).`,
+      );
+    }
+    const drift = applyCultureDrift(state);
+    if (Math.abs(drift) >= 0.5) {
+      report(
+        '🧭',
+        drift > 0
+          ? 'The post takes on a more Sauromatian character.'
+          : 'The post holds to its Imanian ways.',
       );
     }
   }
