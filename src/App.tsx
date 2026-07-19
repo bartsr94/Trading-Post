@@ -1,6 +1,7 @@
 import { useGameStore } from './store/gameStore';
 import { seasonOfTurn, yearOfTurn } from './engine/types';
 import { AssignmentBoard } from './ui/screens/AssignmentBoard';
+import { CharactersScreen } from './ui/screens/CharactersScreen';
 import { EventPanel } from './ui/screens/EventPanel';
 import { GameOver } from './ui/screens/GameOver';
 import { HeroSheet } from './ui/screens/HeroSheet';
@@ -59,6 +60,7 @@ export function App() {
         <div className="content-inner">
           {screen === 'post' && <PostOverview game={game} />}
           {screen === 'assignments' && <AssignmentBoard game={game} />}
+          {screen === 'characters' && <CharactersScreen game={game} />}
           {screen === 'map' && <MapScreen game={game} />}
           {screen === 'market' && <MarketScreen game={game} />}
         </div>

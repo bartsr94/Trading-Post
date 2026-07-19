@@ -26,6 +26,7 @@ import {
 } from './residents';
 import { applyOutcomes } from './events/outcomes';
 import type { OutcomeContext } from './events/outcomes';
+import { dependantCount, reconcileRoster } from './roster';
 import { selectEvents } from './events/selection';
 import type { Choice, GameEvent, TierResult } from './events/types';
 import { Rng } from './rng';
@@ -35,6 +36,7 @@ import {
   heroesAtPost,
   isSeasonEnd,
   livingHeroes,
+  reserveHeroes,
 } from './types';
 import type {
   ExpeditionState,
@@ -168,8 +170,11 @@ function payUpkeep(
   }
 
   const mouths = residentTotal(state);
+  // Named characters (active + reserve) eat as heroes; dependants eat too.
   const grainNeeded =
-    party.length * TUNING.economy.grainPerHeroPerTurn + mouths * res.grainPerResidentPerTurn;
+    party.length * TUNING.economy.grainPerHeroPerTurn +
+    mouths * res.grainPerResidentPerTurn +
+    dependantCount(state) * TUNING.dependants.grainPerDependantPerTurn;
   const grainDef = ctx.goodDefs.get('grain');
   let missed = false;
   let missedFood = false;
@@ -229,9 +234,14 @@ function payResidentWages(
 ): boolean {
   if (!isSeasonEnd(state.turn)) return false;
   const total = residentTotal(state);
-  if (total === 0) return false;
+  const reserve = reserveHeroes(state).length;
+  // Residents draw a wage; reserve characters draw a retainer. Active heroes
+  // (partners in the venture) and dependants draw neither.
+  const bill =
+    total * TUNING.residents.seasonWagePerResident +
+    reserve * TUNING.roster.retainerWagePerReserve;
+  if (bill === 0) return false;
 
-  const bill = total * TUNING.residents.seasonWagePerResident;
   if (state.silver >= bill) {
     state.silver -= bill;
     report('🪙', `The season's wages (${bill} silver) go out to the post's people.`);
@@ -239,7 +249,7 @@ function payResidentWages(
   }
 
   state.silver = 0;
-  report('⚠️', `Wages go unpaid this season — ${total} mouths and an empty strongbox.`);
+  report('⚠️', `Wages go unpaid this season — an empty strongbox and unhappy hands.`);
   return true;
 }
 
@@ -520,10 +530,12 @@ export function advanceTurn(state: GameState): string[] {
     }
   }
 
-  // Standing orders persist; dead/departed heroes drop off the board.
+  // Standing orders persist; dead/departed heroes drop off the board and out
+  // of the active party (a freed slot can be filled from the reserve).
   for (const hero of state.heroes) {
     if (hero.status !== 'active') delete state.assignments[hero.id];
   }
+  reconcileRoster(state);
 
   state.turn += 1;
   state.phase = 'assignment';

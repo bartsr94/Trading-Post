@@ -4,7 +4,7 @@
 // placeholder fallback) comes from Portrait.tsx.
 
 import { LOCATION_NAMES } from '../../content/locations';
-import { livingHeroes } from '../../engine/types';
+import { activeHeroes } from '../../engine/types';
 import type { ExpeditionState, GameState, Hero } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from './ConditionBars';
@@ -73,7 +73,7 @@ function HeroTile({ game, hero }: { game: GameState; hero: Hero }) {
 export function HeroBar({ game }: { game: GameState }) {
   return (
     <footer className="hero-bar">
-      {livingHeroes(game).map((hero) => (
+      {activeHeroes(game).map((hero) => (
         <HeroTile key={hero.id} game={game} hero={hero} />
       ))}
     </footer>

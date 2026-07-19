@@ -1,14 +1,35 @@
-// Hero Sheet (spec §11): stats, skills, traits, condition, personal history.
+// Hero Sheet (spec §11): stats, skills, traits, condition, personal history,
+// plus roster status (active/reserve) and swap action (CHARACTERS_SPEC.md §9).
 
 import { TRAIT_DEFS } from '../../content/traits';
+import { activateError, benchError, dependantsOf } from '../../engine/roster';
 import { SKILL_IDS, STAT_IDS } from '../../engine/types';
-import type { Hero } from '../../engine/types';
+import type { Dependant, Hero } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from '../components/ConditionBars';
 import { Portrait } from '../components/Portrait';
 
+const DEPENDANT_LABEL: Record<Dependant['kind'], string> = {
+  spouse: 'Spouse',
+  child: 'Child',
+  kin: 'Kin',
+};
+
 export function HeroSheet({ hero }: { hero: Hero }) {
   const selectHero = useGameStore((s) => s.selectHero);
+  const game = useGameStore((s) => s.game);
+  const activate = useGameStore((s) => s.activate);
+  const bench = useGameStore((s) => s.bench);
+
+  const isActive = game?.activePartyIds.includes(hero.id) ?? false;
+  const isLiving = hero.status === 'active';
+  const canAct = game?.phase === 'assignment';
+  const deps = game ? dependantsOf(game, hero.id) : [];
+  const swapReason = game
+    ? isActive
+      ? benchError(game, hero.id)
+      : activateError(game, hero.id)
+    : 'unavailable';
 
   return (
     <div className="overlay" onClick={() => selectHero(null)}>
@@ -23,11 +44,40 @@ export function HeroSheet({ hero }: { hero: Hero }) {
             </h2>
             <p className="dim" style={{ fontSize: '0.88rem' }}>{hero.bio}</p>
             <ConditionBars hero={hero} />
-            {hero.status !== 'active' && (
+            {hero.status !== 'active' ? (
               <p className="bad">{hero.status === 'dead' ? '☠ Dead' : 'Departed'}</p>
+            ) : (
+              <div className="roster-badge-row">
+                <span className={`roster-badge ${isActive ? 'active' : 'reserve'}`}>
+                  {isActive ? 'Active party' : 'Reserve'}
+                </span>
+                {game && (
+                  <button
+                    className="small primary"
+                    disabled={!canAct || swapReason !== null}
+                    title={swapReason ?? (isActive ? 'Send to reserve' : 'Bring into the active party')}
+                    onClick={() => (isActive ? bench(hero.id) : activate(hero.id))}
+                  >
+                    {isActive ? 'Bench' : 'Activate'}
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
+
+        {isLiving && deps.length > 0 && (
+          <>
+            <h3 style={{ marginTop: 14 }}>Family</h3>
+            <div>
+              {deps.map((d) => (
+                <span key={d.id} className="trait-tag" title={`${DEPENDANT_LABEL[d.kind]} — fed, does no work`}>
+                  {d.name} <span className="dim">· {DEPENDANT_LABEL[d.kind].toLowerCase()}</span>
+                </span>
+              ))}
+            </div>
+          </>
+        )}
 
         <h3 style={{ marginTop: 14 }}>Stats</h3>
         <div className="skill-grid">

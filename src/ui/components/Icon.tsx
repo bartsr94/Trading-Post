@@ -7,6 +7,7 @@ import type { CSSProperties, ReactElement } from 'react';
 export type IconName =
   | 'post'
   | 'assignments'
+  | 'characters'
   | 'map'
   | 'market'
   | 'caravan'
@@ -26,6 +27,14 @@ const PATHS: Record<IconName, ReactElement> = {
       <line x1="8" y1="9" x2="16" y2="9" />
       <line x1="8" y1="13" x2="16" y2="13" />
       <line x1="8" y1="17" x2="13" y2="17" />
+    </>
+  ),
+  characters: (
+    <>
+      <circle cx="9" cy="8" r="3" />
+      <path d="M4 20 V18 A5 5 0 0 1 14 18 V20" />
+      <path d="M16 5.5 A3 3 0 0 1 16 11" />
+      <path d="M16.5 13.5 A5 5 0 0 1 20 18 V20" />
     </>
   ),
   map: (

@@ -676,3 +676,64 @@ select:focus {
   margin-bottom: 12px;
   font-size: 0.9rem;
 }
+
+/* ---------- characters / roster ---------- */
+.roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  margin: 8px 0 2px;
+}
+.char-card {
+  display: flex;
+  gap: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}
+.char-card.reserve { opacity: 0.82; }
+.char-card .hero-portrait {
+  width: 64px;
+  height: 80px;
+  flex: none;
+}
+.char-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+.char-body .name { cursor: pointer; font-size: 0.92rem; }
+.char-actions { margin-top: auto; }
+.char-deps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 0.76rem;
+}
+.char-dep {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+.roster-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.roster-badge {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.roster-badge.active {
+  color: var(--good, #8fd694);
+  border-color: var(--accent-dim);
+}
+.roster-badge.reserve { color: var(--muted, #a99); }

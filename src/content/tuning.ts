@@ -3,7 +3,7 @@
 
 export const TUNING = {
   save: {
-    version: 4,
+    version: 5,
     autosaveKey: 'trading-post-save',
   },
 
@@ -11,6 +11,18 @@ export const TUNING = {
     silver: 200,
     goods: { grain: 30, timber: 10, tools: 4, salt: 4 } as Partial<Record<string, number>>,
     partySize: 6,
+  },
+
+  // The active party ↔ reserve roster (CHARACTERS_SPEC.md).
+  roster: {
+    activeCap: 6, // in-game party ceiling; a building raises this later (Phase C).
+    retainerWagePerReserve: 8, // a reserve named character's seasonal retainer.
+  },
+
+  // Named, non-working family (CHARACTERS_SPEC.md §7). Food only, no wages.
+  dependants: {
+    grainPerDependantPerTurn: 1, // families eat; tune against grainPerHeroPerTurn.
+    maxPerCharacter: 4, // soft cap on one family; the post-wide count stays uncapped.
   },
 
   time: {

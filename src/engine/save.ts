@@ -37,6 +37,9 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
       case 3:
         current = migrateV3toV4(current);
         break;
+      case 4:
+        current = migrateV4toV5(current);
+        break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
     }
@@ -75,6 +78,18 @@ function migrateV3toV4(save: GameState): GameState {
     residents: freshResidents(),
     transients: [],
     nextTransientId: 1,
+  };
+}
+
+/** v5 adds the active-party roster and the (empty) dependant layer. */
+function migrateV4toV5(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 5,
+    // Every existing living hero was, by definition, the active party.
+    activePartyIds: save.heroes.filter((h) => h.status === 'active').map((h) => h.id),
+    dependants: [],
+    nextDependantId: 1,
   };
 }
 

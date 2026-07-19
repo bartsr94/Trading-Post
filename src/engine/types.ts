@@ -133,7 +133,24 @@ export interface ExpeditionState {
 
 export type FactionStance = 'Hostile' | 'Wary' | 'Neutral' | 'Friendly' | 'Allied';
 
+/** Life state of a named character (NOT party membership — see `activePartyIds`). */
 export type HeroStatus = 'active' | 'dead' | 'departed';
+
+/** Named, non-working family attached to a character (CHARACTERS_SPEC.md). */
+export const DEPENDANT_KINDS = ['spouse', 'child', 'kin'] as const;
+export type DependantKind = (typeof DEPENDANT_KINDS)[number];
+
+export interface Dependant {
+  id: string;
+  name: string;
+  kind: DependantKind;
+  /** The living named character this dependant belongs to. */
+  parentId: string;
+  /** Optional portrait asset key; falls back to the hash-hue tile. */
+  portraitKey?: string;
+  /** Turn a child was born, for aging (forward hook, Phase C). */
+  bornTurn?: number;
+}
 
 export interface Hero {
   id: string;
@@ -246,6 +263,12 @@ export interface GameState {
   turn: number; // 1-based; 24 turns per year, 6 per season
   phase: GamePhase;
   heroes: Hero[];
+  /**
+   * Ordered ids of the active party (≤ TUNING.roster.activeCap). Every id is a
+   * living hero; the remaining living heroes are the reserve bench
+   * (CHARACTERS_SPEC.md §3). Party membership is a separate axis from `status`.
+   */
+  activePartyIds: string[];
   assignments: Record<string, ActivityId>; // heroId -> standing order
   silver: number;
   goods: Record<GoodId, number>;
@@ -255,6 +278,10 @@ export interface GameState {
   /** Monotonic counter for expedition ids. */
   nextExpeditionId: number;
   factions: Record<FactionId, FactionState>;
+  /** Named family attached to characters (CHARACTERS_SPEC.md §3). */
+  dependants: Dependant[];
+  /** Monotonic counter for dependant ids. */
+  nextDependantId: number;
   /** The post's unnamed population (RESIDENTS_SPEC.md). */
   residents: ResidentState;
   /** Transient outsiders (Phase B); empty until spawn hooks land. */
@@ -302,8 +329,23 @@ export function stanceOf(standing: number): FactionStance {
   return 'Allied';
 }
 
+/** All living named characters — active party AND reserve bench. */
 export function livingHeroes(state: GameState): Hero[] {
   return state.heroes.filter((h) => h.status === 'active');
+}
+
+/** The active party, in `activePartyIds` order (dead/missing ids dropped). */
+export function activeHeroes(state: GameState): Hero[] {
+  const byId = new Map(livingHeroes(state).map((h) => [h.id, h]));
+  return state.activePartyIds
+    .map((id) => byId.get(id))
+    .filter((h): h is Hero => h !== undefined);
+}
+
+/** Living heroes not in the active party — the reserve bench. */
+export function reserveHeroes(state: GameState): Hero[] {
+  const active = new Set(state.activePartyIds);
+  return livingHeroes(state).filter((h) => !active.has(h.id));
 }
 
 /** Hero ids currently away on an expedition. */
@@ -311,10 +353,10 @@ export function awayHeroIds(state: GameState): Set<string> {
   return new Set(state.expeditions.flatMap((e) => e.heroIds));
 }
 
-/** Living heroes present at the post (assignable, bindable by post events). */
+/** Active-party heroes present at the post (assignable, bindable by post events). */
 export function heroesAtPost(state: GameState): Hero[] {
   const away = awayHeroIds(state);
-  return livingHeroes(state).filter((h) => !away.has(h.id));
+  return activeHeroes(state).filter((h) => !away.has(h.id));
 }
 
 /** True when `state` is at least as far along as `atLeast` on the discovery ladder. */
