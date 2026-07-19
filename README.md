@@ -44,21 +44,29 @@ The named characters are more than the six on active duty at any one moment. The
 
 ## The post's people
 
-Beyond the named company, the post gathers an **unnamed population** — farmers, porters, guards, and craftsfolk you feed, pay, and put to work. It's a pool you shape rather than a roster you command: farmers grow grain, porters haul more cargo when seconded to a caravan, guards steady a party on the road and hold the palisade, craftsfolk keep the place mended. Hire hands from the neighbouring towns, draw them in as the post prospers or as it grows more integrated with the native peoples, and assign idle newcomers to a trade. They eat every turn and draw wages every season; let either run short and **contentment** slides from content to grumbling to open unrest — output falls, then people desert. Manage it all from the Post screen's *People* panel.
+Beyond the named company, the post gathers an **unnamed population** — farmers, porters, guards, and craftsfolk you feed, pay, and put to work. It's a pool you shape rather than a roster you command: farmers grow grain, porters haul more cargo when seconded to a caravan, guards steady a party on the road and hold the palisade, craftsfolk keep the place mended. Hire hands from the neighbouring towns, draw them in as the post prospers or as it grows more integrated with the native peoples, and assign idle newcomers to a trade. They eat every turn and draw wages every season; let either run short and **contentment** slides from content to grumbling to open unrest — output falls, then people desert. Manage them from the **People** screen.
 
 ## Raising the post
 
-The post itself grows from a clearing of tents into a walled settlement. You raise **buildings** — a storehouse, a palisade, a trade hall, a common house, a workshop — one project at a time: pay the silver and timber up front, then set heroes to **Build** and watch a Craft check each turn drive the work toward completion. Finished buildings pull their weight quietly — more room for residents, defence behind the walls, better trade, easier upkeep, deeper prosperity. And when the right walls stand and the strongbox holds, the post can **come of age**: a narrative moment — *raising the palisade* — with a real check, not a silent upgrade, that carries the clearing up to a proper Post. It's all run from the Post screen's *Buildings & Works* panel.
+The post itself grows from a clearing of tents into a walled settlement. You raise **buildings** — a storehouse, a palisade, a trade hall, a common house, a workshop — one project at a time: pay the silver and timber up front, then set heroes to **Build** and watch a Craft check each turn drive the work toward completion. Finished buildings pull their weight quietly — more room for residents, defence behind the walls, better trade, easier upkeep, deeper prosperity. And when the right walls stand and the strongbox holds, the post can **come of age**: a narrative moment — *raising the palisade* — with a real check, not a silent upgrade, that carries the clearing up to a proper Post. It's all run from the **Buildings** screen.
 
 ## Interface
 
 The game runs as a fixed full-viewport shell, King of Dragon Pass style: a
 left sidebar (title, screen navigation, save actions), a slim top bar (turn
-and silver), a scrolling content pane for the active screen, and a bottom
+and silver), a content pane for the active screen, and a bottom
 hero bar — every active-party hero as a portrait tile, hover for condition and
 status, click to open their sheet. Portraits are painted art where it exists
 and fall back to a deterministic placeholder tile otherwise, so new heroes
 never render blank.
+
+The home screen is the **Outpost Overview** — a read-at-a-glance dashboard
+(the outpost's character, its trade and standing, and its settlement) laid out
+in three columns beneath a painted banner. A guiding rule: **a screen should
+never scroll**, because a scrollbar hides information — so where a view has more
+than fits, it becomes its own screen rather than a scrolling one. That's why the
+hands-on management lives on dedicated **Buildings** and **People** screens,
+linked from the overview, instead of piling onto it.
 
 ## Project layout
 
