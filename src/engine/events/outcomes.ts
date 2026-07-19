@@ -2,9 +2,17 @@
 // log lines for the event panel and turn report.
 
 import { TUNING } from '../../content/tuning';
+import { addBuildProgress, advanceTier, grantBuilding } from '../buildings';
 import { addResidents, adjustContentment, loseResidents } from '../residents';
 import { clamp, getHero, livingHeroes, nextDiscovery } from '../types';
-import type { DiscoveryState, ExpeditionState, GameState, GoodId, LocationId } from '../types';
+import type {
+  BuildingId,
+  DiscoveryState,
+  ExpeditionState,
+  GameState,
+  GoodId,
+  LocationId,
+} from '../types';
 import type { Outcome } from './types';
 
 export interface OutcomeContext {
@@ -16,6 +24,7 @@ export interface OutcomeContext {
   factionNames: ReadonlyMap<string, string>;
   traitNames: ReadonlyMap<string, string>;
   locationNames: ReadonlyMap<LocationId, string>;
+  buildingNames: ReadonlyMap<BuildingId, string>;
 }
 
 export function applyOutcomes(
@@ -137,6 +146,21 @@ export function applyOutcomes(
           turnsLeft: outcome.turns,
         });
         state.nextTransientId += 1;
+        break;
+      }
+      case 'advanceTier': {
+        const tier = advanceTier(state);
+        if (tier !== null) log.push('The post comes of age');
+        break;
+      }
+      case 'completeBuilding': {
+        if (grantBuilding(state, outcome.building)) {
+          log.push(`${ctx.buildingNames.get(outcome.building) ?? outcome.building} is built`);
+        }
+        break;
+      }
+      case 'addBuildProgress': {
+        addBuildProgress(state, outcome.delta);
         break;
       }
       case 'heroDeparts': {

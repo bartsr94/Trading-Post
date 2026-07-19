@@ -42,11 +42,13 @@ describe('saves', () => {
     delete v1.activePartyIds;
     delete v1.dependants;
     delete v1.nextDependantId;
+    delete v1.buildings;
+    delete v1.construction;
     v1.saveVersion = 1;
     v1.silver = 123;
 
     const migrated = deserialize(JSON.stringify(v1), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(5);
+    expect(migrated.saveVersion).toBe(6);
     expect(migrated.silver).toBe(123);
     expect(migrated.expeditions).toEqual([]);
     expect(migrated.locations.river_meet.discovery).toBe('visited');
@@ -57,6 +59,8 @@ describe('saves', () => {
     // Every living hero becomes the active party.
     expect(migrated.activePartyIds).toEqual(migrated.heroes.map((h) => h.id));
     expect(migrated.dependants).toEqual([]);
+    expect(migrated.buildings).toEqual([]);
+    expect(migrated.construction).toBeNull();
   });
 
   it('migrates v2 saves: Charter quota clock + residents added, everything else intact', () => {
@@ -68,11 +72,13 @@ describe('saves', () => {
     delete v2.activePartyIds;
     delete v2.dependants;
     delete v2.nextDependantId;
+    delete v2.buildings;
+    delete v2.construction;
     v2.saveVersion = 2;
     v2.silver = 77;
 
     const migrated = deserialize(JSON.stringify(v2), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(5);
+    expect(migrated.saveVersion).toBe(6);
     expect(migrated.silver).toBe(77);
     expect(migrated.charterMissedStreak).toBe(0);
     expect(migrated.residents.contentment).toBeGreaterThan(0);
@@ -86,11 +92,13 @@ describe('saves', () => {
     delete v3.activePartyIds;
     delete v3.dependants;
     delete v3.nextDependantId;
+    delete v3.buildings;
+    delete v3.construction;
     v3.saveVersion = 3;
     v3.silver = 88;
 
     const migrated = deserialize(JSON.stringify(v3), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(5);
+    expect(migrated.saveVersion).toBe(6);
     expect(migrated.silver).toBe(88);
     expect(migrated.residents.idle).toBe(0);
     expect(migrated.nextTransientId).toBe(1);
@@ -101,14 +109,31 @@ describe('saves', () => {
     delete v4.activePartyIds;
     delete v4.dependants;
     delete v4.nextDependantId;
+    delete v4.buildings;
+    delete v4.construction;
     v4.saveVersion = 4;
     v4.silver = 99;
 
     const migrated = deserialize(JSON.stringify(v4), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(5);
+    expect(migrated.saveVersion).toBe(6);
     expect(migrated.silver).toBe(99);
     expect(migrated.activePartyIds).toEqual(migrated.heroes.map((h) => h.id));
     expect(migrated.dependants).toEqual([]);
     expect(migrated.nextDependantId).toBe(1);
+  });
+
+  it('migrates v5 saves: buildings + construction slot added, everything else intact', () => {
+    const v5 = testState(559) as Partial<GameState>;
+    delete v5.buildings;
+    delete v5.construction;
+    v5.saveVersion = 5;
+    v5.silver = 111;
+
+    const migrated = deserialize(JSON.stringify(v5), { locationDefs: TEST_LOCATIONS });
+    expect(migrated.saveVersion).toBe(6);
+    expect(migrated.silver).toBe(111);
+    expect(migrated.buildings).toEqual([]);
+    expect(migrated.construction).toBeNull();
+    expect(migrated.postTier).toBe(1);
   });
 });

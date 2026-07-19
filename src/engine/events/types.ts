@@ -3,6 +3,7 @@
 
 import type {
   AxisId,
+  BuildingId,
   DiscoveryState,
   ExpeditionKind,
   ExpeditionState,
@@ -52,6 +53,12 @@ export type Condition =
   | { type: 'residentsBelow'; role?: ResidentRole; value: number }
   | { type: 'contentmentAtLeast'; value: number }
   | { type: 'contentmentAtMost'; value: number }
+  | { type: 'postTierAtLeast'; value: number }
+  | { type: 'postTierAtMost'; value: number }
+  | { type: 'hasBuilding'; building: BuildingId }
+  | { type: 'lacksBuilding'; building: BuildingId }
+  | { type: 'constructionActive'; value: boolean }
+  | { type: 'canAdvanceTier' }
   | { type: 'locationDiscovery'; location: LocationId; atLeast: DiscoveryState }
   // Travel-only conditions (false outside an expedition context):
   | { type: 'expeditionKind'; kind: ExpeditionKind }
@@ -90,6 +97,9 @@ export type Outcome =
   | { type: 'loseResidents'; role?: ResidentRole; count: number }
   | { type: 'contentment'; delta: number }
   | { type: 'addTransient'; kind: TransientKind; count: number; turns: number }
+  | { type: 'advanceTier' }
+  | { type: 'completeBuilding'; building: BuildingId }
+  | { type: 'addBuildProgress'; delta: number }
   | { type: 'heroDeparts' }
   | { type: 'history'; text: string }
   /** Advance a location's discovery (default: the expedition's destination). */

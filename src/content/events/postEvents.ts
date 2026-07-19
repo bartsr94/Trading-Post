@@ -5,6 +5,59 @@ import type { GameEvent } from '../../engine/events/types';
 
 export const POST_EVENTS: GameEvent[] = [
   {
+    id: 'post_raise_palisade',
+    category: 'post',
+    illustration: 'palisade_raising',
+    title: 'Raising the Palisade',
+    text: 'The timber is cut and stacked, the storehouse holds, and there is coin enough in the strongbox at last. What stands now is a clearing with walls half-imagined; what could stand by first frost is a Post — gated, named, marked on the maps that matter. {hero} paces the line where the wall will run, and the work wants a hand that knows how timber and tired people are made to hold together.',
+    conditions: [{ type: 'canAdvanceTier' }],
+    weight: 40,
+    cooldownTurns: 4,
+    binding: { type: 'highestSkill', skill: 'leadership' },
+    choices: [
+      {
+        label: 'Drive the work yourself — every hand on the wall until it stands.',
+        check: { skill: 'leadership', stat: 'resolve', difficulty: 10, tags: ['build'] },
+        outcomes: {
+          critSuccess: {
+            text: 'The whole company and every hired hand turn out. The posts go up straight and deep, the gate swings true on its first hanging, and someone scratches a name into the lintel. By dusk you are no longer a camp. You are a Post.',
+            outcomes: [
+              { type: 'advanceTier' },
+              { type: 'history', text: 'Raised the palisade and named the Post.' },
+            ],
+          },
+          success: {
+            text: 'A hard fortnight of raw hands and short tempers, but the wall stands and the gate bars. The frontier can no longer simply wander in at night. The camp has become a Post.',
+            outcomes: [
+              { type: 'advanceTier' },
+              { type: 'history', text: 'Saw the palisade raised.' },
+            ],
+          },
+          failure: {
+            text: 'Half-set posts lean in the churned mud and a whole section sags overnight. The wall will stand — but not this fortnight, and not without another push. Tempers fray all round.',
+            outcomes: [{ type: 'stress', delta: 1, allHeroes: true }],
+          },
+          critFailure: {
+            text: 'A run of posts pulls loose in the wet and comes down, nearly taking a labourer with it. The work is set back to bare ground, and the company grumbles at the wasted sweat.',
+            outcomes: [{ type: 'stress', delta: 2, allHeroes: true }],
+          },
+        },
+      },
+      {
+        label: 'Leave it to the hired hands — pay them to raise it at their own pace.',
+        outcomes: {
+          success: {
+            text: 'You keep the company at its trades and let the labourers raise the wall. It goes up slower, and a little crooked — but it goes up, and the gate bars at the end of it. The extra hands cost you.',
+            outcomes: [
+              { type: 'advanceTier' },
+              { type: 'silver', delta: -20 },
+            ],
+          },
+        },
+      },
+    ],
+  },
+  {
     id: 'post_leaky_stores',
     category: 'post',
     illustration: 'rain_stores',

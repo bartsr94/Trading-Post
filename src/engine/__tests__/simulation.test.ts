@@ -2,6 +2,7 @@
 // (seeded) choices — the MVP 1 "survive the first season" loop, sans UI.
 
 import { describe, expect, it } from 'vitest';
+import { constructionError, startConstruction } from '../buildings';
 import { evalConditions } from '../events/conditions';
 import { dispatchExpedition } from '../expeditions';
 import type { TravelContext } from '../events/types';
@@ -77,6 +78,17 @@ function maybeDispatch(state: GameState, rng: Rng): void {
   }
 }
 
+/** Every so often, break ground on whatever the post can afford to build. */
+function maybeBuild(state: GameState): void {
+  if (state.construction || state.turn % 4 !== 0) return;
+  for (const id of ['storehouse', 'palisade', 'common_house']) {
+    if (constructionError(state, id) === null) {
+      startConstruction(state, id);
+      return;
+    }
+  }
+}
+
 function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
   for (let i = 0; i < turns; i++) {
     if (state.gameOver) return;
@@ -86,12 +98,17 @@ function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
     }
     if (state.residents.idle > 0) reallocate(state, 'idle', 'guards', state.residents.idle);
     maybeDispatch(state, choiceRng);
+    maybeBuild(state);
     // Standing orders: a sensible default spread.
     const party = heroesAtPost(state);
     party.forEach((hero, idx) => {
       state.assignments[hero.id] =
         idx % 4 === 0 ? 'provision' : idx % 4 === 1 ? 'trade' : idx % 4 === 2 ? 'rest' : 'diplomacy';
     });
+    // If something's under construction, put a hand on it.
+    if (state.construction && party.length > 0) {
+      state.assignments[party[party.length - 1].id] = 'build';
+    }
     resolveTurn(state, TEST_CONTENT);
     while (state.phase === 'event' && state.pendingEvents.length > 0) {
       const active = state.pendingEvents[0];
@@ -141,6 +158,10 @@ describe('full-season simulation', () => {
       expect(residentTotal(s)).toBeLessThanOrEqual(residentCap(s));
       expect(s.residents.contentment).toBeGreaterThanOrEqual(0);
       expect(s.residents.contentment).toBeLessThanOrEqual(10);
+      // Buildings & tier invariants: tier in range, at most one live project.
+      expect(s.postTier).toBeGreaterThanOrEqual(1);
+      expect(s.postTier).toBeLessThanOrEqual(4);
+      if (s.construction) expect(s.construction.progress).toBeGreaterThanOrEqual(0);
     }
   });
 

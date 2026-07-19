@@ -221,6 +221,46 @@ export interface TransientGroup {
   turnsLeft: number;
 }
 
+/** Building ids are defined by content (like LocationId/TraitId). Prose lives
+ *  in `content/buildings.ts`; all balance numbers live in `TUNING.building`. */
+export type BuildingId = string;
+
+/** Passive numeric effects a completed building contributes (summed by selectors). */
+export interface BuildingEffects {
+  residentCapBonus: number;
+  defenseBonus: number;
+  prosperityBonus: number;
+  tradeIncomeBonus: number;
+  stressReliefBonus: number;
+  craftReliefBonus: number;
+  upkeepSilver: number;
+  storageBonus: number; // reserved; unused until storage caps land (Phase C)
+}
+
+/** A building's cost, effort, prerequisites, and effects (TUNING.building.defs). */
+export interface BuildingDefData {
+  cost: { silver: number; goods?: Partial<Record<GoodId, number>> };
+  /** Hero-turns of Build work needed to complete it. */
+  buildProgress: number;
+  prerequisites: BuildingId[];
+  effects: Partial<BuildingEffects>;
+}
+
+/** A tier-advancement recipe (TUNING.building.tierLadder, BUILDINGS_SPEC.md §7). */
+export interface TierRequirement {
+  tier: number; // the tier you advance INTO
+  requiredBuildings: BuildingId[];
+  silverCost: number;
+  advanceEventId: string;
+}
+
+/** The single in-flight construction project (BUILDINGS_SPEC.md §4). */
+export interface ConstructionState {
+  building: BuildingId;
+  /** Accumulated build progress toward the def's buildProgress. */
+  progress: number;
+}
+
 export interface QueuedEvent {
   eventId: string;
   fireOnTurn: number;
@@ -290,6 +330,10 @@ export interface GameState {
   nextTransientId: number;
   axes: Record<AxisId, number>; // −10..+10
   postTier: number; // 1–4
+  /** Completed buildings (ids). Presence is what matters; effects are derived. */
+  buildings: BuildingId[];
+  /** The single active construction project, or null (BUILDINGS_SPEC.md §4). */
+  construction: ConstructionState | null;
   /** World flags set by event outcomes, checked by conditions. */
   flags: Record<string, boolean>;
   /** Ids of `once` events that have fired. */

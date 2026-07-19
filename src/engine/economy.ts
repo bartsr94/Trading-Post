@@ -2,6 +2,7 @@
 // localSupplyDemandMod × eventMod, drifting each turn within bands.
 
 import { TUNING } from '../content/tuning';
+import { buildingEffect } from './buildings';
 import { clamp, seasonOfTurn } from './types';
 import type { GameState, GoodId, LocationDef, MarketGoodState, Season } from './types';
 import type { Rng } from './rng';
@@ -72,10 +73,10 @@ export function stockValue(state: GameState, goodDefs: ReadonlyMap<GoodId, GoodD
 /** Derived score driving trade income (and later caravan frequency / event weights). */
 export function prosperity(state: GameState, goodDefs: ReadonlyMap<GoodId, GoodDef>): number {
   const { prosperitySilverDiv, prosperityStockDiv } = TUNING.economy;
-  return (
-    Math.round((state.silver / prosperitySilverDiv + stockValue(state, goodDefs) / prosperityStockDiv) * 10) /
-    10
-  );
+  const base =
+    state.silver / prosperitySilverDiv + stockValue(state, goodDefs) / prosperityStockDiv;
+  // Buildings raise prosperity directly (spec §6).
+  return Math.round((base + buildingEffect(state, 'prosperityBonus')) * 10) / 10;
 }
 
 /** Buy at the post market. Returns false if silver is short. */

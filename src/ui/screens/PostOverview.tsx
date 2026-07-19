@@ -9,6 +9,7 @@ import { CONTENT } from '../../content/registry';
 import { stanceOf } from '../../engine/types';
 import type { ExpeditionState, GameState } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
+import { BuildingsPanel } from '../components/BuildingsPanel';
 import { Icon } from '../components/Icon';
 import type { IconName } from '../components/Icon';
 import { ResidentsPanel } from '../components/ResidentsPanel';
@@ -148,6 +149,7 @@ export function PostOverview({ game }: { game: GameState }) {
         </div>
       </div>
 
+      <BuildingsPanel game={game} />
       <ResidentsPanel game={game} />
     </div>
   );

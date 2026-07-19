@@ -11,7 +11,7 @@ const ACTIVITIES: { id: ActivityId; label: string; hint: string; enabled: boolea
   { id: 'trade', label: 'Trade', hint: 'Run the post market (Bargain check for the margin).', enabled: true },
   { id: 'provision', label: 'Provision', hint: 'Hunt and forage — offsets food costs (Survival).', enabled: true },
   { id: 'rest', label: 'Rest', hint: 'Recover health and stress; a chance to shake bad traits.', enabled: true },
-  { id: 'build', label: 'Build', hint: 'Construction arrives with MVP 2.', enabled: false },
+  { id: 'build', label: 'Build', hint: 'Work the active construction project (Craft check).', enabled: true },
   {
     id: 'diplomacy',
     label: 'Diplomacy',
@@ -54,17 +54,20 @@ export function AssignmentBoard({ game }: { game: GameState }) {
               <ConditionBars hero={hero} />
             </div>
             <div className="activity-buttons">
-              {ACTIVITIES.map((a) => (
-                <button
-                  key={a.id}
-                  className={current === a.id ? 'active' : ''}
-                  disabled={!a.enabled || game.phase !== 'assignment'}
-                  title={a.hint}
-                  onClick={() => setAssignment(hero.id, a.id)}
-                >
-                  {a.label}
-                </button>
-              ))}
+              {ACTIVITIES.map((a) => {
+                const noProject = a.id === 'build' && game.construction === null;
+                return (
+                  <button
+                    key={a.id}
+                    className={current === a.id ? 'active' : ''}
+                    disabled={!a.enabled || noProject || game.phase !== 'assignment'}
+                    title={noProject ? 'No project — start one on the Post screen.' : a.hint}
+                    onClick={() => setAssignment(hero.id, a.id)}
+                  >
+                    {a.label}
+                  </button>
+                );
+              })}
             </div>
             {current === 'unassigned' && <span className="bad" title="This hero needs orders.">⚑ unassigned</span>}
           </div>
