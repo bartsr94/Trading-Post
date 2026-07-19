@@ -9,8 +9,14 @@ import {
   residentTotal,
 } from '../../engine/residents';
 import { RESIDENT_ROLES } from '../../engine/types';
-import type { GameState, ResidentRole } from '../../engine/types';
+import type { GameState, ResidentRole, TransientKind } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
+
+const TRANSIENT_LABELS: Record<TransientKind, string> = {
+  visitorGuards: 'Visiting guards',
+  companyAgents: 'Company inspectors',
+  supplierCrew: 'Supplier crew',
+};
 
 const ROLE_LABELS: Record<ResidentRole, string> = {
   farmers: 'Farmers',
@@ -80,6 +86,24 @@ export function ResidentsPanel({ game }: { game: GameState }) {
             <span className="dim">Wages</span>
             <span className="dim">{wagePerSeason} silver / season</span>
           </div>
+        </>
+      )}
+
+      {game.transients.length > 0 && (
+        <>
+          <h4 style={{ marginTop: 14 }}>Visitors</h4>
+          {game.transients.map((t) => (
+            <div key={t.id} className="faction-row">
+              <span className="dim">
+                {TRANSIENT_LABELS[t.kind]} <b>{t.count}</b>
+              </span>
+              <span className="dim" style={{ fontSize: '0.8rem' }}>
+                {t.turnsLeft < 0
+                  ? 'posted'
+                  : `${t.turnsLeft} turn${t.turnsLeft === 1 ? '' : 's'} left`}
+              </span>
+            </div>
+          ))}
         </>
       )}
 

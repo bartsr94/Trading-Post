@@ -162,6 +162,9 @@ describe('full-season simulation', () => {
       expect(s.postTier).toBeGreaterThanOrEqual(1);
       expect(s.postTier).toBeLessThanOrEqual(4);
       if (s.construction) expect(s.construction.progress).toBeGreaterThanOrEqual(0);
+      // Transient invariants: positive head counts, at most one inspector group.
+      for (const t of s.transients) expect(t.count).toBeGreaterThan(0);
+      expect(s.transients.filter((t) => t.kind === 'companyAgents').length).toBeLessThanOrEqual(1);
     }
   });
 

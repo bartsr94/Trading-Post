@@ -6,6 +6,7 @@ import { BUILDINGS, BUILDING_NAMES } from '../../content/buildings';
 import { GOOD_NAMES } from '../../content/goods';
 import { TUNING } from '../../content/tuning';
 import { canAdvanceTier, constructionError, tierRequirement } from '../../engine/buildings';
+import { outputMultiplier, residentsAvailable } from '../../engine/residents';
 import type { BuildingId, GameState, GoodId } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 
@@ -95,6 +96,18 @@ export function BuildingsPanel({ game }: { game: GameState }) {
           <p className="dim" style={{ fontSize: '0.78rem', margin: '4px 0 6px' }}>
             Assign heroes to <b>Build</b> to raise it (Craft each turn).
           </p>
+          {(() => {
+            const crewGain = Math.round(
+              residentsAvailable(game, 'craftsfolk') *
+                TUNING.residents.effects.crewYieldPerCraftsperson *
+                outputMultiplier(game),
+            );
+            return crewGain > 0 ? (
+              <p className="good" style={{ fontSize: '0.78rem', margin: '0 0 6px' }}>
+                +{crewGain} / turn from the craftsfolk on the crew.
+              </p>
+            ) : null;
+          })()}
           <button
             className="small"
             disabled={!canAct}

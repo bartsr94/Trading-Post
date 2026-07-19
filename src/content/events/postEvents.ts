@@ -553,4 +553,56 @@ export const POST_EVENTS: GameEvent[] = [
       },
     ],
   },
+  {
+    id: 'post_supplier_crew',
+    category: 'post',
+    illustration: 'river_canoes',
+    title: 'A Crew Passing Through',
+    text: 'A supplier crew out of Thornwatch makes camp at your gate — a dozen weathered hands with pack-frames and a foreman who reads a ledger by firelight. They are bound downriver, but their contract is loose and their backs are for hire. If you feed them a few nights, {hero} is told, they will haul whatever you need hauled while they linger.',
+    conditions: [
+      { type: 'minTurn', value: 3 },
+      { type: 'silverAtLeast', value: 30 },
+    ],
+    weight: 8,
+    cooldownTurns: 10,
+    binding: { type: 'highestSkill', skill: 'bargain' },
+    choices: [
+      {
+        label: 'Strike a deal — board and coin for their backs while they stay.',
+        check: { skill: 'bargain', stat: 'charm', difficulty: 9, tags: ['trade', 'strangers'] },
+        outcomes: {
+          critSuccess: {
+            text: '{hero} talks them into a full week and a fair price. The foreman shakes on it and puts his whole crew at your disposal — anything that leaves the post leaves heavier and comes back fuller.',
+            outcomes: [
+              { type: 'silver', delta: -8 },
+              { type: 'addTransient', kind: 'supplierCrew', count: 3, turns: 4 },
+            ],
+          },
+          success: {
+            text: 'A few nights of board and a handful of silver, and the crew agrees to lend their backs to your caravans before they move on.',
+            outcomes: [
+              { type: 'silver', delta: -12 },
+              { type: 'addTransient', kind: 'supplierCrew', count: 2, turns: 3 },
+            ],
+          },
+          failure: {
+            text: 'The foreman drives a hard bargain and {hero} pays more than the help is worth. Still, extra hands are extra hands, for the little while they stay.',
+            outcomes: [
+              { type: 'silver', delta: -20 },
+              { type: 'addTransient', kind: 'supplierCrew', count: 1, turns: 2 },
+            ],
+          },
+        },
+      },
+      {
+        label: 'Send them on — you have mouths enough to feed.',
+        outcomes: {
+          success: {
+            text: 'You wish them fair weather downriver. They break camp at dawn and are gone with the mist, and the post is quiet again.',
+            outcomes: [],
+          },
+        },
+      },
+    ],
+  },
 ];
