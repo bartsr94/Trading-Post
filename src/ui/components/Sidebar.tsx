@@ -10,6 +10,7 @@ import type { IconName } from './Icon';
 const NAV_ITEMS: { screen: Screen; icon: IconName; label: string }[] = [
   { screen: 'post', icon: 'post', label: 'Post' },
   { screen: 'assignments', icon: 'assignments', label: 'Assignments' },
+  { screen: 'characters', icon: 'characters', label: 'Characters' },
   { screen: 'map', icon: 'map', label: 'Map' },
   { screen: 'market', icon: 'market', label: 'Market' },
 ];

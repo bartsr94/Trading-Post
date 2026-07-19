@@ -11,6 +11,7 @@ import { buyGood, sellGood } from '../engine/economy';
 import { dispatchExpedition } from '../engine/expeditions';
 import type { DispatchParams } from '../engine/expeditions';
 import { hireResidents, reallocate } from '../engine/residents';
+import { activateHero, benchHero } from '../engine/roster';
 import { evalConditions } from '../engine/events/conditions';
 import type { TravelContext } from '../engine/events/types';
 import { autosave, clearAutosave, deserialize, loadAutosave, serialize } from '../engine/save';
@@ -24,7 +25,7 @@ import {
 import type { ChoiceResolution } from '../engine/turn';
 import type { ActiveEvent, ActivityId, GameState, GoodId, ResidentRole } from '../engine/types';
 
-export type Screen = 'post' | 'assignments' | 'map' | 'market';
+export type Screen = 'post' | 'assignments' | 'characters' | 'map' | 'market';
 
 const MIGRATION_CTX = { locationDefs: LOCATIONS };
 
@@ -58,6 +59,10 @@ interface GameStore {
   sell: (good: GoodId, qty: number) => void;
   /** Dispatch a caravan or explore party. Returns false if the dispatch is invalid. */
   dispatch: (params: DispatchParams) => boolean;
+  /** Promote a reserve character into the active party. Returns false if invalid. */
+  activate: (heroId: string) => boolean;
+  /** Send an active-party character to the reserve bench. Returns false if invalid. */
+  bench: (heroId: string) => boolean;
   /** Hire residents of a role from the neighbouring towns. Returns false if invalid. */
   hire: (role: ResidentRole, count: number) => boolean;
   /** Move residents between roles/idle at the post. Returns false if invalid. */
@@ -203,6 +208,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!game || game.phase !== 'assignment') return false;
     const next = draft(game);
     if (!dispatchExpedition(next, params, CONTENT.locationDefs)) return false;
+    autosave(next);
+    set({ game: next });
+    return true;
+  },
+
+  activate: (heroId) => {
+    const { game } = get();
+    if (!game || game.phase !== 'assignment') return false;
+    const next = draft(game);
+    if (!activateHero(next, heroId)) return false;
+    autosave(next);
+    set({ game: next });
+    return true;
+  },
+
+  bench: (heroId) => {
+    const { game } = get();
+    if (!game || game.phase !== 'assignment') return false;
+    const next = draft(game);
+    if (!benchHero(next, heroId)) return false;
     autosave(next);
     set({ game: next });
     return true;
