@@ -1,6 +1,7 @@
 // Assembles all content into the TurnContext the engine consumes.
 
 import type { TurnContext } from '../engine/turn';
+import { BUILDING_NAMES } from './buildings';
 import { EVENT_MAP } from './events';
 import { GOOD_DEFS, GOOD_NAMES } from './goods';
 import { FACTION_NAMES } from './factions';
@@ -16,4 +17,5 @@ export const CONTENT: TurnContext = {
   traitNames: TRAIT_NAMES,
   locationDefs: LOCATION_DEFS,
   locationNames: LOCATION_NAMES,
+  buildingNames: BUILDING_NAMES,
 };

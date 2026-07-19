@@ -82,6 +82,8 @@ export function createInitialState(options: NewGameOptions): GameState {
     nextTransientId: 1,
     axes: { integration: 0, communal: 0 },
     postTier: 1,
+    buildings: [],
+    construction: null,
     flags: {},
     firedEvents: [],
     cooldowns: {},

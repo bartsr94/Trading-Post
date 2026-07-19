@@ -46,6 +46,10 @@ The named characters are more than the six on active duty at any one moment. The
 
 Beyond the named company, the post gathers an **unnamed population** — farmers, porters, guards, and craftsfolk you feed, pay, and put to work. It's a pool you shape rather than a roster you command: farmers grow grain, porters haul more cargo when seconded to a caravan, guards steady a party on the road and hold the palisade, craftsfolk keep the place mended. Hire hands from the neighbouring towns, draw them in as the post prospers or as it grows more integrated with the native peoples, and assign idle newcomers to a trade. They eat every turn and draw wages every season; let either run short and **contentment** slides from content to grumbling to open unrest — output falls, then people desert. Manage it all from the Post screen's *People* panel.
 
+## Raising the post
+
+The post itself grows from a clearing of tents into a walled settlement. You raise **buildings** — a storehouse, a palisade, a trade hall, a common house, a workshop — one project at a time: pay the silver and timber up front, then set heroes to **Build** and watch a Craft check each turn drive the work toward completion. Finished buildings pull their weight quietly — more room for residents, defence behind the walls, better trade, easier upkeep, deeper prosperity. And when the right walls stand and the strongbox holds, the post can **come of age**: a narrative moment — *raising the palisade* — with a real check, not a silent upgrade, that carries the clearing up to a proper Post. It's all run from the Post screen's *Buildings & Works* panel.
+
 ## Interface
 
 The game runs as a fixed full-viewport shell, King of Dragon Pass style: a
@@ -67,6 +71,7 @@ src/
     expeditions.ts # caravan, explore & envoy dispatch and per-turn resolution
     residents.ts   # unnamed population: roles, contentment, upkeep, escorts
     roster.ts      # named-character roster: active party ↔ reserve bench, dependants
+    buildings.ts   # construction projects, building effects, tier advancement
     events/        # event selection, conditions, hero binding, outcomes
     rng.ts         # seeded PRNG (runs are reproducible)
     save.ts        # versioned JSON saves + migrations
@@ -85,7 +90,7 @@ The engine never hardcodes content: new events, heroes, traits, or locations are
 ## Roadmap
 
 - **MVP 1 — the loop works** *(complete)*: core turn loop, heroes, visible checks, event engine, post market, saves.
-- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅; the active-party ↔ reserve character roster ✅; still open — buildings & post tiers, settlement axes in full, recruitment chains & marriage/dependant events, event count to ~60 (27 so far), failure states with narrative endings.
+- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅; the active-party ↔ reserve character roster ✅; buildings, construction & tier 1→2 advancement ✅; still open — the rest of the buildings & post tiers 2→4, settlement axes in full, recruitment chains & marriage/dependant events, event count to ~60 (28 so far), failure states with narrative endings.
 - **MVP 3 — it's a game**: balance pass, seasonal content, endgame variants, art, audio, onboarding.
 
 Hero names, cultures, faction identities, and location names are grounded in the Ashmark region of Palusteria; a handful of minor wilderness-node names and one trait name are still open.

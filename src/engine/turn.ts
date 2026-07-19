@@ -12,6 +12,11 @@ import {
   traitModifiers,
 } from './checks';
 import type { CheckResult } from './checks';
+import {
+  addBuildProgress,
+  buildingEffect,
+  completeConstructionIfDone,
+} from './buildings';
 import { driftMarket, priceOf, prosperity } from './economy';
 import type { GoodDef } from './economy';
 import { advanceExpeditions } from './expeditions';
@@ -39,6 +44,7 @@ import {
   reserveHeroes,
 } from './types';
 import type {
+  BuildingId,
   ExpeditionState,
   GameState,
   GoodId,
@@ -59,6 +65,7 @@ export interface TurnContext {
   traitNames: ReadonlyMap<string, string>;
   locationDefs: ReadonlyMap<LocationId, LocationDef>;
   locationNames: ReadonlyMap<LocationId, string>;
+  buildingNames: ReadonlyMap<BuildingId, string>;
 }
 
 function outcomeCtx(
@@ -73,6 +80,7 @@ function outcomeCtx(
     factionNames: ctx.factionNames,
     traitNames: ctx.traitNames,
     locationNames: ctx.locationNames,
+    buildingNames: ctx.buildingNames,
   };
 }
 
@@ -108,6 +116,13 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   // 3. Activity results for heroes present at the post.
   for (const hero of heroesAtPost(state)) {
     resolveActivity(state, ctx, hero, rng, report);
+  }
+
+  // 3a. A construction project that reached its mark opens for use.
+  const finished = completeConstructionIfDone(state);
+  if (finished) {
+    const name = ctx.buildingNames.get(finished) ?? finished;
+    report('🏗️', `The ${name} is finished and stands ready.`);
   }
 
   // 3b. The resident society settles: mood, desertion, growth, arrivals.
@@ -197,12 +212,16 @@ function payUpkeep(
     }
   }
 
-  // Craftsfolk keep the place mended, easing the silver upkeep.
+  // Craftsfolk (and the Workshop) keep the place mended, easing the silver upkeep;
+  // each building carries its own maintenance on top of the tier-1 base.
   const craftsfolk = residentsAvailable(state, 'craftsfolk');
-  const relief = Math.round(
-    craftsfolk * res.effects.upkeepReliefPerCraftsperson * outputMultiplier(state),
+  const relief =
+    Math.round(craftsfolk * res.effects.upkeepReliefPerCraftsperson * outputMultiplier(state)) +
+    buildingEffect(state, 'craftReliefBonus');
+  const upkeep = Math.max(
+    0,
+    TUNING.economy.postUpkeepSilver + buildingEffect(state, 'upkeepSilver') - relief,
   );
-  const upkeep = Math.max(0, TUNING.economy.postUpkeepSilver - relief);
 
   if (!missed && state.silver >= upkeep) {
     state.silver -= upkeep;
@@ -358,7 +377,9 @@ function resolveActivity(
       const stat = bestGoverningStat(hero, 'bargain');
       const mods = traitModifiers(hero, ctx.traitDefs, 'bargain', ['trade']);
       const check = resolveCheck(rng, hero, 'bargain', stat, eco.tradeCheckDifficulty, mods);
-      const prosMult = 1 + prosperity(state, ctx.goodDefs) * eco.prosperityTradeBonus;
+      const prosMult =
+        1 + prosperity(state, ctx.goodDefs) * eco.prosperityTradeBonus +
+        buildingEffect(state, 'tradeIncomeBonus');
       let income = 0;
       if (isSuccess(check.tier)) {
         income = Math.round(eco.tradeBaseIncome * prosMult + check.margin * eco.tradeMarginSilver);
@@ -385,8 +406,10 @@ function resolveActivity(
     }
     case 'rest': {
       const cond = TUNING.condition;
+      // A Common House (and later an Infirmary) makes rest go further.
+      const stressRecovery = cond.restStressRecovery + buildingEffect(state, 'stressReliefBonus');
       hero.health = clamp(hero.health + cond.restHealthRecovery, 0, cond.maxHealth);
-      hero.stress = clamp(hero.stress - cond.restStressRecovery, 0, cond.maxStress);
+      hero.stress = clamp(hero.stress - stressRecovery, 0, cond.maxStress);
       let line = `${hero.name} rests and recovers.`;
       if (rng.next() < cond.restTraitRecoveryChance) {
         const recoverable = hero.traits.filter((t) => {
@@ -424,11 +447,26 @@ function resolveActivity(
       );
       break;
     }
+    case 'build': {
+      const b = TUNING.building;
+      if (!state.construction) {
+        report('🔨', `${hero.name} has no project to build — start one on the Post screen.`);
+        break;
+      }
+      const stat = bestGoverningStat(hero, 'craft');
+      const mods = traitModifiers(hero, ctx.traitDefs, 'craft', ['build']);
+      const check = resolveCheck(rng, hero, 'craft', stat, b.buildCheckDifficulty, mods);
+      const gain = b.buildProgressYield[check.tier] ?? 0;
+      addBuildProgress(state, gain);
+      if (isSuccess(check.tier)) markSkill(hero, 'craft');
+      const name = ctx.buildingNames.get(state.construction.building) ?? state.construction.building;
+      report('🔨', `${hero.name} works the ${name}: ${checkBreakdown(check)}. +${gain} progress.`);
+      break;
+    }
     case 'unassigned':
       report('❔', `${hero.name} idles about the post.`);
       break;
     default:
-      // build arrives later in MVP 2; UI keeps it locked.
       report('❔', `${hero.name} has nothing to do (${activity} not yet available).`);
       break;
   }

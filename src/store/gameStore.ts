@@ -7,6 +7,10 @@ import { STARTING_STANDINGS } from '../content/factions';
 import { HERO_POOL, createHero } from '../content/heroes';
 import { LOCATIONS } from '../content/locations';
 import { CONTENT } from '../content/registry';
+import {
+  cancelConstruction as cancelConstructionFn,
+  startConstruction as startConstructionFn,
+} from '../engine/buildings';
 import { buyGood, sellGood } from '../engine/economy';
 import { dispatchExpedition } from '../engine/expeditions';
 import type { DispatchParams } from '../engine/expeditions';
@@ -23,7 +27,14 @@ import {
   resolveTurn,
 } from '../engine/turn';
 import type { ChoiceResolution } from '../engine/turn';
-import type { ActiveEvent, ActivityId, GameState, GoodId, ResidentRole } from '../engine/types';
+import type {
+  ActiveEvent,
+  ActivityId,
+  BuildingId,
+  GameState,
+  GoodId,
+  ResidentRole,
+} from '../engine/types';
 
 export type Screen = 'post' | 'assignments' | 'characters' | 'map' | 'market';
 
@@ -63,6 +74,10 @@ interface GameStore {
   activate: (heroId: string) => boolean;
   /** Send an active-party character to the reserve bench. Returns false if invalid. */
   bench: (heroId: string) => boolean;
+  /** Begin a construction project (deducts cost up front). Returns false if invalid. */
+  startConstruction: (buildingId: BuildingId) => boolean;
+  /** Abandon the active project — paid costs are forfeit. */
+  cancelConstruction: () => void;
   /** Hire residents of a role from the neighbouring towns. Returns false if invalid. */
   hire: (role: ResidentRole, count: number) => boolean;
   /** Move residents between roles/idle at the post. Returns false if invalid. */
@@ -231,6 +246,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
     autosave(next);
     set({ game: next });
     return true;
+  },
+
+  startConstruction: (buildingId) => {
+    const { game } = get();
+    if (!game || game.phase !== 'assignment') return false;
+    const next = draft(game);
+    if (!startConstructionFn(next, buildingId)) return false;
+    autosave(next);
+    set({ game: next });
+    return true;
+  },
+
+  cancelConstruction: () => {
+    const { game } = get();
+    if (!game || game.phase !== 'assignment') return;
+    const next = draft(game);
+    cancelConstructionFn(next);
+    autosave(next);
+    set({ game: next });
   },
 
   hire: (role, count) => {

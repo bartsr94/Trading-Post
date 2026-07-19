@@ -8,6 +8,7 @@ export type IconName =
   | 'post'
   | 'assignments'
   | 'characters'
+  | 'build'
   | 'map'
   | 'market'
   | 'caravan'
@@ -35,6 +36,14 @@ const PATHS: Record<IconName, ReactElement> = {
       <path d="M4 20 V18 A5 5 0 0 1 14 18 V20" />
       <path d="M16 5.5 A3 3 0 0 1 16 11" />
       <path d="M16.5 13.5 A5 5 0 0 1 20 18 V20" />
+    </>
+  ),
+  build: (
+    <>
+      <rect x="3" y="6" width="18" height="12" rx="1" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="9" y1="6" x2="9" y2="12" />
+      <line x1="15" y1="12" x2="15" y2="18" />
     </>
   ),
   map: (

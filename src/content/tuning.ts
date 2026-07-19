@@ -1,9 +1,11 @@
 // All initial tuning values in one place (spec §14). Balancing happens here,
 // never in engine code. Pure data — no logic.
 
+import type { BuildingDefData, TierRequirement } from '../engine/types';
+
 export const TUNING = {
   save: {
-    version: 5,
+    version: 6,
     autosaveKey: 'trading-post-save',
   },
 
@@ -199,6 +201,59 @@ export const TUNING = {
       /** Residents added per qualifying axis at each season end. */
       arrivalsPerSeason: 1,
     },
+  },
+
+  // Buildings & construction (BUILDINGS_SPEC.md). Prose (names/blurbs) lives in
+  // content/buildings.ts; every balance number lives here, keyed by building id.
+  building: {
+    /** Craft check each Build turn; progress added by result tier. */
+    buildCheckDifficulty: 9,
+    buildProgressYield: { critSuccess: 3, success: 2, failure: 1, critFailure: 0 } as Record<
+      string,
+      number
+    >,
+    /** Per-building cost, effort, prerequisites, and effects (ids ↔ content/buildings.ts). */
+    defs: {
+      storehouse: {
+        cost: { silver: 40, goods: { timber: 10 } },
+        buildProgress: 4,
+        prerequisites: [],
+        effects: { residentCapBonus: 2, prosperityBonus: 1, upkeepSilver: 1 },
+      },
+      palisade: {
+        cost: { silver: 60, goods: { timber: 20 } },
+        buildProgress: 6,
+        prerequisites: [],
+        effects: { defenseBonus: 3, prosperityBonus: 1, upkeepSilver: 1 },
+      },
+      trade_hall: {
+        cost: { silver: 80, goods: { timber: 10, tools: 4 } },
+        buildProgress: 6,
+        prerequisites: ['storehouse'],
+        effects: { tradeIncomeBonus: 0.15, prosperityBonus: 2, upkeepSilver: 2 },
+      },
+      common_house: {
+        cost: { silver: 70, goods: { timber: 15 } },
+        buildProgress: 5,
+        prerequisites: [],
+        effects: { residentCapBonus: 4, stressReliefBonus: 1, upkeepSilver: 1 },
+      },
+      workshop: {
+        cost: { silver: 90, goods: { timber: 10, tools: 6 } },
+        buildProgress: 7,
+        prerequisites: ['storehouse'],
+        effects: { craftReliefBonus: 1, prosperityBonus: 2, upkeepSilver: 2 },
+      },
+    } as Record<string, BuildingDefData>,
+    /** Tier-advancement recipes; canAdvanceTier reads the entry for postTier+1. */
+    tierLadder: [
+      {
+        tier: 2,
+        requiredBuildings: ['palisade', 'storehouse'],
+        silverCost: 100,
+        advanceEventId: 'post_raise_palisade',
+      },
+    ] as TierRequirement[],
   },
 
   charter: {

@@ -3,6 +3,7 @@
 // mutators here are called from the turn pipeline and store actions.
 
 import { TUNING } from '../content/tuning';
+import { buildingEffect } from './buildings';
 import { clamp, RESIDENT_ROLES } from './types';
 import type { GameState, ResidentRole, ResidentState } from './types';
 import type { Rng } from './rng';
@@ -51,13 +52,16 @@ export function residentCount(state: GameState, role?: ResidentRole): number {
 }
 
 export function residentCap(state: GameState): number {
-  return TUNING.residents.capByTier[state.postTier] ?? 0;
-  // Buildings will add to this in Phase C.
+  // Tier floor + whatever completed buildings add (Storehouse, Common House…).
+  return (TUNING.residents.capByTier[state.postTier] ?? 0) + buildingEffect(state, 'residentCapBonus');
 }
 
-/** Guards present contribute post defense (read by raids later; suppresses unrest now). */
+/** Guards present + walls contribute post defense (read by raids later; suppresses unrest now). */
 export function postDefense(state: GameState): number {
-  return residentsAvailable(state, 'guards') * TUNING.residents.effects.postDefensePerGuard;
+  return (
+    residentsAvailable(state, 'guards') * TUNING.residents.effects.postDefensePerGuard +
+    buildingEffect(state, 'defenseBonus')
+  );
 }
 
 export function contentmentBand(state: GameState): ContentmentBand {

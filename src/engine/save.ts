@@ -40,6 +40,9 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
       case 4:
         current = migrateV4toV5(current);
         break;
+      case 5:
+        current = migrateV5toV6(current);
+        break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
     }
@@ -90,6 +93,16 @@ function migrateV4toV5(save: GameState): GameState {
     activePartyIds: save.heroes.filter((h) => h.status === 'active').map((h) => h.id),
     dependants: [],
     nextDependantId: 1,
+  };
+}
+
+/** v6 adds buildings + the (empty) construction slot. postTier already exists. */
+function migrateV5toV6(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 6,
+    buildings: [],
+    construction: null,
   };
 }
 

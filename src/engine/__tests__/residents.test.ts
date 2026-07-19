@@ -38,6 +38,7 @@ function outcomeCtx(state: GameState): OutcomeContext {
     factionNames: TEST_CONTENT.factionNames,
     traitNames: TEST_CONTENT.traitNames,
     locationNames: TEST_CONTENT.locationNames,
+    buildingNames: TEST_CONTENT.buildingNames,
   };
 }
 

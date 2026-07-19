@@ -1,4 +1,5 @@
 import { discoveryAtLeast, livingHeroes, seasonOfTurn } from '../types';
+import { canAdvanceTier, hasBuilding } from '../buildings';
 import { cargoUnits } from '../expeditions';
 import { residentCount } from '../residents';
 import type { GameState } from '../types';
@@ -54,6 +55,18 @@ export function evalCondition(
       return state.residents.contentment >= cond.value;
     case 'contentmentAtMost':
       return state.residents.contentment <= cond.value;
+    case 'postTierAtLeast':
+      return state.postTier >= cond.value;
+    case 'postTierAtMost':
+      return state.postTier <= cond.value;
+    case 'hasBuilding':
+      return hasBuilding(state, cond.building);
+    case 'lacksBuilding':
+      return !hasBuilding(state, cond.building);
+    case 'constructionActive':
+      return (state.construction !== null) === cond.value;
+    case 'canAdvanceTier':
+      return canAdvanceTier(state);
     case 'locationDiscovery': {
       const loc = state.locations[cond.location];
       return loc !== undefined && discoveryAtLeast(loc.discovery, cond.atLeast);
