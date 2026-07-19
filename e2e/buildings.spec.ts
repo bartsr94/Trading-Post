@@ -16,9 +16,9 @@ test('starts a construction project and unlocks the Build assignment', async ({ 
   const firstRow = page.locator('.assign-row').first();
   await expect(firstRow.getByRole('button', { name: 'Build', exact: true })).toBeDisabled();
 
-  // Open the Post screen and break ground on the Storehouse.
-  await page.getByRole('button', { name: 'Post', exact: true }).click();
-  await expect(page.getByRole('heading', { name: /Buildings/ })).toBeVisible();
+  // Open the Buildings screen and break ground on the Storehouse.
+  await page.getByRole('button', { name: 'Buildings', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /Buildings/ }).first()).toBeVisible();
   const storehouse = page.locator('.build-option', {
     has: page.getByText('Storehouse', { exact: true }),
   });
@@ -40,7 +40,7 @@ test('starts a construction project and unlocks the Build assignment', async ({ 
 
   // Cancelling the project (auto-accept the confirm) clears the slot.
   page.on('dialog', (d) => d.accept());
-  await page.getByRole('button', { name: 'Post', exact: true }).click();
+  await page.getByRole('button', { name: 'Buildings', exact: true }).click();
   await page.locator('.construction-active').getByRole('button', { name: /Cancel Project/ }).click();
   await expect(page.locator('.construction-active')).toHaveCount(0);
 });

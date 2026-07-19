@@ -8,9 +8,11 @@ import { Icon } from './Icon';
 import type { IconName } from './Icon';
 
 const NAV_ITEMS: { screen: Screen; icon: IconName; label: string }[] = [
-  { screen: 'post', icon: 'post', label: 'Post' },
+  { screen: 'post', icon: 'post', label: 'Outpost' },
   { screen: 'assignments', icon: 'assignments', label: 'Assignments' },
   { screen: 'characters', icon: 'characters', label: 'Characters' },
+  { screen: 'buildings', icon: 'build', label: 'Buildings' },
+  { screen: 'people', icon: 'people', label: 'People' },
   { screen: 'map', icon: 'map', label: 'Map' },
   { screen: 'market', icon: 'market', label: 'Market' },
 ];

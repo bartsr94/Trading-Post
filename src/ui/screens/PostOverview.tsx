@@ -1,18 +1,22 @@
-// Post Overview (spec §11): post banner by tier, resources, settlement axes,
-// faction standings, and the post market (buy/sell).
+// Outpost Overview: a read-at-a-glance dashboard (no controls) laid out in three
+// columns so it never scrolls. The interactive management lives on the dedicated
+// Buildings and People screens, linked from here.
 
+import outpostBg from '../../assets/ui/outpost_background.jpg';
+import { BUILDING_NAMES } from '../../content/buildings';
 import { FACTIONS } from '../../content/factions';
 import { GOODS } from '../../content/goods';
 import { LOCATION_NAMES } from '../../content/locations';
-import { prosperity } from '../../engine/economy';
 import { CONTENT } from '../../content/registry';
+import { TUNING } from '../../content/tuning';
+import { canAdvanceTier, tierRequirement } from '../../engine/buildings';
+import { prosperity } from '../../engine/economy';
+import { contentmentBand, postDefense, residentCap, residentTotal } from '../../engine/residents';
 import { stanceOf } from '../../engine/types';
 import type { ExpeditionState, GameState } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
-import { BuildingsPanel } from '../components/BuildingsPanel';
 import { Icon } from '../components/Icon';
 import type { IconName } from '../components/Icon';
-import { ResidentsPanel } from '../components/ResidentsPanel';
 
 const TIER_NAMES = ['The Clearing', 'Palisade Post', 'Established Post', 'Thriving Settlement'];
 
@@ -22,15 +26,13 @@ const EXPEDITION_KIND_ICONS: Record<ExpeditionState['kind'], IconName> = {
   diplomacy: 'diplomacy',
 };
 
-function AxisIndicator({
-  value,
-  left,
-  right,
-}: {
-  value: number;
-  left: string;
-  right: string;
-}) {
+const BAND_LABEL = {
+  content: { text: 'Content', cls: 'good' },
+  grumbling: { text: 'Grumbling', cls: 'dim' },
+  unrest: { text: 'Unrest', cls: 'bad' },
+} as const;
+
+function AxisIndicator({ value, left, right }: { value: number; left: string; right: string }) {
   return (
     <div className="axis-row">
       <span className="dim">{left}</span> ↔ <span className="dim">{right}</span>
@@ -45,38 +47,79 @@ function AxisIndicator({
 export function PostOverview({ game }: { game: GameState }) {
   const setScreen = useGameStore((s) => s.setScreen);
 
+  const total = residentTotal(game);
+  const cap = residentCap(game);
+  const band = BAND_LABEL[contentmentBand(game)];
+  const construction = game.construction;
+  const activeDef = construction ? TUNING.building.defs[construction.building] : undefined;
+  const nextTier = tierRequirement(game.postTier + 1);
+  const ready = canAdvanceTier(game);
+  const ownedGoods = GOODS.filter((g) => game.goods[g.id] > 0);
+
   return (
-    <div>
-      <div className="post-banner">
-        <div>
-          <h2 style={{ color: '#fff6e0', margin: 0 }}>{TIER_NAMES[game.postTier - 1]}</h2>
-          <span className="dim" style={{ color: '#cbbfa4' }}>
+    <div className="outpost-overview">
+      <div className="post-banner" style={{ backgroundImage: `url(${outpostBg})` }}>
+        <div className="post-banner-text">
+          <span className="eyebrow">Outpost Overview</span>
+          <h2>{TIER_NAMES[game.postTier - 1]}</h2>
+          <span className="dim banner-flavor">
             Tents, a firepit, a stock pile — and six people determined to make it more.
           </span>
         </div>
       </div>
 
-      <div className="overview-grid">
+      <div className="overview-grid-3">
+        {/* Column 1 — the character of the outpost */}
         <div className="panel">
-          <h3>The Post</h3>
+          <h3>The Outpost</h3>
           <AxisIndicator value={game.axes.integration} left="Aloof" right="Integrated" />
           <AxisIndicator value={game.axes.communal} left="Mercantile" right="Communal" />
-          <div style={{ marginTop: 10, fontSize: '0.9rem' }}>
-            Prosperity: <b>{prosperity(game, CONTENT.goodDefs)}</b>
-            {game.bankruptcyClock > 0 && (
-              <div className="bad">
-                ⚠ Upkeep unpaid {game.bankruptcyClock} turn{game.bankruptcyClock > 1 ? 's' : ''} — ruin
-                at 3.
-              </div>
-            )}
-            {game.charterMissedStreak > 0 && (
-              <div className="bad">
-                ⚠ Charter quota unmet {game.charterMissedStreak} season
-                {game.charterMissedStreak > 1 ? 's' : ''} running.
-              </div>
-            )}
+          <div className="faction-row">
+            <span>Prosperity</span>
+            <b>{prosperity(game, CONTENT.goodDefs)}</b>
           </div>
-          <h4 style={{ marginTop: 16 }}>Factions</h4>
+          <div className="faction-row">
+            <span>Defense</span>
+            <b>{postDefense(game)}</b>
+          </div>
+          {game.bankruptcyClock > 0 && (
+            <div className="bad" style={{ fontSize: '0.85rem', marginTop: 8 }}>
+              ⚠ Upkeep unpaid {game.bankruptcyClock} turn{game.bankruptcyClock > 1 ? 's' : ''} — ruin
+              at 3.
+            </div>
+          )}
+          {game.charterMissedStreak > 0 && (
+            <div className="bad" style={{ fontSize: '0.85rem', marginTop: 8 }}>
+              ⚠ Charter quota unmet {game.charterMissedStreak} season
+              {game.charterMissedStreak > 1 ? 's' : ''} running.
+            </div>
+          )}
+          {game.bankruptcyClock === 0 && game.charterMissedStreak === 0 && (
+            <div className="dim" style={{ fontSize: '0.82rem', marginTop: 8 }}>
+              The books balance and the Company is quiet — for now.
+            </div>
+          )}
+        </div>
+
+        {/* Column 2 — trade and standing */}
+        <div className="panel">
+          <h3>Trade &amp; Standing</h3>
+          <h4>Stores</h4>
+          <table className="market">
+            <tbody>
+              {ownedGoods.map((g) => (
+                <tr key={g.id} title={g.note}>
+                  <td>{g.name}</td>
+                  <td className="num">{game.goods[g.id]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <button className="manage-link" onClick={() => setScreen('market')}>
+            Buy &amp; sell on the Market →
+          </button>
+
+          <h4 style={{ marginTop: 14 }}>Factions</h4>
           {FACTIONS.map((f) => {
             const standing = game.factions[f.id].standing;
             return (
@@ -94,33 +137,78 @@ export function PostOverview({ game }: { game: GameState }) {
           })}
         </div>
 
+        {/* Column 3 — the settlement and its comings & goings */}
         <div className="panel">
-          <h3>Stores</h3>
-          <table className="market">
-            <tbody>
-              {GOODS.filter((g) => game.goods[g.id] > 0).map((g) => (
-                <tr key={g.id} title={g.note}>
-                  <td>{g.name}</td>
-                  <td className="num">{game.goods[g.id]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="dim" style={{ fontSize: '0.78rem', margin: '8px 0 0' }}>
-            Buy and sell — and plan caravans — on the{' '}
-            <a
-              style={{ color: 'var(--accent)', cursor: 'pointer' }}
-              onClick={() => setScreen('market')}
-            >
-              Market screen
-            </a>
-            .
-          </p>
+          <h3>The Settlement</h3>
 
-          <h4 style={{ marginTop: 16 }}>Comings &amp; Goings</h4>
+          <h4>Buildings</h4>
+          {game.buildings.length === 0 ? (
+            <p className="dim" style={{ fontSize: '0.84rem', margin: '0 0 6px' }}>
+              Nothing raised yet.
+            </p>
+          ) : (
+            <div className="building-chips">
+              {game.buildings.map((id) => (
+                <span key={id} className="building-chip">
+                  {BUILDING_NAMES.get(id) ?? id}
+                </span>
+              ))}
+            </div>
+          )}
+          {construction && activeDef && (
+            <div className="faction-row">
+              <span className="dim">
+                Building {BUILDING_NAMES.get(construction.building) ?? construction.building}
+              </span>
+              <span className="dim">
+                {construction.progress}/{activeDef.buildProgress}
+              </span>
+            </div>
+          )}
+          {ready ? (
+            <div className="good" style={{ fontSize: '0.82rem', margin: '4px 0' }}>
+              ▲ Ready to grow.
+            </div>
+          ) : (
+            nextTier && (
+              <div className="dim" style={{ fontSize: '0.8rem', margin: '4px 0' }}>
+                To grow: {nextTier.requiredBuildings.map((b) => BUILDING_NAMES.get(b) ?? b).join(' + ')}
+                {' '}+ {nextTier.silverCost} silver.
+              </div>
+            )
+          )}
+          <button className="manage-link" onClick={() => setScreen('buildings')}>
+            Manage buildings →
+          </button>
+
+          <h4 style={{ marginTop: 14 }}>People</h4>
+          <div className="faction-row">
+            <span>Population</span>
+            <span className={total > cap ? 'bad' : 'dim'}>
+              {total} / {cap}
+            </span>
+          </div>
+          <div className="faction-row">
+            <span>Mood</span>
+            <span className={band.cls}>
+              {band.text} <span className="dim">({game.residents.contentment}/10)</span>
+            </span>
+          </div>
+          <div className="faction-row">
+            <span className="dim">Upkeep</span>
+            <span className="dim">
+              {total * TUNING.residents.grainPerResidentPerTurn} grain/turn ·{' '}
+              {total * TUNING.residents.seasonWagePerResident} silver/season
+            </span>
+          </div>
+          <button className="manage-link" onClick={() => setScreen('people')}>
+            Manage people →
+          </button>
+
+          <h4 style={{ marginTop: 14 }}>Comings &amp; Goings</h4>
           {game.expeditions.length === 0 ? (
-            <p className="dim" style={{ fontSize: '0.85rem' }}>
-              Everyone is at the post. The road waits.
+            <p className="dim" style={{ fontSize: '0.84rem', margin: 0 }}>
+              Everyone is at the outpost.
             </p>
           ) : (
             game.expeditions.map((exp) => {
@@ -133,14 +221,13 @@ export function PostOverview({ game }: { game: GameState }) {
                   <span>
                     <Icon
                       name={EXPEDITION_KIND_ICONS[exp.kind]}
-                      size={14}
+                      size={13}
                       style={{ verticalAlign: '-2px', marginRight: 4 }}
                     />
                     {names}
                   </span>
-                  <span className="dim">
-                    {exp.leg === 'outbound' ? `→ ${dest}` : `${dest} → home`} ({exp.turnsLeft}{' '}
-                    turn{exp.turnsLeft === 1 ? '' : 's'})
+                  <span className="dim" style={{ fontSize: '0.8rem' }}>
+                    {exp.leg === 'outbound' ? `→ ${dest}` : `${dest} →`} ({exp.turnsLeft})
                   </span>
                 </div>
               );
@@ -148,9 +235,6 @@ export function PostOverview({ game }: { game: GameState }) {
           )}
         </div>
       </div>
-
-      <BuildingsPanel game={game} />
-      <ResidentsPanel game={game} />
     </div>
   );
 }

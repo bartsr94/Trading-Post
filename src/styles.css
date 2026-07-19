@@ -451,17 +451,87 @@ h4 {
 @media (max-width: 760px) {
   .overview-grid { grid-template-columns: 1fr; }
 }
+/* ---------- Outpost Overview dashboard ---------- */
+.outpost-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 .post-banner {
-  aspect-ratio: 16 / 3;
+  position: relative;
+  overflow: hidden;
+  min-height: 168px;
+  max-height: 24vh;
   border-radius: 8px;
   border: 1px solid var(--border);
   display: flex;
   align-items: flex-end;
   padding: 14px 18px;
-  background: linear-gradient(180deg, #33414a 0%, #232c26 55%, #1d1a13 100%);
-  margin-bottom: 14px;
+  /* Fallback tint behind the photo (set via inline background-image). */
+  background-color: #232c26;
+  background-size: cover;
+  background-position: center 38%;
   color: #fff6e0;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+/* Dark bottom-up wash so the tier name stays legible over the art. */
+.post-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.12) 0%,
+    rgba(0, 0, 0, 0.38) 55%,
+    rgba(0, 0, 0, 0.82) 100%
+  );
+}
+.post-banner-text {
+  position: relative;
+  z-index: 1;
+}
+.post-banner-text h2 {
+  color: #fff6e0;
+  margin: 2px 0;
+}
+.post-banner .eyebrow {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #d8c8a4;
+}
+.post-banner .banner-flavor {
+  color: #cbbfa4;
+  font-size: 0.9rem;
+}
+.overview-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .overview-grid-3 { grid-template-columns: 1fr; }
+}
+/* A full-width link out to a dedicated management screen. */
+.manage-link {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 5px 8px;
+  text-align: left;
+  font-size: 0.82rem;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+.manage-link:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
+/* Wrapper for the dedicated Buildings / People management screens. */
+.manage-screen {
+  max-width: 760px;
 }
 .axis-row { margin: 8px 0; font-size: 0.85rem; }
 .axis-track {

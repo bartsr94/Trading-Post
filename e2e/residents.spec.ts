@@ -9,9 +9,9 @@ async function foundPost(page: Page): Promise<void> {
   await expect(page.getByRole('button', { name: /Confirm Orders/ })).toBeVisible();
 }
 
-test('hiring a resident adds a hand to the pool on the Post screen', async ({ page }) => {
+test('hiring a resident adds a hand to the pool on the People screen', async ({ page }) => {
   await foundPost(page);
-  await page.getByRole('button', { name: /Post/ }).first().click();
+  await page.getByRole('button', { name: 'People', exact: true }).click();
 
   const panel = page.locator('.panel', { hasText: "The Post's People" });
   await expect(panel).toContainText('No one has settled here yet');

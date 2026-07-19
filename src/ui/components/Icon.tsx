@@ -9,6 +9,7 @@ export type IconName =
   | 'assignments'
   | 'characters'
   | 'build'
+  | 'people'
   | 'map'
   | 'market'
   | 'caravan'
@@ -44,6 +45,14 @@ const PATHS: Record<IconName, ReactElement> = {
       <line x1="3" y1="12" x2="21" y2="12" />
       <line x1="9" y1="6" x2="9" y2="12" />
       <line x1="15" y1="12" x2="15" y2="18" />
+    </>
+  ),
+  people: (
+    <>
+      <circle cx="7" cy="9" r="2.5" />
+      <circle cx="16" cy="9" r="2.5" />
+      <path d="M2.5 19 V17.5 A4 4 0 0 1 11 17.5 V19" />
+      <path d="M13 19 V17.5 A4 4 0 0 1 21.5 17.5 V19" />
     </>
   ),
   map: (

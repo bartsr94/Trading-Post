@@ -36,7 +36,14 @@ import type {
   ResidentRole,
 } from '../engine/types';
 
-export type Screen = 'post' | 'assignments' | 'characters' | 'map' | 'market';
+export type Screen =
+  | 'post'
+  | 'assignments'
+  | 'characters'
+  | 'buildings'
+  | 'people'
+  | 'map'
+  | 'market';
 
 const MIGRATION_CTX = { locationDefs: LOCATIONS };
 
