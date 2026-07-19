@@ -1,11 +1,11 @@
 // All initial tuning values in one place (spec §14). Balancing happens here,
 // never in engine code. Pure data — no logic.
 
-import type { BuildingDefData, TierRequirement } from '../engine/types';
+import type { BuildingDefData, FactionId, TierRequirement } from '../engine/types';
 
 export const TUNING = {
   save: {
-    version: 6,
+    version: 7,
     autosaveKey: 'trading-post-save',
   },
 
@@ -290,5 +290,56 @@ export const TUNING = {
     seizureFraction: 0.25,
     /** Standing gained with the Company for meeting the quota. */
     metStandingGain: 1,
+  },
+
+  // Heritage & the cultural character of the post (HERITAGE_SPEC.md). The
+  // `culture` axis is Homeland(−, Imanian) ↔ Frontier(+, Sauromatian).
+  heritage: {
+    /** Native peoples hireable locally: which faction gates them and where they live. */
+    nativePeoples: {
+      kiswani: { faction: 'RIVER_CLANS', seat: 'river_meet' },
+      dustwalker: { faction: 'HILL_TRIBES', seat: 'hill_fort' },
+      bejasi: { faction: 'OLD_PEOPLE', seat: 'elder_grove' },
+    } as Record<string, { faction: FactionId; seat: string }>,
+
+    // Hiring
+    /** Native-faction standing needed to hire that people locally. */
+    localHireStanding: 0,
+    /** Local hands are cheaper than the base costPerHead. */
+    localCostMult: 0.6,
+    /** Thornwatch labor is dearer than any local hire (per head, flat). */
+    homelandCostPerHead: 45,
+    /** Culture nudge per head hired (Frontier for local, Homeland for homeland). */
+    hireAxisNudge: 0.4,
+    /** CHARTER_COMPANY bump when a labor run reaches Thornwatch. */
+    homelandArrivalStanding: 1,
+
+    // Axis drift (season end)
+    /** Max culture step toward the tally-implied target each season. */
+    axisDriftPerSeason: 1,
+    /** culture ≥ this → native settlers drift in via applyAxisArrivals. */
+    frontierThreshold: 4,
+    /** culture ≤ this → homeland families settle via applyAxisArrivals. */
+    homelandThreshold: -4,
+
+    // Company judgment (used in Phase B)
+    /** culture ≥ this reads as "compromised". */
+    compromiseThreshold: 5,
+    /** culture ≤ this reads as "loyal". */
+    loyalThreshold: -5,
+    /** Standing lost per point past compromiseThreshold, per season. */
+    compromiseStandingLoss: 1.5,
+    /** Standing gained per season while loyal. */
+    loyalStandingGain: 2,
+    /** Compromised-AND-hostile seasons before the charter is revoked. */
+    revokeStreak: 3,
+
+    // Active-party composition (HERITAGE_SPEC.md §6, Q7)
+    /** Homeland share of the active party that reassures the Company. */
+    partyLoyalShare: 0.6,
+    /** CHARTER_COMPANY gain + compromise-loss dampener from a loyal party. */
+    partyReassureStanding: 2,
+    /** Standing a mixed party earns with each non-hostile native faction. */
+    nativeRelationsGainPerSeason: 1,
   },
 } as const;

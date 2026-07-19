@@ -24,6 +24,7 @@ const EXPEDITION_KIND_ICONS: Record<ExpeditionState['kind'], IconName> = {
   caravan: 'caravan',
   explore: 'explore',
   diplomacy: 'diplomacy',
+  labor: 'people',
 };
 
 const BAND_LABEL = {
@@ -74,6 +75,7 @@ export function PostOverview({ game }: { game: GameState }) {
           <h3>The Outpost</h3>
           <AxisIndicator value={game.axes.integration} left="Aloof" right="Integrated" />
           <AxisIndicator value={game.axes.communal} left="Mercantile" right="Communal" />
+          <AxisIndicator value={game.axes.culture} left="Imanian" right="Sauromatian" />
           <div className="faction-row">
             <span>Prosperity</span>
             <b>{prosperity(game, CONTENT.goodDefs)}</b>

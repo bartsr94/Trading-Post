@@ -14,7 +14,15 @@ import {
 import type { CheckModifier } from './checks';
 import { priceAt } from './economy';
 import type { GoodDef } from './economy';
-import { addTransientGroup, residentsAvailable, transientEffect } from './residents';
+import {
+  addResidents,
+  addTransientGroup,
+  nudgeCulture,
+  residentCap,
+  residentsAvailable,
+  residentTotal,
+  transientEffect,
+} from './residents';
 import { Rng } from './rng';
 import {
   awayHeroIds,
@@ -54,10 +62,22 @@ export interface DispatchParams {
   buyOrders?: Partial<Record<GoodId, number>>;
   /** Residents seconded to the party (porters add cargo, guards add escort). */
   residents?: Partial<Record<ResidentRole, number>>;
+  /** For `labor` runs: homeland hands to fetch from Thornwatch (HERITAGE_SPEC.md §5.2). */
+  laborCount?: number;
 }
 
 export function cargoUnits(cargo: Partial<Record<GoodId, number>>): number {
   return Object.values(cargo).reduce((sum: number, qty) => sum + (qty ?? 0), 0);
+}
+
+/** Homeland laborers currently in flight (reserve cap so runs can't overflow). */
+export function inFlightHomelandLabor(state: GameState): number {
+  return state.expeditions.reduce((sum, e) => sum + (e.homelandLabor ?? 0), 0);
+}
+
+/** Total silver a labor run of `count` hands costs up front. */
+export function laborRunCost(count: number): number {
+  return TUNING.heritage.homelandCostPerHead * count;
 }
 
 export function cargoCapacity(
@@ -104,6 +124,15 @@ export function dispatchError(
   } else if (params.kind === 'diplomacy') {
     if (!def.faction) return 'There is no one there to treat with.';
     if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way there yet.';
+  } else if (params.kind === 'labor') {
+    if (def.faction !== 'CHARTER_COMPANY') return 'Only the Company garrison hires out homeland hands.';
+    if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to the garrison yet.';
+    const count = params.laborCount ?? 0;
+    if (count < 1) return 'Send for at least one hand.';
+    if (state.silver < laborRunCost(count)) return "Not enough silver for the recruiters' fee.";
+    if (residentTotal(state) + inFlightHomelandLabor(state) + count > residentCap(state)) {
+      return 'No room to house them yet.';
+    }
   } else {
     if (!def.hasMarket) return 'There is no market there.';
     if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to that market yet.';
@@ -150,6 +179,14 @@ export function dispatchExpedition(
   const silver = params.silver ?? 0;
   state.silver -= silver;
 
+  // A labor run pays the recruiters' fee up front and reserves its hands.
+  let homelandLabor: number | undefined;
+  if (params.kind === 'labor') {
+    const count = params.laborCount ?? 0;
+    state.silver -= laborRunCost(count);
+    homelandLabor = count;
+  }
+
   // Second residents onto the party: they leave the post pool until homecoming.
   const escort: Partial<Record<ResidentRole, number>> = {};
   for (const role of RESIDENT_ROLES) {
@@ -170,6 +207,7 @@ export function dispatchExpedition(
     silver,
     buyOrders: { ...(params.buyOrders ?? {}) },
     residentEscort: escort,
+    ...(homelandLabor !== undefined ? { homelandLabor } : {}),
   });
   state.nextExpeditionId += 1;
   return true;
@@ -223,7 +261,8 @@ export function advanceExpeditions(
     if (exp.leg === 'outbound') {
       if (exp.kind === 'caravan') resolveCaravanArrival(state, ctx, exp, def, rng, report);
       else if (exp.kind === 'explore') resolveExploreArrival(state, ctx, exp, def, rng, report);
-      else resolveDiplomacyArrival(state, ctx, exp, def, rng, report);
+      else if (exp.kind === 'diplomacy') resolveDiplomacyArrival(state, ctx, exp, def, rng, report);
+      else resolveLaborArrival(state, exp, def, report);
       exp.leg = 'returning';
       exp.turnsLeft = Math.max(1, def.travelTurns);
     } else {
@@ -404,6 +443,25 @@ function resolveDiplomacyArrival(
   );
 }
 
+/** A labor run reaches Thornwatch: the Company notes your investment in homeland
+ *  hands (HERITAGE_SPEC.md §5.2). The hands themselves are added on homecoming. */
+function resolveLaborArrival(
+  state: GameState,
+  exp: ExpeditionState,
+  def: LocationDef,
+  report: (icon: string, text: string) => void,
+): void {
+  const count = exp.homelandLabor ?? 0;
+  if (def.faction) {
+    const faction = state.factions[def.faction];
+    faction.standing = clamp(faction.standing + TUNING.heritage.homelandArrivalStanding, -100, 100);
+  }
+  report(
+    '📜',
+    `${partyNames(state, exp)} sign on ${count} homeland hand${count === 1 ? '' : 's'} at ${def.name}.`,
+  );
+}
+
 /** Word of neighbouring places reaches the party once a node is truly visited. */
 function spreadRumors(
   state: GameState,
@@ -440,13 +498,33 @@ function resolveHomecoming(
     }
   }
 
+  // Homeland hands fetched from Thornwatch settle in (HERITAGE_SPEC.md §5.2).
+  let laborLine = '';
+  if (exp.homelandLabor && exp.homelandLabor > 0) {
+    const wanted = exp.homelandLabor;
+    const settled = addResidents(state, 'idle', wanted, 'settlers', 'homeland');
+    if (settled > 0) nudgeCulture(state, -TUNING.heritage.hireAxisNudge * settled);
+    const overflow = wanted - settled;
+    if (overflow > 0) {
+      const refund = laborRunCost(overflow);
+      state.silver += refund;
+      laborLine = ` ${settled} homeland hand${settled === 1 ? '' : 's'} settle in; ${overflow} turned away for want of room (${refund} silver refunded).`;
+    } else {
+      laborLine = ` ${settled} homeland hand${settled === 1 ? '' : 's'} settle in.`;
+    }
+  }
+
   const haul: string[] = [];
   if (exp.silver > 0) haul.push(`${exp.silver} silver`);
   if (goodsBrought.length > 0) haul.push(goodsBrought.join(', '));
   const tail =
-    haul.length > 0 ? ` with ${haul.join(' and ')}.` : exp.kind === 'diplomacy' ? '.' : ' with empty hands.';
+    haul.length > 0
+      ? ` with ${haul.join(' and ')}.`
+      : exp.kind === 'diplomacy' || exp.kind === 'labor'
+        ? '.'
+        : ' with empty hands.';
   report(
     '🏠',
-    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${def.name}${tail}`,
+    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${def.name}${tail}${laborLine}`,
   );
 }

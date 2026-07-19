@@ -1,7 +1,7 @@
-import { discoveryAtLeast, livingHeroes, seasonOfTurn } from '../types';
+import { activeHeroes, discoveryAtLeast, livingHeroes, seasonOfTurn } from '../types';
 import { canAdvanceTier, hasBuilding } from '../buildings';
 import { cargoUnits } from '../expeditions';
-import { residentCount } from '../residents';
+import { heritageCount, nativeShare, residentCount } from '../residents';
 import type { GameState } from '../types';
 import type { Condition, TravelContext } from './types';
 
@@ -55,6 +55,14 @@ export function evalCondition(
       return state.residents.contentment >= cond.value;
     case 'contentmentAtMost':
       return state.residents.contentment <= cond.value;
+    case 'nativeShareAtLeast':
+      return nativeShare(state) >= cond.value;
+    case 'nativeShareAtMost':
+      return nativeShare(state) <= cond.value;
+    case 'heritageCountAtLeast':
+      return heritageCount(state, cond.group) >= cond.value;
+    case 'heroHeritageInParty':
+      return activeHeroes(state).some((h) => h.heritage === cond.heritage);
     case 'postTierAtLeast':
       return state.postTier >= cond.value;
     case 'postTierAtMost':

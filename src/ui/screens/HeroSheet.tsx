@@ -4,7 +4,7 @@
 import { TRAIT_DEFS } from '../../content/traits';
 import { activateError, benchError, dependantsOf } from '../../engine/roster';
 import { SKILL_IDS, STAT_IDS } from '../../engine/types';
-import type { Dependant, Hero } from '../../engine/types';
+import type { Dependant, Hero, Heritage } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from '../components/ConditionBars';
 import { Portrait } from '../components/Portrait';
@@ -13,6 +13,13 @@ const DEPENDANT_LABEL: Record<Dependant['kind'], string> = {
   spouse: 'Spouse',
   child: 'Child',
   kin: 'Kin',
+};
+
+const HERITAGE_LABEL: Record<Heritage, string> = {
+  imanian: 'Imanian (homeland)',
+  kiswani: 'Kiswani',
+  dustwalker: 'Dustwalker',
+  bejasi: 'Bejasi',
 };
 
 export function HeroSheet({ hero }: { hero: Hero }) {
@@ -42,6 +49,9 @@ export function HeroSheet({ hero }: { hero: Hero }) {
             <h2>
               {hero.name} <span className="dim">{hero.epithet}</span>
             </h2>
+            <p className="dim" style={{ fontSize: '0.78rem', margin: '0 0 4px' }}>
+              {HERITAGE_LABEL[hero.heritage]}
+            </p>
             <p className="dim" style={{ fontSize: '0.88rem' }}>{hero.bio}</p>
             <ConditionBars hero={hero} />
             {hero.status !== 'active' ? (

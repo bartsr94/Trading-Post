@@ -80,7 +80,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     residents: freshResidents(),
     transients: [],
     nextTransientId: 1,
-    axes: { integration: 0, communal: 0 },
+    axes: { integration: 0, communal: 0, culture: 0 },
     postTier: 1,
     buildings: [],
     construction: null,
@@ -91,6 +91,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     pendingEvents: [],
     bankruptcyClock: 0,
     charterMissedStreak: 0,
+    charterCompromisedStreak: 0,
     report: { turn: 1, lines: [], silverDelta: 0, goodsDelta: {} },
     gameOver: null,
   };

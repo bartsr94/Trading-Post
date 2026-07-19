@@ -62,9 +62,13 @@ export function applyOutcomes(
             ? outcome.delta > 0
               ? 'The post grows more integrated'
               : 'The post grows more aloof'
-            : outcome.delta > 0
-              ? 'The post feels more like a home'
-              : 'The post grows more mercantile';
+            : outcome.axis === 'communal'
+              ? outcome.delta > 0
+                ? 'The post feels more like a home'
+                : 'The post grows more mercantile'
+              : outcome.delta > 0
+                ? 'The post takes on a more Sauromatian character'
+                : 'The post holds to its Imanian ways';
         log.push(label);
         break;
       }
@@ -123,13 +127,13 @@ export function applyOutcomes(
         break;
       }
       case 'addResidents': {
-        const added = addResidents(state, outcome.role, outcome.count, outcome.tag);
+        const added = addResidents(state, outcome.role, outcome.count, outcome.tag, outcome.group);
         if (added > 0) log.push(`+${added} resident${added === 1 ? '' : 's'}`);
         else log.push('No room for newcomers');
         break;
       }
       case 'loseResidents': {
-        const lost = loseResidents(state, outcome.role, outcome.count);
+        const lost = loseResidents(state, outcome.role, outcome.count, outcome.group);
         if (lost > 0) log.push(`−${lost} resident${lost === 1 ? '' : 's'}`);
         break;
       }

@@ -10,6 +10,8 @@ import type {
   FactionId,
   GameState,
   GoodId,
+  Heritage,
+  HeritageGroup,
   LocationDef,
   LocationId,
   ResidentRole,
@@ -53,6 +55,10 @@ export type Condition =
   | { type: 'residentsBelow'; role?: ResidentRole; value: number }
   | { type: 'contentmentAtLeast'; value: number }
   | { type: 'contentmentAtMost'; value: number }
+  | { type: 'nativeShareAtLeast'; value: number }
+  | { type: 'nativeShareAtMost'; value: number }
+  | { type: 'heritageCountAtLeast'; group: HeritageGroup; value: number }
+  | { type: 'heroHeritageInParty'; heritage: Heritage }
   | { type: 'postTierAtLeast'; value: number }
   | { type: 'postTierAtMost'; value: number }
   | { type: 'hasBuilding'; building: BuildingId }
@@ -93,8 +99,14 @@ export type Outcome =
   | { type: 'queueEvent'; eventId: string; delayTurns: number; sameHero?: boolean }
   | { type: 'setFlag'; flag: string; value?: boolean }
   | { type: 'priceShock'; good: GoodId; mod: number }
-  | { type: 'addResidents'; role: ResidentRole | 'idle'; count: number; tag?: string }
-  | { type: 'loseResidents'; role?: ResidentRole; count: number }
+  | {
+      type: 'addResidents';
+      role: ResidentRole | 'idle';
+      count: number;
+      tag?: string;
+      group?: HeritageGroup;
+    }
+  | { type: 'loseResidents'; role?: ResidentRole; count: number; group?: HeritageGroup }
   | { type: 'contentment'; delta: number }
   | { type: 'addTransient'; kind: TransientKind; count: number; turns: number }
   | { type: 'advanceTier' }

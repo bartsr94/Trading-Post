@@ -45,8 +45,23 @@ function maybeDispatch(state: GameState, rng: Rng): void {
     const loc = state.locations[d.id];
     return d.faction !== undefined && loc && discoveryAtLeast(loc.discovery, 'visited');
   });
+  const laborTarget = defs.find((d) => {
+    const loc = state.locations[d.id];
+    return d.faction === 'CHARTER_COMPANY' && loc && discoveryAtLeast(loc.discovery, 'visited');
+  });
   const roll = rng.next();
-  if (roll < 0.4 && caravanTargets.length > 0) {
+  if (
+    roll < 0.15 &&
+    laborTarget &&
+    state.silver > 120 &&
+    residentTotal(state) < residentCap(state)
+  ) {
+    dispatchExpedition(
+      state,
+      { kind: 'labor', destination: laborTarget.id, heroIds: [heroIds[0]], laborCount: 1 },
+      TEST_CONTENT.locationDefs,
+    );
+  } else if (roll < 0.4 && caravanTargets.length > 0) {
     dispatchExpedition(
       state,
       {
@@ -94,7 +109,8 @@ function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
     if (state.gameOver) return;
     // Take on a few hands when there's room and coin, and put idle ones to work.
     if (state.turn % 2 === 0 && state.silver > 80 && residentTotal(state) < residentCap(state)) {
-      hireResidents(state, choiceRng.next() < 0.5 ? 'farmers' : 'porters', 1);
+      // Local hire is gated on native standing/discovery; a no-op when unmet.
+      hireResidents(state, choiceRng.next() < 0.5 ? 'farmers' : 'porters', 1, 'kiswani');
     }
     if (state.residents.idle > 0) reallocate(state, 'idle', 'guards', state.residents.idle);
     maybeDispatch(state, choiceRng);
@@ -158,6 +174,12 @@ describe('full-season simulation', () => {
       expect(residentTotal(s)).toBeLessThanOrEqual(residentCap(s));
       expect(s.residents.contentment).toBeGreaterThanOrEqual(0);
       expect(s.residents.contentment).toBeLessThanOrEqual(10);
+      // Heritage tally stays non-negative and summed-equal to the pool; culture in band.
+      expect(s.residents.heritage.homeland).toBeGreaterThanOrEqual(0);
+      expect(s.residents.heritage.native).toBeGreaterThanOrEqual(0);
+      expect(s.residents.heritage.homeland + s.residents.heritage.native).toBe(residentTotal(s));
+      expect(s.axes.culture).toBeGreaterThanOrEqual(-10);
+      expect(s.axes.culture).toBeLessThanOrEqual(10);
       // Buildings & tier invariants: tier in range, at most one live project.
       expect(s.postTier).toBeGreaterThanOrEqual(1);
       expect(s.postTier).toBeLessThanOrEqual(4);

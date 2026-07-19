@@ -2,7 +2,8 @@
 // docs/ASHMARK_LORE_SPEC.md. Each hero's hookHint teases their personal
 // event chain without spelling it out.
 
-import type { Hero, SkillId, StatId } from '../engine/types';
+import { HERITAGES } from '../engine/types';
+import type { Hero, Heritage, SkillId, StatId } from '../engine/types';
 
 export interface HeroTemplate {
   id: string;
@@ -14,9 +15,19 @@ export interface HeroTemplate {
    *  UI-only — never copied onto the runtime Hero (that lives in GameState
    *  and would force a save migration). */
   portraitKey: string;
+  /** People this character belongs to (HERITAGE_SPEC.md §2). Optional here —
+   *  falls back to the portrait-key prefix, which already encodes the race pool. */
+  heritage?: Heritage;
   stats: Record<StatId, number>;
   skills: Partial<Record<SkillId, number>>;
   traits: string[];
+}
+
+/** A template's heritage: explicit if set, else read from the portrait-key prefix. */
+export function heritageOf(template: Pick<HeroTemplate, 'portraitKey' | 'heritage'>): Heritage {
+  if (template.heritage) return template.heritage;
+  const prefix = template.portraitKey.split('_')[0];
+  return (HERITAGES as readonly string[]).includes(prefix) ? (prefix as Heritage) : 'imanian';
 }
 
 const NO_SKILLS: Record<SkillId, number> = {
@@ -44,6 +55,7 @@ export function createHero(template: HeroTemplate): Hero {
     health: 10,
     stress: 0,
     status: 'active',
+    heritage: heritageOf(template),
     history: [],
   };
 }

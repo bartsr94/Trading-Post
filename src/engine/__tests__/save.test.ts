@@ -44,11 +44,12 @@ describe('saves', () => {
     delete v1.nextDependantId;
     delete v1.buildings;
     delete v1.construction;
+    delete (v1 as Partial<GameState>).charterCompromisedStreak;
     v1.saveVersion = 1;
     v1.silver = 123;
 
     const migrated = deserialize(JSON.stringify(v1), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(6);
+    expect(migrated.saveVersion).toBe(7);
     expect(migrated.silver).toBe(123);
     expect(migrated.expeditions).toEqual([]);
     expect(migrated.locations.river_meet.discovery).toBe('visited');
@@ -61,6 +62,11 @@ describe('saves', () => {
     expect(migrated.dependants).toEqual([]);
     expect(migrated.buildings).toEqual([]);
     expect(migrated.construction).toBeNull();
+    // v7 heritage system.
+    expect(migrated.axes.culture).toBe(0);
+    expect(migrated.charterCompromisedStreak).toBe(0);
+    expect(migrated.residents.heritage).toEqual({ homeland: 0, native: 0 });
+    expect(migrated.heroes.every((h) => h.heritage !== undefined)).toBe(true);
   });
 
   it('migrates v2 saves: Charter quota clock + residents added, everything else intact', () => {
@@ -78,7 +84,7 @@ describe('saves', () => {
     v2.silver = 77;
 
     const migrated = deserialize(JSON.stringify(v2), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(6);
+    expect(migrated.saveVersion).toBe(7);
     expect(migrated.silver).toBe(77);
     expect(migrated.charterMissedStreak).toBe(0);
     expect(migrated.residents.contentment).toBeGreaterThan(0);
@@ -98,7 +104,7 @@ describe('saves', () => {
     v3.silver = 88;
 
     const migrated = deserialize(JSON.stringify(v3), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(6);
+    expect(migrated.saveVersion).toBe(7);
     expect(migrated.silver).toBe(88);
     expect(migrated.residents.idle).toBe(0);
     expect(migrated.nextTransientId).toBe(1);
@@ -115,7 +121,7 @@ describe('saves', () => {
     v4.silver = 99;
 
     const migrated = deserialize(JSON.stringify(v4), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(6);
+    expect(migrated.saveVersion).toBe(7);
     expect(migrated.silver).toBe(99);
     expect(migrated.activePartyIds).toEqual(migrated.heroes.map((h) => h.id));
     expect(migrated.dependants).toEqual([]);
@@ -130,10 +136,40 @@ describe('saves', () => {
     v5.silver = 111;
 
     const migrated = deserialize(JSON.stringify(v5), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(6);
+    expect(migrated.saveVersion).toBe(7);
     expect(migrated.silver).toBe(111);
     expect(migrated.buildings).toEqual([]);
     expect(migrated.construction).toBeNull();
     expect(migrated.postTier).toBe(1);
+  });
+
+  it('migrates v6 saves: heritage system added; residents backfill homeland, heroes from ctx', () => {
+    const v6 = testState(560) as Partial<GameState>;
+    if (v6.axes) delete (v6.axes as Partial<GameState['axes']>).culture;
+    delete (v6 as Partial<GameState>).charterCompromisedStreak;
+    if (v6.residents) delete (v6.residents as Partial<GameState['residents']>).heritage;
+    // Pretend the old pool had no heritage stamped on the runtime heroes.
+    v6.heroes = v6.heroes!.map((h) => {
+      const copy = { ...h } as Partial<GameState['heroes'][number]>;
+      delete copy.heritage;
+      return copy as GameState['heroes'][number];
+    });
+    v6.residents!.roles.farmers = 3;
+    v6.saveVersion = 6;
+
+    const heroHeritage = new Map([['p4', 'kiswani'], ['p5', 'dustwalker']] as const);
+    const migrated = deserialize(JSON.stringify(v6), {
+      locationDefs: TEST_LOCATIONS,
+      heroHeritage,
+    });
+    expect(migrated.saveVersion).toBe(7);
+    expect(migrated.axes.culture).toBe(0);
+    expect(migrated.charterCompromisedStreak).toBe(0);
+    // Pre-feature residents are treated as homeland founders.
+    expect(migrated.residents.heritage).toEqual({ homeland: 3, native: 0 });
+    // Hero heritage comes from the injected map; unknown ids default to imanian.
+    expect(migrated.heroes.find((h) => h.id === 'p4')!.heritage).toBe('kiswani');
+    expect(migrated.heroes.find((h) => h.id === 'p5')!.heritage).toBe('dustwalker');
+    expect(migrated.heroes.find((h) => h.id === 'p1')!.heritage).toBe('imanian');
   });
 });

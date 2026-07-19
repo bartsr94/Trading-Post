@@ -4,8 +4,15 @@
 
 import { TUNING } from '../content/tuning';
 import { addBuildProgress, buildingEffect } from './buildings';
-import { clamp, RESIDENT_ROLES } from './types';
-import type { GameState, ResidentRole, ResidentState, TransientKind } from './types';
+import { clamp, discoveryAtLeast, isNativeHeritage, RESIDENT_ROLES, stanceOf } from './types';
+import type {
+  GameState,
+  Heritage,
+  HeritageGroup,
+  ResidentRole,
+  ResidentState,
+  TransientKind,
+} from './types';
 import type { Rng } from './rng';
 
 export type ContentmentBand = 'content' | 'grumbling' | 'unrest';
@@ -15,7 +22,13 @@ export function emptyRoles(): Record<ResidentRole, number> {
 }
 
 export function freshResidents(): ResidentState {
-  return { roles: emptyRoles(), idle: 0, contentment: TUNING.residents.contentment.start, tags: [] };
+  return {
+    roles: emptyRoles(),
+    idle: 0,
+    contentment: TUNING.residents.contentment.start,
+    tags: [],
+    heritage: { homeland: 0, native: 0 },
+  };
 }
 
 // ------------------------------------------------------------- selectors
@@ -54,6 +67,29 @@ export function residentCount(state: GameState, role?: ResidentRole): number {
 export function residentCap(state: GameState): number {
   // Tier floor + whatever completed buildings add (Storehouse, Common House…).
   return (TUNING.residents.capByTier[state.postTier] ?? 0) + buildingEffect(state, 'residentCapBonus');
+}
+
+// ------------------------------------------------------- heritage (HERITAGE_SPEC.md)
+
+/** Heads of a given origin the post feeds (HERITAGE_SPEC.md §3.2). */
+export function heritageCount(state: GameState, group: HeritageGroup): number {
+  return state.residents.heritage[group];
+}
+
+/** Native heads ÷ total (0 when the pool is empty). */
+export function nativeShare(state: GameState): number {
+  const total = residentTotal(state);
+  return total === 0 ? 0 : state.residents.heritage.native / total;
+}
+
+/** Whichever origin currently forms the majority (ties → homeland). */
+export function dominantGroup(state: GameState): HeritageGroup {
+  return nativeShare(state) > 0.5 ? 'native' : 'homeland';
+}
+
+/** Nudge the culture axis (Homeland− ↔ Frontier+), clamped to the axis band. */
+export function nudgeCulture(state: GameState, delta: number): void {
+  state.axes.culture = clamp(state.axes.culture + delta, -10, 10);
 }
 
 export type TransientEffectField = 'defenseBonus' | 'contentmentPressure' | 'cargoBonus';
@@ -98,13 +134,16 @@ export function outputMultiplier(state: GameState): number {
 
 /**
  * Adds residents into a role (or idle), never exceeding the cap. Returns how
- * many actually joined. Used by hiring, growth, axis arrivals, and events.
+ * many actually joined. `group` records their origin on the heritage tally
+ * (kept summed-equal to residentTotal). Used by hiring, growth, axis arrivals,
+ * and events.
  */
 export function addResidents(
   state: GameState,
   role: ResidentRole | 'idle',
   count: number,
   tag?: string,
+  group: HeritageGroup = 'homeland',
 ): number {
   if (count <= 0) return 0;
   const space = Math.max(0, residentCap(state) - residentTotal(state));
@@ -112,16 +151,42 @@ export function addResidents(
   if (added <= 0) return 0;
   if (role === 'idle') state.residents.idle += added;
   else state.residents.roles[role] += added;
+  state.residents.heritage[group] += added;
   if (tag && !state.residents.tags.includes(tag)) state.residents.tags.push(tag);
   return added;
 }
 
 /**
+ * Debits the heritage tally by `n` heads, keeping it summed-equal to the pool.
+ * Biases toward `prefer` when given, otherwise splits proportionally to the
+ * current mix (HERITAGE_SPEC.md §4).
+ */
+function debitHeritage(state: GameState, n: number, prefer?: HeritageGroup): void {
+  if (n <= 0) return;
+  const h = state.residents.heritage;
+  const before = h.homeland + h.native;
+  if (before <= 0) return;
+  let native: number;
+  if (prefer === 'native') native = Math.min(n, h.native);
+  else if (prefer === 'homeland') native = n - Math.min(n, h.homeland);
+  else native = Math.min(h.native, Math.round(n * (h.native / before)));
+  native = clamp(native, Math.max(0, n - h.homeland), Math.min(n, h.native));
+  h.native -= native;
+  h.homeland -= n - native;
+}
+
+/**
  * Removes residents present at the post — idle first, then from the largest
- * role (or the named role). Never touches seconded escorts. Returns how many
+ * role (or the named role). Never touches seconded escorts. `group` biases which
+ * origin leaves on the heritage tally (default: proportional). Returns how many
  * actually left.
  */
-export function loseResidents(state: GameState, role: ResidentRole | undefined, count: number): number {
+export function loseResidents(
+  state: GameState,
+  role: ResidentRole | undefined,
+  count: number,
+  group?: HeritageGroup,
+): number {
   if (count <= 0) return 0;
   let remaining = count;
   const r = state.residents;
@@ -152,7 +217,9 @@ export function loseResidents(state: GameState, role: ResidentRole | undefined, 
     remaining -= 1;
   }
 
-  return count - remaining;
+  const lost = count - remaining;
+  debitHeritage(state, lost, group);
+  return lost;
 }
 
 /** Move residents between roles/idle at the post (present counts only). */
@@ -173,20 +240,49 @@ export function reallocate(
   return true;
 }
 
-/** Why hiring `count` of `role` is invalid, or null when it may proceed. */
-export function hireError(state: GameState, role: ResidentRole, count: number): string | null {
+/** Silver to hire `count` native hands of a role locally (discounted from base). */
+export function localHireCost(role: ResidentRole, count: number): number {
+  return Math.ceil(TUNING.residents.hire.costPerHead[role] * TUNING.heritage.localCostMult) * count;
+}
+
+/**
+ * Why hiring `count` of `role` from a native `people` is invalid, or null when
+ * it may proceed. Native hands only — homeland hands are fetched from Thornwatch
+ * (HERITAGE_SPEC.md §4). Gated on reaching that people and their goodwill.
+ */
+export function hireError(
+  state: GameState,
+  role: ResidentRole,
+  count: number,
+  people: Heritage,
+): string | null {
   if (count <= 0) return 'Hire at least one.';
-  const cost = TUNING.residents.hire.costPerHead[role] * count;
-  if (state.silver < cost) return 'Not enough silver.';
+  if (!isNativeHeritage(people)) return 'Homeland hands must be sent for from Thornwatch.';
+  const src = TUNING.heritage.nativePeoples[people];
+  if (!src) return 'No such people to hire from.';
+  const loc = state.locations[src.seat];
+  if (!loc || !discoveryAtLeast(loc.discovery, 'visited')) {
+    return 'You have not reached their people yet.';
+  }
+  const standing = state.factions[src.faction].standing;
+  if (stanceOf(standing) === 'Hostile') return 'They will not send their people to you.';
+  if (standing < TUNING.heritage.localHireStanding) return 'They do not trust you enough yet.';
+  if (state.silver < localHireCost(role, count)) return 'Not enough silver.';
   if (residentTotal(state) + count > residentCap(state)) return 'No room for them yet.';
   return null;
 }
 
-/** Pay to bring on residents of a role (they arrive knowing their trade). */
-export function hireResidents(state: GameState, role: ResidentRole, count: number): boolean {
-  if (hireError(state, role, count) !== null) return false;
-  state.silver -= TUNING.residents.hire.costPerHead[role] * count;
-  state.residents.roles[role] += count;
+/** Hire native hands of a role from their people (instant; they know their trade). */
+export function hireResidents(
+  state: GameState,
+  role: ResidentRole,
+  count: number,
+  people: Heritage,
+): boolean {
+  if (hireError(state, role, count, people) !== null) return false;
+  state.silver -= localHireCost(role, count);
+  addResidents(state, role, count, people, 'native');
+  nudgeCulture(state, TUNING.heritage.hireAxisNudge * count);
   return true;
 }
 
@@ -285,20 +381,39 @@ export function applyGrowth(state: GameState, rng: Rng, prosperityScore: number)
   const g = TUNING.residents.growth;
   const chance = g.baseGrowthChance + Math.max(0, prosperityScore) * g.prosperityBonus;
   if (rng.next() >= chance) return 0;
-  return addResidents(state, 'idle', 1);
+  // Organic growth mirrors the post's existing makeup.
+  return addResidents(state, 'idle', 1, undefined, dominantGroup(state));
 }
 
 /** Season-end arrivals driven by the settlement axes. Returns lines describing them. */
-export function applyAxisArrivals(state: GameState): { tag: string; count: number }[] {
+export function applyAxisArrivals(
+  state: GameState,
+): { tag: string; count: number; group: HeritageGroup }[] {
   const a = TUNING.residents.axisGrowth;
-  const arrivals: { tag: string; count: number }[] = [];
-  if (state.axes.integration >= a.integrationThreshold) {
-    const added = addResidents(state, 'farmers', a.arrivalsPerSeason, 'native-kin');
-    if (added > 0) arrivals.push({ tag: 'native-kin', count: added });
-  }
-  if (state.axes.communal >= a.communalThreshold) {
-    const added = addResidents(state, 'farmers', a.arrivalsPerSeason, 'settlers');
-    if (added > 0) arrivals.push({ tag: 'settlers', count: added });
-  }
+  const h = TUNING.heritage;
+  const arrivals: { tag: string; count: number; group: HeritageGroup }[] = [];
+  const draw = (tag: string, group: HeritageGroup) => {
+    const added = addResidents(state, 'farmers', a.arrivalsPerSeason, tag, group);
+    if (added > 0) arrivals.push({ tag, count: added, group });
+  };
+  if (state.axes.integration >= a.integrationThreshold) draw('native-kin', 'native');
+  if (state.axes.communal >= a.communalThreshold) draw('settlers', 'homeland');
+  // The post's cultural character draws its own kind (HERITAGE_SPEC.md §5.3).
+  if (state.axes.culture >= h.frontierThreshold) draw('frontier-folk', 'native');
+  if (state.axes.culture <= h.homelandThreshold) draw('homeland-folk', 'homeland');
   return arrivals;
+}
+
+/**
+ * Season-end: the culture axis drifts toward the balance the resident tally
+ * implies, so it self-corrects as the pool churns (HERITAGE_SPEC.md §5.1).
+ * Returns the applied delta.
+ */
+export function applyCultureDrift(state: GameState): number {
+  if (residentTotal(state) === 0) return 0;
+  const target = (nativeShare(state) - 0.5) * 20; // map 0–1 share onto −10..+10
+  const step = TUNING.heritage.axisDriftPerSeason;
+  const before = state.axes.culture;
+  nudgeCulture(state, clamp(target - before, -step, step));
+  return state.axes.culture - before;
 }

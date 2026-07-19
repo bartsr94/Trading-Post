@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { FACTION_DEFS } from '../../content/factions';
 import { LOCATIONS, LOCATION_DEFS } from '../../content/locations';
-import { dispatchError } from '../../engine/expeditions';
+import { dispatchError, laborRunCost } from '../../engine/expeditions';
 import { discoveryAtLeast, heroesAtPost, stanceOf } from '../../engine/types';
 import type { GameState, LocationDef } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
@@ -29,6 +29,9 @@ export function MapScreen({ game }: { game: GameState }) {
   const [error, setError] = useState<string | null>(null);
   const [envoyParty, setEnvoyParty] = useState<string[]>([]);
   const [envoyError, setEnvoyError] = useState<string | null>(null);
+  const [laborParty, setLaborParty] = useState<string[]>([]);
+  const [laborCount, setLaborCount] = useState(1);
+  const [laborError, setLaborError] = useState<string | null>(null);
 
   const available = heroesAtPost(game);
   const selected = selectedId ? LOCATION_DEFS.get(selectedId) ?? null : null;
@@ -84,6 +87,37 @@ export function MapScreen({ game }: { game: GameState }) {
     }
   };
 
+  const toggleLabor = (heroId: string) => {
+    setLaborError(null);
+    setLaborParty((prev) =>
+      prev.includes(heroId)
+        ? prev.filter((id) => id !== heroId)
+        : prev.length < TUNING.map.maxExpeditionHeroes
+          ? [...prev, heroId]
+          : prev,
+    );
+  };
+
+  const callForHands = () => {
+    if (!selected) return;
+    const params = {
+      kind: 'labor' as const,
+      destination: selected.id,
+      heroIds: laborParty,
+      laborCount,
+    };
+    const reason = dispatchError(game, params, LOCATION_DEFS);
+    if (reason) {
+      setLaborError(reason);
+      return;
+    }
+    if (dispatch(params)) {
+      setLaborParty([]);
+      setLaborCount(1);
+      setLaborError(null);
+    }
+  };
+
   const canExplore =
     selected !== undefined &&
     selected !== null &&
@@ -96,6 +130,13 @@ export function MapScreen({ game }: { game: GameState }) {
     selected !== null &&
     selectedLoc !== undefined &&
     selected.faction !== undefined &&
+    discoveryAtLeast(selectedLoc.discovery, 'visited');
+
+  const canCallHands =
+    selected !== undefined &&
+    selected !== null &&
+    selectedLoc !== undefined &&
+    selected.faction === 'CHARTER_COMPANY' &&
     discoveryAtLeast(selectedLoc.discovery, 'visited');
 
   return (
@@ -142,7 +183,13 @@ export function MapScreen({ game }: { game: GameState }) {
                 </text>
                 {expeditionHere && (
                   <text x={def.mapX + 3.5} y={def.mapY + 1.4} className="map-marker">
-                    {expeditionHere.kind === 'caravan' ? '🐴' : expeditionHere.kind === 'explore' ? '🗺️' : '🤝'}
+                    {expeditionHere.kind === 'caravan'
+                      ? '🐴'
+                      : expeditionHere.kind === 'explore'
+                        ? '🗺️'
+                        : expeditionHere.kind === 'labor'
+                          ? '📜'
+                          : '🤝'}
                   </text>
                 )}
               </g>
@@ -165,7 +212,13 @@ export function MapScreen({ game }: { game: GameState }) {
               return (
                 <div key={exp.id} className="faction-row">
                   <span>
-                    {exp.kind === 'caravan' ? '🐴' : exp.kind === 'explore' ? '🗺️' : '🤝'}{' '}
+                    {exp.kind === 'caravan'
+                      ? '🐴'
+                      : exp.kind === 'explore'
+                        ? '🗺️'
+                        : exp.kind === 'labor'
+                          ? '📜'
+                          : '🤝'}{' '}
                     {exp.heroIds
                       .map((id) => game.heroes.find((h) => h.id === id)?.name ?? id)
                       .join(' & ')}
@@ -279,6 +332,62 @@ export function MapScreen({ game }: { game: GameState }) {
                 {game.phase !== 'assignment' && (
                   <div className="dim" style={{ fontSize: '0.78rem', marginTop: 4 }}>
                     Envoys set out during the assignment phase.
+                  </div>
+                )}
+              </>
+            )}
+
+            {canCallHands && (
+              <>
+                <h3 style={{ marginTop: 14 }}>Call for Hands</h3>
+                <p className="dim" style={{ fontSize: '0.8rem', margin: '0 0 6px' }}>
+                  Send to Thornwatch for homeland laborers — dearer than local hands, and away{' '}
+                  {selected.travelTurns * 2} turns, but they keep the post Imanian.
+                </p>
+                {available.map((hero) => (
+                  <label key={hero.id} className="pick-row">
+                    <input
+                      type="checkbox"
+                      checked={laborParty.includes(hero.id)}
+                      onChange={() => toggleLabor(hero.id)}
+                    />{' '}
+                    {hero.name}
+                  </label>
+                ))}
+                <div className="faction-row" style={{ marginTop: 6 }}>
+                  <span>Hands</span>
+                  <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                    <button
+                      className="small"
+                      disabled={laborCount <= 1}
+                      onClick={() => setLaborCount((n) => Math.max(1, n - 1))}
+                    >
+                      −
+                    </button>
+                    <b>{laborCount}</b>
+                    <button className="small" onClick={() => setLaborCount((n) => n + 1)}>
+                      +
+                    </button>
+                  </span>
+                </div>
+                <div className="faction-row">
+                  <span className="dim">Recruiters' fee</span>
+                  <span className="dim">{laborRunCost(laborCount)} silver</span>
+                </div>
+                {laborError && (
+                  <div className="bad" style={{ fontSize: '0.85rem', margin: '6px 0' }}>{laborError}</div>
+                )}
+                <button
+                  className="primary"
+                  style={{ marginTop: 8 }}
+                  disabled={game.phase !== 'assignment' || laborParty.length === 0}
+                  onClick={callForHands}
+                >
+                  Send for Hands ▸
+                </button>
+                {game.phase !== 'assignment' && (
+                  <div className="dim" style={{ fontSize: '0.78rem', marginTop: 4 }}>
+                    Parties set out during the assignment phase.
                   </div>
                 )}
               </>
