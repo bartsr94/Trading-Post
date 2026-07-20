@@ -1,7 +1,7 @@
 // Event registry: all content events in one map for the engine.
 
 import type { GameEvent } from '../../engine/events/types';
-import { HERO_EVENTS } from './heroEvents';
+import { GENERIC_HERO_EVENTS, HERO_EVENTS } from './heroEvents';
 import { POST_EVENTS } from './postEvents';
 import { SEASON_EVENTS } from './seasonEvents';
 import { TRAVEL_EVENTS } from './travelEvents';
@@ -9,6 +9,7 @@ import { TRAVEL_EVENTS } from './travelEvents';
 export const ALL_EVENTS: GameEvent[] = [
   ...POST_EVENTS,
   ...HERO_EVENTS,
+  ...GENERIC_HERO_EVENTS,
   ...SEASON_EVENTS,
   ...TRAVEL_EVENTS,
 ];
