@@ -79,7 +79,7 @@ export interface TurnContext {
   dependantName: (heritage: Heritage, gender: Gender, seed: number) => string;
 }
 
-function outcomeCtx(
+export function outcomeCtx(
   ctx: TurnContext,
   heroId: string,
   expedition?: ExpeditionState,

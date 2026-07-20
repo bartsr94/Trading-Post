@@ -15,7 +15,8 @@ export type IconName =
   | 'caravan'
   | 'explore'
   | 'diplomacy'
-  | 'heart';
+  | 'heart'
+  | 'gear';
 
 const PATHS: Record<IconName, ReactElement> = {
   post: (
@@ -94,6 +95,12 @@ const PATHS: Record<IconName, ReactElement> = {
   ),
   heart: (
     <path d="M12 20 C12 20 4 14.5 4 8.8 A4 4 0 0 1 12 6.5 A4 4 0 0 1 20 8.8 C20 14.5 12 20 12 20 Z" />
+  ),
+  gear: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3 V5.5 M12 18.5 V21 M21 12 H18.5 M5.5 12 H3 M18.5 5.5 L16.8 7.2 M7.2 16.8 L5.5 18.5 M18.5 18.5 L16.8 16.8 M7.2 7.2 L5.5 5.5" />
+    </>
   ),
 };
 

@@ -1026,4 +1026,55 @@ select:focus {
   font-weight: 600;
   line-height: 1.1;
 }
+
+/* Bottom-left settings popover (SettingsMenu) */
+.settings-menu {
+  position: relative;
+}
+.settings-popover {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 70;
+  width: 200px;
+  background: var(--panel);
+  border: 1px solid var(--accent-dim);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+/* Cheat console (testing tool; see CheatConsole.tsx) */
+.cc-modal {
+  width: min(1100px, 96vw);
+}
+.cc-canvas {
+  padding: 16px 20px;
+}
+.cc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.cc-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 0.82rem;
+}
+.cc-row select,
+.cc-row input[type='text'] {
+  max-width: 160px;
+}
 .fam-rel { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.03em; }
