@@ -17,16 +17,20 @@ import type { DispatchParams } from '../engine/expeditions';
 import { hireResidents, reallocate } from '../engine/residents';
 import { activateHero, benchHero } from '../engine/roster';
 import { evalConditions } from '../engine/events/conditions';
+import { applyOutcomes } from '../engine/events/outcomes';
+import type { Outcome } from '../engine/events/types';
 import type { TravelContext } from '../engine/events/types';
 import { autosave, clearAutosave, deserialize, loadAutosave, serialize } from '../engine/save';
 import { createInitialState } from '../engine/state';
 import {
   advancePendingEvent,
   advanceTurn,
+  outcomeCtx,
   resolveChoice,
   resolveTurn,
 } from '../engine/turn';
 import type { ChoiceResolution } from '../engine/turn';
+import { livingHeroes } from '../engine/types';
 import type {
   ActiveEvent,
   ActivityId,
@@ -36,6 +40,8 @@ import type {
   Heritage,
   ResidentRole,
 } from '../engine/types';
+
+const CHEAT_MODE_KEY = 'tp_cheat_mode';
 
 export type Screen =
   | 'post'
@@ -61,6 +67,10 @@ interface GameStore {
   lastResolution: ChoiceResolution | null;
   /** Season-end skill growth lines, shown once on the next assignment phase. */
   growthLines: string[];
+  /** Whether the cheat console is unlocked (persisted; off by default). */
+  cheatModeEnabled: boolean;
+  /** Whether the cheat console overlay is currently open. */
+  cheatConsoleOpen: boolean;
 
   hasAutosave: () => boolean;
   newGame: (heroIds: string[]) => void;
@@ -98,6 +108,15 @@ interface GameStore {
     to: ResidentRole | 'idle',
     count: number,
   ) => boolean;
+
+  /** Unlock/lock the cheat console (persisted across reloads). */
+  setCheatMode: (enabled: boolean) => void;
+  setCheatConsoleOpen: (open: boolean) => void;
+  /** Apply arbitrary testing outcomes against a cloned draft. Returns the log lines. */
+  applyCheatOutcomes: (outcomes: Outcome[], heroId: string) => string[];
+  /** Force a non-travel event to fire immediately, bypassing selection/eligibility.
+   *  Returns false if the event/hero is invalid. */
+  forceFireEvent: (eventId: string, heroId: string) => boolean;
 }
 
 function draft(game: GameState): GameState {
@@ -110,6 +129,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   selectedHeroId: null,
   lastResolution: null,
   growthLines: [],
+  cheatModeEnabled: typeof localStorage !== 'undefined' && localStorage.getItem(CHEAT_MODE_KEY) === 'true',
+  cheatConsoleOpen: false,
 
   hasAutosave: () => loadAutosave(MIGRATION_CTX) !== null,
 
@@ -296,6 +317,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!reallocate(next, from, to, count)) return false;
     autosave(next);
     set({ game: next });
+    return true;
+  },
+
+  setCheatMode: (enabled) => {
+    localStorage.setItem(CHEAT_MODE_KEY, enabled ? 'true' : 'false');
+    set({ cheatModeEnabled: enabled, cheatConsoleOpen: enabled ? get().cheatConsoleOpen : false });
+  },
+
+  setCheatConsoleOpen: (open) => set({ cheatConsoleOpen: open }),
+
+  applyCheatOutcomes: (outcomes, heroId) => {
+    const { game } = get();
+    if (!game) return [];
+    const next = draft(game);
+    const log = applyOutcomes(next, outcomes, outcomeCtx(CONTENT, heroId));
+    autosave(next);
+    set({ game: next });
+    return log;
+  },
+
+  forceFireEvent: (eventId, heroId) => {
+    const { game } = get();
+    if (!game) return false;
+    const event = CONTENT.events.get(eventId);
+    if (!event || event.category === 'travel') return false;
+    if (!livingHeroes(game).some((h) => h.id === heroId)) return false;
+    const next = draft(game);
+    next.pendingEvents = [{ eventId, heroId }, ...next.pendingEvents];
+    next.phase = 'event';
+    autosave(next);
+    set({ game: next, lastResolution: null });
     return true;
   },
 }));

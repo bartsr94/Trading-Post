@@ -1,5 +1,6 @@
 import { useGameStore } from './store/gameStore';
 import { seasonOfTurn, yearOfTurn } from './engine/types';
+import { CheatConsole } from './ui/components/CheatConsole';
 import { AssignmentBoard } from './ui/screens/AssignmentBoard';
 import { BuildingsScreen } from './ui/screens/BuildingsScreen';
 import { CharactersScreen } from './ui/screens/CharactersScreen';
@@ -26,6 +27,9 @@ export function App() {
   const game = useGameStore((s) => s.game);
   const screen = useGameStore((s) => s.screen);
   const selectedHeroId = useGameStore((s) => s.selectedHeroId);
+  const cheatModeEnabled = useGameStore((s) => s.cheatModeEnabled);
+  const cheatConsoleOpen = useGameStore((s) => s.cheatConsoleOpen);
+  const setCheatConsoleOpen = useGameStore((s) => s.setCheatConsoleOpen);
 
   if (!game) {
     return (
@@ -75,6 +79,9 @@ export function App() {
       {game.phase === 'event' && <EventPanel game={game} />}
       {game.phase === 'report' && <TurnReport game={game} />}
       {selectedHero && <HeroSheet hero={selectedHero} />}
+      {cheatModeEnabled && cheatConsoleOpen && (
+        <CheatConsole game={game} onClose={() => setCheatConsoleOpen(false)} />
+      )}
     </div>
   );
 }

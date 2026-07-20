@@ -6,6 +6,7 @@ import { useGameStore } from '../../store/gameStore';
 import type { Screen } from '../../store/gameStore';
 import { Icon } from './Icon';
 import type { IconName } from './Icon';
+import { SettingsMenu } from './SettingsMenu';
 
 const NAV_ITEMS: { screen: Screen; icon: IconName; label: string }[] = [
   { screen: 'post', icon: 'post', label: 'Outpost' },
@@ -75,6 +76,7 @@ export function Sidebar({ game }: { game: GameState }) {
         >
           Abandon
         </button>
+        <SettingsMenu />
       </div>
     </aside>
   );
