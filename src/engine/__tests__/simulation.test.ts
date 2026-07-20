@@ -149,7 +149,7 @@ function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
     // Take on a few hands when there's room and coin, and put idle ones to work.
     if (state.turn % 2 === 0 && state.silver > 80 && residentTotal(state) < residentCap(state)) {
       // Local hire is gated on native standing/discovery; a no-op when unmet.
-      hireResidents(state, choiceRng.next() < 0.5 ? 'farmers' : 'porters', 1, 'kiswani');
+      hireResidents(state, choiceRng.next() < 0.5 ? 'farmers' : 'porters', 1, 'tributary');
     }
     if (state.residents.idle > 0) reallocate(state, 'idle', 'guards', state.residents.idle);
     maybeDispatch(state, choiceRng);

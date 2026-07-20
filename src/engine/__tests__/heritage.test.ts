@@ -152,22 +152,40 @@ describe('local (native) hiring', () => {
     expect(hireError(s, 'farmers', 1, 'dustwalker')).toBeNull();
   });
 
-  it('refuses homeland hands (they come from Thornwatch)', () => {
+  it('has no local source for homeland or Weri hands (heroes-only / Thornwatch run)', () => {
     const s = testState();
-    expect(hireError(s, 'farmers', 1, 'imanian')).toMatch(/Thornwatch/);
+    expect(hireError(s, 'farmers', 1, 'imanian')).toMatch(/No such people/);
+    expect(hireError(s, 'farmers', 1, 'weri')).toMatch(/No such people/);
   });
 
   it('costs the discount, adds native heads, and pulls culture toward the frontier', () => {
     const s = testState(); // river_meet visited, RIVER_CLANS friendly
     const silverBefore = s.silver;
     const cultureBefore = s.axes.culture;
-    expect(hireResidents(s, 'farmers', 2, 'kiswani')).toBe(true);
+    expect(hireResidents(s, 'farmers', 2, 'tributary')).toBe(true);
     expect(s.residents.roles.farmers).toBe(2);
     expect(s.residents.heritage.native).toBe(2);
     expect(s.silver).toBe(silverBefore - localHireCost('farmers', 2));
     expect(localHireCost('farmers', 1)).toBeLessThan(TUNING.residents.hire.costPerHead.farmers);
     expect(s.axes.culture).toBeCloseTo(cultureBefore + TUNING.heritage.hireAxisNudge * 2);
     expect(s.residents.tags).toContain('kiswani');
+    expectTallyInvariant(s);
+  });
+
+  it('hires the one Kiswani people from two different seats (Tributary vs Bejasi Hills)', () => {
+    const s = testState();
+    s.buildings = ['common_house']; // room for both
+    // Tributary seat is visited & friendly out of the box.
+    expect(hireError(s, 'farmers', 1, 'tributary')).toBeNull();
+    // Bejasi Hills seat gates on OLD_PEOPLE + its own discovery.
+    expect(hireError(s, 'farmers', 1, 'bejasi_hills')).toMatch(/reached their people/);
+    s.locations.elder_grove.discovery = 'visited';
+    s.factions.OLD_PEOPLE.standing = 10;
+    expect(hireError(s, 'farmers', 1, 'bejasi_hills')).toBeNull();
+    // Both add Kiswani (native) heads to the same tally.
+    expect(hireResidents(s, 'farmers', 1, 'tributary')).toBe(true);
+    expect(hireResidents(s, 'guards', 1, 'bejasi_hills')).toBe(true);
+    expect(s.residents.heritage.native).toBe(2);
     expectTallyInvariant(s);
   });
 });
@@ -315,7 +333,7 @@ describe('party heritage & new event vocabulary', () => {
     expect(evalCondition(s, { type: 'nativeShareAtMost', value: 0.5 })).toBe(false);
     expect(evalCondition(s, { type: 'heritageCountAtLeast', group: 'native', value: 3 })).toBe(true);
     expect(evalCondition(s, { type: 'heroHeritageInParty', heritage: 'kiswani' })).toBe(true);
-    expect(evalCondition(s, { type: 'heroHeritageInParty', heritage: 'bejasi' })).toBe(false);
+    expect(evalCondition(s, { type: 'heroHeritageInParty', heritage: 'weri' })).toBe(false);
   });
 
   it('honors the group param on addResidents / loseResidents outcomes', () => {

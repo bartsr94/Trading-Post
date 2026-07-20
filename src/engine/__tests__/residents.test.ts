@@ -138,11 +138,11 @@ describe('resident mutators', () => {
     const guardCost = Math.ceil(TUNING.residents.hire.costPerHead.guards * TUNING.heritage.localCostMult);
     const farmerCost = Math.ceil(TUNING.residents.hire.costPerHead.farmers * TUNING.heritage.localCostMult);
     s.silver = guardCost - 1;
-    expect(hireError(s, 'guards', 1, 'kiswani')).toBe('Not enough silver.');
+    expect(hireError(s, 'guards', 1, 'tributary')).toBe('Not enough silver.');
     s.silver = 500;
-    expect(hireError(s, 'farmers', 5, 'kiswani')).toBe('No room for them yet.'); // cap 4
-    expect(hireError(s, 'farmers', 2, 'kiswani')).toBeNull();
-    expect(hireResidents(s, 'farmers', 2, 'kiswani')).toBe(true);
+    expect(hireError(s, 'farmers', 5, 'tributary')).toBe('No room for them yet.'); // cap 4
+    expect(hireError(s, 'farmers', 2, 'tributary')).toBeNull();
+    expect(hireResidents(s, 'farmers', 2, 'tributary')).toBe(true);
     expect(s.residents.roles.farmers).toBe(2);
     expect(s.silver).toBe(500 - 2 * farmerCost);
   });

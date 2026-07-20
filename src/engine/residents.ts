@@ -4,10 +4,9 @@
 
 import { TUNING } from '../content/tuning';
 import { addBuildProgress, buildingEffect } from './buildings';
-import { clamp, discoveryAtLeast, isNativeHeritage, RESIDENT_ROLES, stanceOf } from './types';
+import { clamp, discoveryAtLeast, RESIDENT_ROLES, stanceOf } from './types';
 import type {
   GameState,
-  Heritage,
   HeritageGroup,
   ResidentRole,
   ResidentState,
@@ -246,20 +245,21 @@ export function localHireCost(role: ResidentRole, count: number): number {
 }
 
 /**
- * Why hiring `count` of `role` from a native `people` is invalid, or null when
- * it may proceed. Native hands only — homeland hands are fetched from Thornwatch
- * (HERITAGE_SPEC.md §4). Gated on reaching that people and their goodwill.
+ * Why hiring `count` of `role` from a native `source` (a tribe/region key into
+ * TUNING.heritage.hireSources — 'tributary', 'bejasi_hills', 'dustwalker', …) is
+ * invalid, or null when it may proceed. Native hands only — homeland hands are
+ * fetched from Thornwatch (PEOPLES_SPEC.md §7.1) and Weri are heroes-only, so
+ * neither has a hire source. Gated on reaching that seat and their goodwill.
  */
 export function hireError(
   state: GameState,
   role: ResidentRole,
   count: number,
-  people: Heritage,
+  source: string,
 ): string | null {
   if (count <= 0) return 'Hire at least one.';
-  if (!isNativeHeritage(people)) return 'Homeland hands must be sent for from Thornwatch.';
-  const src = TUNING.heritage.nativePeoples[people];
-  if (!src) return 'No such people to hire from.';
+  const src = TUNING.heritage.hireSources[source];
+  if (!src) return 'No such people to hire from here.';
   const loc = state.locations[src.seat];
   if (!loc || !discoveryAtLeast(loc.discovery, 'visited')) {
     return 'You have not reached their people yet.';
@@ -272,16 +272,17 @@ export function hireError(
   return null;
 }
 
-/** Hire native hands of a role from their people (instant; they know their trade). */
+/** Hire native hands of a role from a local source (instant; they know their trade). */
 export function hireResidents(
   state: GameState,
   role: ResidentRole,
   count: number,
-  people: Heritage,
+  source: string,
 ): boolean {
-  if (hireError(state, role, count, people) !== null) return false;
+  if (hireError(state, role, count, source) !== null) return false;
+  const src = TUNING.heritage.hireSources[source];
   state.silver -= localHireCost(role, count);
-  addResidents(state, role, count, people, 'native');
+  addResidents(state, role, count, src.people, 'native');
   nudgeCulture(state, TUNING.heritage.hireAxisNudge * count);
   return true;
 }

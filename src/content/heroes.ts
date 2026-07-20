@@ -2,7 +2,7 @@
 // docs/ASHMARK_LORE_SPEC.md. Each hero's hookHint teases their personal
 // event chain without spelling it out.
 
-import { HERITAGES } from '../engine/types';
+import { defaultSubPeople, HERITAGES } from '../engine/types';
 import type { Gender, Hero, Heritage, SkillId, StatId } from '../engine/types';
 
 export interface HeroTemplate {
@@ -18,6 +18,9 @@ export interface HeroTemplate {
   /** People this character belongs to (HERITAGE_SPEC.md §2). Optional here —
    *  falls back to the portrait-key prefix, which already encodes the race pool. */
   heritage?: Heritage;
+  /** Tribe/region within the people (PEOPLES_SPEC.md §2). Optional — falls back
+   *  to the per-people default. */
+  subPeople?: string;
   /** Gender (FAMILY_SPEC.md §3.1). Optional — falls back to the portrait-key middle token. */
   gender?: Gender;
   stats: Record<StatId, number>;
@@ -30,6 +33,13 @@ export function heritageOf(template: Pick<HeroTemplate, 'portraitKey' | 'heritag
   if (template.heritage) return template.heritage;
   const prefix = template.portraitKey.split('_')[0];
   return (HERITAGES as readonly string[]).includes(prefix) ? (prefix as Heritage) : 'imanian';
+}
+
+/** A template's tribe/region: explicit if set, else the per-people default. */
+export function subPeopleOf(
+  template: Pick<HeroTemplate, 'portraitKey' | 'heritage' | 'subPeople'>,
+): string {
+  return template.subPeople ?? defaultSubPeople(heritageOf(template));
 }
 
 /** A template's gender: explicit if set, else read from the portrait-key middle
@@ -65,6 +75,7 @@ export function createHero(template: HeroTemplate): Hero {
     stress: 0,
     status: 'active',
     heritage: heritageOf(template),
+    subPeople: subPeopleOf(template),
     gender: genderOf(template),
     history: [],
   };
@@ -119,8 +130,10 @@ export const HERO_POOL: HeroTemplate[] = [
     id: 'p5',
     name: 'Dagny',
     epithet: 'the Huntress',
-    portraitKey: 'dustwalker_female_01',
-    bio: 'Dustwalker-born, she left the horse-herds young to hunt alone. Took her first elk at eleven and has fed whole villages since. Distrusts walls, ledgers, and anyone who smiles while bargaining.',
+    portraitKey: 'hanjoda_female_01',
+    heritage: 'hanjoda',
+    subPeople: 'dustwalker',
+    bio: 'Dustwalker-born, of the Hanjoda nomads, she left the horse-herds young to hunt alone. Took her first elk at eleven and has fed whole villages since. Distrusts walls, ledgers, and anyone who smiles while bargaining.',
     hookHint: 'The drylands hold hunters less honest than she is.',
     stats: { might: 3, agility: 4, wits: 3, charm: 1, resolve: 3 },
     skills: { survival: 3, combat: 2, stealth: 1 },
@@ -196,8 +209,10 @@ export const HERO_POOL: HeroTemplate[] = [
     id: 'p12',
     name: 'Ashka',
     epithet: 'the Outcast Ritualist',
-    portraitKey: 'bejasi_female_01',
-    bio: 'Cast out of Mandaro, in the Bejasi Hills, for a transgression she will not name. Knows the jungle’s courtesies and the jungle’s prices better than anyone living among strangers.',
+    portraitKey: 'kiswani_female_03',
+    heritage: 'kiswani',
+    subPeople: 'bejasi_hills',
+    bio: 'Cast out of Mandaro, in the Bejasi Hills, for a transgression she will not name. Kiswani by blood like all the hill settlements, she knows the jungle’s courtesies and the jungle’s prices better than anyone living among strangers.',
     hookHint: 'Her people have not finished with her.',
     stats: { might: 1, agility: 3, wits: 4, charm: 2, resolve: 3 },
     skills: { lore: 3, survival: 2, stealth: 1 },

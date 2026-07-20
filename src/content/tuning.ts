@@ -1,11 +1,11 @@
 // All initial tuning values in one place (spec §14). Balancing happens here,
 // never in engine code. Pure data — no logic.
 
-import type { BuildingDefData, FactionId, TierRequirement } from '../engine/types';
+import type { BuildingDefData, FactionId, Heritage, TierRequirement } from '../engine/types';
 
 export const TUNING = {
   save: {
-    version: 8,
+    version: 9,
     autosaveKey: 'trading-post-save',
   },
 
@@ -295,12 +295,17 @@ export const TUNING = {
   // Heritage & the cultural character of the post (HERITAGE_SPEC.md). The
   // `culture` axis is Homeland(−, Imanian) ↔ Frontier(+, Sauromatian).
   heritage: {
-    /** Native peoples hireable locally: which faction gates them and where they live. */
-    nativePeoples: {
-      kiswani: { faction: 'RIVER_CLANS', seat: 'river_meet' },
-      dustwalker: { faction: 'HILL_TRIBES', seat: 'hill_fort' },
-      bejasi: { faction: 'OLD_PEOPLE', seat: 'elder_grove' },
-    } as Record<string, { faction: FactionId; seat: string }>,
+    /** Native hire sources, keyed by tribe/region (PEOPLES_SPEC.md §7.1): which
+     *  people they are, which faction gates them, and where they live. One people
+     *  can have several seats (Kiswani at the Tributary Towns AND the Bejasi Hills;
+     *  Hanjoda across the three nomad seats). Weri are heroes-only — not hireable. */
+    hireSources: {
+      tributary: { people: 'kiswani', faction: 'RIVER_CLANS', seat: 'river_meet' },
+      bejasi_hills: { people: 'kiswani', faction: 'OLD_PEOPLE', seat: 'elder_grove' },
+      dustwalker: { people: 'hanjoda', faction: 'HILL_TRIBES', seat: 'hill_fort' },
+      sunspear: { people: 'hanjoda', faction: 'HILL_TRIBES', seat: 'blackstone_plateau' },
+      redsand: { people: 'hanjoda', faction: 'HILL_TRIBES', seat: 'redsand_range' },
+    } as Record<string, { people: Heritage; faction: FactionId; seat: string }>,
 
     // Hiring
     /** Native-faction standing needed to hire that people locally. */

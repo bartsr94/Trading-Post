@@ -4,7 +4,7 @@
 // the store (between-turns swaps) and, later, recruitment outcomes.
 
 import { TUNING } from '../content/tuning';
-import { activeHeroes, awayHeroIds, SKILL_IDS } from './types';
+import { activeHeroes, awayHeroIds, defaultSubPeople, SKILL_IDS } from './types';
 import type { Dependant, GameState, Hero, RecruitDef, SkillId } from './types';
 
 // ------------------------------------------------------------- selectors
@@ -89,6 +89,7 @@ function buildRecruit(state: GameState, def: RecruitDef): Hero {
     stress: 0,
     status: 'active',
     heritage: def.heritage,
+    subPeople: def.subPeople ?? defaultSubPeople(def.heritage),
     gender: def.gender,
     history: [`Joined the company in turn ${state.turn}.`],
   };

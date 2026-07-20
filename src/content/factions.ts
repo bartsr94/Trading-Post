@@ -19,16 +19,16 @@ export const FACTIONS: FactionDef[] = [
   },
   {
     id: 'HILL_TRIBES',
-    name: 'The Dustwalkers',
+    name: 'The Hanjoda Nomads',
     blurb:
-      'A Hanjoda-descended nomadic tribe, horse-herders ranging the drylands west of the tributary. Wary of every outside power and answerable to none — they broker the overland trade routes by right of mobility, not walls.',
+      'The Hanjoda horse-tribes of the drylands — Dustwalker, Sunspear, and Redsand — who coordinate but bow to none. Determinedly neutral between Company and Cult, they broker the overland routes by right of mobility, not walls.',
     startingStanding: -10,
   },
   {
     id: 'OLD_PEOPLE',
     name: 'The Bejasi Hills Folk',
     blurb:
-      'Isolated settlements — Themba\'s Town chief among them — built among pre-Sauromatian ruins deep in the jungle interior. Ritual, riddles, and the only known amber workings.',
+      'Kiswani settlements — Themba\'s Town chief among them — built among pre-Sauromatian ruins deep in the jungle interior. Ritual, riddles, and the only known amber workings.',
     startingStanding: 0,
   },
   {
@@ -37,6 +37,13 @@ export const FACTIONS: FactionDef[] = [
     blurb:
       'Your charter sponsor, seated at the Thornwatch garrison downriver. They want profit shipments and send inspectors to make sure.',
     startingStanding: 25,
+  },
+  {
+    id: 'KNIGHTS_EIRWEN',
+    name: 'The Knights of Saint Eirwen',
+    blurb:
+      'An Imanian holy order holding the Stormwall pass at Pemba-Jasiri, where the rare Weri metalworkers keep their forges. Allied to the Company in the broad Imanian cause, but their own power, with their own price.',
+    startingStanding: 0,
   },
 ];
 
