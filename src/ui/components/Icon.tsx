@@ -14,7 +14,8 @@ export type IconName =
   | 'market'
   | 'caravan'
   | 'explore'
-  | 'diplomacy';
+  | 'diplomacy'
+  | 'heart';
 
 const PATHS: Record<IconName, ReactElement> = {
   post: (
@@ -90,6 +91,9 @@ const PATHS: Record<IconName, ReactElement> = {
       <line x1="6" y1="3" x2="6" y2="21" />
       <path d="M6 4 L18 7 L6 11 Z" />
     </>
+  ),
+  heart: (
+    <path d="M12 20 C12 20 4 14.5 4 8.8 A4 4 0 0 1 12 6.5 A4 4 0 0 1 20 8.8 C20 14.5 12 20 12 20 Z" />
   ),
 };
 

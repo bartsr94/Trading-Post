@@ -3,15 +3,29 @@
 
 import { TUNING } from '../../content/tuning';
 import { addBuildProgress, advanceTier, grantBuilding } from '../buildings';
+import {
+  addChild,
+  addDependant,
+  comeOfAge,
+  dominantHeritage,
+  formUnion,
+  graphNode,
+  removeDependant,
+} from '../family';
 import { addResidents, addTransientGroup, adjustContentment, loseResidents } from '../residents';
-import { clamp, getHero, livingHeroes, nextDiscovery } from '../types';
+import { departCharacter, recruitCharacter } from '../roster';
+import type { Rng } from '../rng';
+import { clamp, getHero, livingHeroes, nextDiscovery, oppositeGender } from '../types';
 import type {
   BuildingId,
   DiscoveryState,
   ExpeditionState,
   GameState,
+  Gender,
   GoodId,
+  Heritage,
   LocationId,
+  RecruitDef,
 } from '../types';
 import type { Outcome } from './types';
 
@@ -25,6 +39,12 @@ export interface OutcomeContext {
   traitNames: ReadonlyMap<string, string>;
   locationNames: ReadonlyMap<LocationId, string>;
   buildingNames: ReadonlyMap<BuildingId, string>;
+  /** Recruit templates by id, so `recruitCharacter` stays content-free. */
+  recruitDefs: ReadonlyMap<string, RecruitDef>;
+  /** A dependant name for a people + gender, picked deterministically by seed. */
+  dependantName: (heritage: Heritage, gender: Gender, seed: number) => string;
+  /** The turn's RNG when applied from an event (absent when called directly). */
+  rng?: Rng;
 }
 
 export function applyOutcomes(
@@ -167,6 +187,94 @@ export function applyOutcomes(
           hero.history.push(`Left the company in turn ${state.turn}.`);
           log.push(`${hero.name} leaves the company.`);
         }
+        break;
+      }
+      case 'recruitCharacter': {
+        const def = ctx.recruitDefs.get(outcome.templateId);
+        if (def) {
+          const joined = recruitCharacter(state, def, outcome.toActive);
+          log.push(`${joined.name}, ${joined.epithet}, joins the company.`);
+        }
+        break;
+      }
+      case 'departCharacter': {
+        const targetId = outcome.heroId ?? ctx.heroId;
+        const target = state.heroes.find((h) => h.id === targetId);
+        if (departCharacter(state, targetId) && target) {
+          log.push(`${target.name} leaves the company.`);
+        }
+        break;
+      }
+      case 'addDependant': {
+        const parentId = outcome.parentId ?? ctx.heroId;
+        const subject = graphNode(state, parentId);
+        const rand = () =>
+          ctx.rng ? ctx.rng.next() : ((state.nextDependantId * 2654435761) >>> 0) / 0x100000000;
+        const nameFor = (g: Gender, h: Heritage) =>
+          ctx.dependantName(h, g, state.nextDependantId);
+
+        if (outcome.kind === 'child') {
+          const child = addChild(state, parentId, {
+            nameFor,
+            gender: outcome.gender,
+            rand,
+          });
+          if (child) log.push(`A child, ${child.name}, is born to the post.`);
+          break;
+        }
+        if (outcome.kind === 'spouse' && outcome.union) {
+          const heritage = outcome.heritage ?? (subject ? dominantHeritage(subject) : 'imanian');
+          const spouseGender = outcome.gender ?? (subject ? oppositeGender(subject.gender) : 'female');
+          const spouse = formUnion(state, parentId, {
+            source: outcome.union,
+            heritage,
+            name: nameFor(spouseGender, heritage),
+          });
+          if (spouse && subject) log.push(`${subject.name} takes a spouse, ${spouse.name}.`);
+          break;
+        }
+        // A plain kin/spouse with no union source (an aunt, a ward, a betrothed).
+        const heritage = outcome.heritage ?? (subject ? dominantHeritage(subject) : 'imanian');
+        const gender = outcome.gender ?? (rand() < 0.5 ? 'male' : 'female');
+        const dep = addDependant(state, {
+          kind: outcome.kind,
+          name: nameFor(gender, heritage),
+          parentId,
+          gender,
+          heritage,
+          ancestry: { peoples: [heritage] },
+        });
+        log.push(`${dep.name} joins ${subject?.name ?? 'the'} household.`);
+        break;
+      }
+      case 'removeDependant': {
+        if (outcome.dependantId) {
+          if (removeDependant(state, outcome.dependantId)) log.push('A family member departs.');
+          break;
+        }
+        const parentId = outcome.parentId ?? ctx.heroId;
+        const target = state.dependants.find(
+          (d) => d.parentId === parentId && (!outcome.kind || d.kind === outcome.kind),
+        );
+        if (target && removeDependant(state, target.id)) log.push(`${target.name} departs.`);
+        break;
+      }
+      case 'formUnion': {
+        const subjectId = outcome.subjectId ?? ctx.heroId;
+        const subject = graphNode(state, subjectId);
+        const heritage = outcome.heritage ?? (subject ? dominantHeritage(subject) : 'imanian');
+        const spouseGender = subject ? oppositeGender(subject.gender) : 'female';
+        const spouse = formUnion(state, subjectId, {
+          source: outcome.source,
+          heritage,
+          name: ctx.dependantName(heritage, spouseGender, state.nextDependantId),
+        });
+        if (spouse && subject) log.push(`${subject.name} weds ${spouse.name}.`);
+        break;
+      }
+      case 'comeOfAge': {
+        const grown = comeOfAge(state, outcome.dependantId);
+        if (grown) log.push(`${grown.name} comes of age at the post.`);
         break;
       }
       case 'history': {

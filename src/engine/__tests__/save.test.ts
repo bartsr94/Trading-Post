@@ -49,7 +49,7 @@ describe('saves', () => {
     v1.silver = 123;
 
     const migrated = deserialize(JSON.stringify(v1), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(7);
+    expect(migrated.saveVersion).toBe(8);
     expect(migrated.silver).toBe(123);
     expect(migrated.expeditions).toEqual([]);
     expect(migrated.locations.river_meet.discovery).toBe('visited');
@@ -84,7 +84,7 @@ describe('saves', () => {
     v2.silver = 77;
 
     const migrated = deserialize(JSON.stringify(v2), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(7);
+    expect(migrated.saveVersion).toBe(8);
     expect(migrated.silver).toBe(77);
     expect(migrated.charterMissedStreak).toBe(0);
     expect(migrated.residents.contentment).toBeGreaterThan(0);
@@ -104,7 +104,7 @@ describe('saves', () => {
     v3.silver = 88;
 
     const migrated = deserialize(JSON.stringify(v3), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(7);
+    expect(migrated.saveVersion).toBe(8);
     expect(migrated.silver).toBe(88);
     expect(migrated.residents.idle).toBe(0);
     expect(migrated.nextTransientId).toBe(1);
@@ -121,7 +121,7 @@ describe('saves', () => {
     v4.silver = 99;
 
     const migrated = deserialize(JSON.stringify(v4), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(7);
+    expect(migrated.saveVersion).toBe(8);
     expect(migrated.silver).toBe(99);
     expect(migrated.activePartyIds).toEqual(migrated.heroes.map((h) => h.id));
     expect(migrated.dependants).toEqual([]);
@@ -136,7 +136,7 @@ describe('saves', () => {
     v5.silver = 111;
 
     const migrated = deserialize(JSON.stringify(v5), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(7);
+    expect(migrated.saveVersion).toBe(8);
     expect(migrated.silver).toBe(111);
     expect(migrated.buildings).toEqual([]);
     expect(migrated.construction).toBeNull();
@@ -162,7 +162,7 @@ describe('saves', () => {
       locationDefs: TEST_LOCATIONS,
       heroHeritage,
     });
-    expect(migrated.saveVersion).toBe(7);
+    expect(migrated.saveVersion).toBe(8);
     expect(migrated.axes.culture).toBe(0);
     expect(migrated.charterCompromisedStreak).toBe(0);
     // Pre-feature residents are treated as homeland founders.
@@ -171,5 +171,35 @@ describe('saves', () => {
     expect(migrated.heroes.find((h) => h.id === 'p4')!.heritage).toBe('kiswani');
     expect(migrated.heroes.find((h) => h.id === 'p5')!.heritage).toBe('dustwalker');
     expect(migrated.heroes.find((h) => h.id === 'p1')!.heritage).toBe('imanian');
+  });
+
+  it('migrates v7 saves: families added; gender backfilled, recruit counter seeded, dependants enriched', () => {
+    const v7 = testState(561) as Partial<GameState>;
+    delete (v7 as Partial<GameState>).nextCharacterId;
+    // Pretend the old heroes had no gender stamped on the runtime.
+    v7.heroes = v7.heroes!.map((h) => {
+      const copy = { ...h } as Partial<GameState['heroes'][number]>;
+      delete copy.gender;
+      return copy as GameState['heroes'][number];
+    });
+    // A pre-v8 dependant with only a single heritage and no gender/ancestry.
+    v7.dependants = [
+      { id: 'd1', name: 'Old One', kind: 'kin', parentId: 'p1', heritage: 'kiswani' } as GameState['dependants'][number],
+    ];
+    v7.saveVersion = 7;
+
+    const heroGender = new Map([['p2', 'female'], ['p4', 'female']] as const);
+    const migrated = deserialize(JSON.stringify(v7), {
+      locationDefs: TEST_LOCATIONS,
+      heroGender,
+    });
+    expect(migrated.saveVersion).toBe(8);
+    expect(migrated.nextCharacterId).toBe(1);
+    // Gender from the injected map; unknown ids default to male.
+    expect(migrated.heroes.find((h) => h.id === 'p2')!.gender).toBe('female');
+    expect(migrated.heroes.find((h) => h.id === 'p1')!.gender).toBe('male');
+    // Dependant gets a default gender and ancestry derived from its heritage.
+    expect(migrated.dependants[0].gender).toBe('female');
+    expect(migrated.dependants[0].ancestry).toEqual({ peoples: ['kiswani'] });
   });
 });

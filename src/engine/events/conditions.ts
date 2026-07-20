@@ -1,6 +1,7 @@
-import { activeHeroes, discoveryAtLeast, livingHeroes, seasonOfTurn } from '../types';
+import { activeHeroes, discoveryAtLeast, livingHeroes, reserveHeroes, seasonOfTurn } from '../types';
 import { canAdvanceTier, hasBuilding } from '../buildings';
 import { cargoUnits } from '../expeditions';
+import { isMarried } from '../family';
 import { heritageCount, nativeShare, residentCount } from '../residents';
 import type { GameState } from '../types';
 import type { Condition, TravelContext } from './types';
@@ -47,6 +48,18 @@ export function evalCondition(
       return state.flags[cond.flag] !== true;
     case 'partySizeAtLeast':
       return livingHeroes(state).length >= cond.value;
+    case 'rosterAtLeast':
+      return rosterCount(state, cond.scope) >= cond.value;
+    case 'rosterBelow':
+      return rosterCount(state, cond.scope) < cond.value;
+    case 'heroHasSpouse':
+      return cond.heroId !== undefined
+        ? isMarried(state, cond.heroId)
+        : activeHeroes(state).some((h) => isMarried(state, h.id));
+    case 'heroUnmarried':
+      return cond.heroId !== undefined
+        ? !isMarried(state, cond.heroId)
+        : activeHeroes(state).some((h) => !isMarried(state, h.id));
     case 'residentsAtLeast':
       return residentCount(state, cond.role) >= cond.value;
     case 'residentsBelow':
@@ -89,6 +102,17 @@ export function evalCondition(
       return travel !== undefined && travel.destination.tags.includes(cond.tag);
     case 'cargoUnitsAtLeast':
       return travel !== undefined && cargoUnits(travel.expedition.cargo) >= cond.qty;
+  }
+}
+
+function rosterCount(state: GameState, scope: 'active' | 'reserve' | 'living'): number {
+  switch (scope) {
+    case 'active':
+      return activeHeroes(state).length;
+    case 'reserve':
+      return reserveHeroes(state).length;
+    case 'living':
+      return livingHeroes(state).length;
   }
 }
 

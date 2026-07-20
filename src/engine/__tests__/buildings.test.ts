@@ -30,6 +30,8 @@ function outcomeCtx(state: GameState): OutcomeContext {
     traitNames: TEST_CONTENT.traitNames,
     locationNames: TEST_CONTENT.locationNames,
     buildingNames: TEST_CONTENT.buildingNames,
+    recruitDefs: TEST_CONTENT.recruitDefs,
+    dependantName: TEST_CONTENT.dependantName,
   };
 }
 

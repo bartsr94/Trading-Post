@@ -20,3 +20,21 @@ export const PORTRAIT_URLS: Map<string, string> = new Map(
 export function portraitUrl(key: string | undefined): string | undefined {
   return key !== undefined ? PORTRAIT_URLS.get(key) : undefined;
 }
+
+/** Painted portrait keys for a race_gender prefix (e.g. "kiswani_female"). */
+export function portraitKeysFor(prefix: string): string[] {
+  return [...PORTRAIT_URLS.keys()].filter((k) => k.startsWith(`${prefix}_`)).sort();
+}
+
+/**
+ * Deterministically pick a portrait key from a race_gender pool by a stable seed
+ * (e.g. a dependant id), so unnamed family show real art where a pool exists and
+ * the same person always gets the same face. Returns undefined if the pool is empty.
+ */
+export function pickPortraitKey(prefix: string, seed: string): string | undefined {
+  const keys = portraitKeysFor(prefix);
+  if (keys.length === 0) return undefined;
+  let hash = 0;
+  for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+  return keys[Math.abs(hash) % keys.length];
+}

@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { STARTING_STANDINGS } from '../content/factions';
-import { HERO_POOL, createHero, heritageOf } from '../content/heroes';
+import { HERO_POOL, createHero, genderOf, heritageOf } from '../content/heroes';
 import { LOCATIONS } from '../content/locations';
 import { CONTENT } from '../content/registry';
 import {
@@ -49,6 +49,7 @@ export type Screen =
 const MIGRATION_CTX = {
   locationDefs: LOCATIONS,
   heroHeritage: new Map(HERO_POOL.map((t) => [t.id, heritageOf(t)] as const)),
+  heroGender: new Map(HERO_POOL.map((t) => [t.id, genderOf(t)] as const)),
 };
 
 interface GameStore {

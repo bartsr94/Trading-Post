@@ -5,7 +5,7 @@ import type { BuildingDefData, FactionId, TierRequirement } from '../engine/type
 
 export const TUNING = {
   save: {
-    version: 7,
+    version: 8,
     autosaveKey: 'trading-post-save',
   },
 
@@ -341,5 +341,44 @@ export const TUNING = {
     partyReassureStanding: 2,
     /** Standing a mixed party earns with each non-hostile native faction. */
     nativeRelationsGainPerSeason: 1,
+  },
+
+  // Marriage, partners, children & the family line (FAMILY_SPEC.md §13). All
+  // tunable; the `culture` axis moves are signed toward the Homeland(−)/Frontier(+)
+  // poles. Child gender/heritage arithmetic and Company weighting live here too.
+  family: {
+    // Gender / bloodline (child arithmetic used in Phase B)
+    pureFemaleChance: 0.5, // pure-union child gender (1:1 lore baseline)
+    mixedFemaleChance: 0.7, // mixed-union daughter skew (2:1–3:1 lore)
+
+    // Acquisition
+    /** Certified Imanian spouse via a Thornwatch courtship run (dear). */
+    homelandBridePrice: 120,
+    /** CHARTER_COMPANY bump when a courtship reaches Thornwatch. */
+    homelandMatchStanding: 2,
+    /** Hearth-companion informal union (cheap; event-driven). */
+    informalUnionCost: 20,
+    /** Multiple partners allowed (compound/polygyny lore); a building raises this later. */
+    maxSpousesPerHero: 3,
+    /** Culture axis move per union, signed toward the pole. */
+    unionCultureNudge: { homeland: -2, alliance: 2, informal: 1 } as Record<string, number>,
+
+    // Children & the line (Phase B)
+    /** Turns from bornTurn to coming of age (2 years at 24 turns/yr). */
+    comeOfAgeTurns: 48,
+    /** Soft cap on one union's children; the post-wide count stays uncapped. */
+    maxChildrenPerUnion: 4,
+    /** Odds a coming-of-age child is offered as a named recruit rather than grown kin. */
+    comeOfAgeRecruitChance: 0.1,
+    /** Season retainer for a grown-kin dependant (lighter than a reserve hero's). */
+    grownKinRetainer: 4,
+
+    // Company judgment (folded INTO Heritage Phase B, not a parallel clock)
+    company: {
+      purePartyReassure: 1, // extra reassurance per wed 'pure' active hero
+      mixedCompromiseAdd: 1, // extra compromise per wed 'mixed' active hero
+      informalCompromiseMult: 1.5, // informal households weigh heavier than alliances
+      multiSpouseCompromiseMult: 1.25, // a multi-spouse mixed household heavier still
+    },
   },
 } as const;

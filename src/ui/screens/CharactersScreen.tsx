@@ -1,36 +1,60 @@
 // Characters (CHARACTERS_SPEC.md §9): the named-character roster — the active
 // party (≤ activeCap) and the reserve bench. Swap members in and out between
-// turns; dependants (Phase C) nest under their character.
+// turns; each character's family (FAMILY_SPEC.md §10) shows as a strip that
+// opens the full multi-generational tree.
 
+import { useState } from 'react';
 import { TUNING } from '../../content/tuning';
-import {
-  activateError,
-  activeCap,
-  benchError,
-  dependantsOf,
-} from '../../engine/roster';
+import { activateError, activeCap, benchError } from '../../engine/roster';
+import { childrenOf, householdMembers, spousesOf } from '../../engine/family';
 import { activeHeroes, reserveHeroes } from '../../engine/types';
-import type { Dependant, GameState, Hero } from '../../engine/types';
+import type { GameState, Hero, UnionSource } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from '../components/ConditionBars';
+import { FamilyTree } from '../components/FamilyTree';
 import { Portrait } from '../components/Portrait';
 
-const DEPENDANT_LABEL: Record<Dependant['kind'], string> = {
-  spouse: 'Spouse',
-  child: 'Child',
-  kin: 'Kin',
+const UNION_BADGE: Record<UnionSource, string> = {
+  homeland: 'Homeland',
+  alliance: 'Allied',
+  informal: 'Household',
 };
 
-function DependantList({ game, hero }: { game: GameState; hero: Hero }) {
-  const deps = dependantsOf(game, hero.id);
-  if (deps.length === 0) return null;
+function FamilyStrip({
+  game,
+  hero,
+  onOpen,
+}: {
+  game: GameState;
+  hero: Hero;
+  onOpen: () => void;
+}) {
+  const spouses = spousesOf(game, hero.id);
+  const household = householdMembers(game, hero.id);
+  const children = childrenOf(game, hero.id);
+  const kin = household.filter((d) => d.kind === 'kin' && d.comeOfAge);
+  const hasFamily = spouses.length > 0 || household.length > 0;
+  if (!hasFamily) return null;
+
   return (
-    <div className="char-deps">
-      {deps.map((d) => (
-        <span key={d.id} className="char-dep" title={`${DEPENDANT_LABEL[d.kind]} — eats grain, does no work`}>
-          {d.name} <span className="dim">({DEPENDANT_LABEL[d.kind].toLowerCase()})</span>
+    <div className="char-family">
+      {spouses.map((s) => (
+        <span key={s.id} className="char-dep" title="Spouse — eats grain, does no work">
+          {s.name}
+          {!('stats' in s) && s.union && (
+            <span className="union-badge"> {UNION_BADGE[s.union]}</span>
+          )}
         </span>
       ))}
+      {children.length > 0 && (
+        <span className="dim">
+          {children.length} child{children.length === 1 ? '' : 'ren'}
+        </span>
+      )}
+      {kin.length > 0 && <span className="dim">{kin.length} grown kin</span>}
+      <button className="small link-btn" onClick={onOpen}>
+        Family tree ▸
+      </button>
     </div>
   );
 }
@@ -39,10 +63,12 @@ function CharacterCard({
   game,
   hero,
   reserve,
+  onOpenFamily,
 }: {
   game: GameState;
   hero: Hero;
   reserve: boolean;
+  onOpenFamily: (headId: string) => void;
 }) {
   const selectHero = useGameStore((s) => s.selectHero);
   const activate = useGameStore((s) => s.activate);
@@ -59,9 +85,15 @@ function CharacterCard({
       <div className="char-body">
         <div className="name" onClick={() => selectHero(hero.id)}>
           {hero.name} <span className="dim">{hero.epithet}</span>
+          <span className="dim"> {hero.gender === 'female' ? '♀' : '♂'}</span>
+          {hero.bloodline && (
+            <span className={`ft-blood ${hero.bloodline}`}>
+              {hero.bloodline === 'pure' ? 'Pure' : 'Mixed'}
+            </span>
+          )}
         </div>
         <ConditionBars hero={hero} />
-        <DependantList game={game} hero={hero} />
+        <FamilyStrip game={game} hero={hero} onOpen={() => onOpenFamily(hero.id)} />
         <div className="char-actions">
           <button
             className="small primary"
@@ -81,6 +113,7 @@ export function CharactersScreen({ game }: { game: GameState }) {
   const active = activeHeroes(game);
   const reserve = reserveHeroes(game);
   const cap = activeCap(game);
+  const [familyHead, setFamilyHead] = useState<string | null>(null);
 
   return (
     <div>
@@ -104,7 +137,13 @@ export function CharactersScreen({ game }: { game: GameState }) {
 
       <div className="roster-grid">
         {active.map((hero) => (
-          <CharacterCard key={hero.id} game={game} hero={hero} reserve={false} />
+          <CharacterCard
+            key={hero.id}
+            game={game}
+            hero={hero}
+            reserve={false}
+            onOpenFamily={setFamilyHead}
+          />
         ))}
       </div>
 
@@ -121,7 +160,13 @@ export function CharactersScreen({ game }: { game: GameState }) {
       ) : (
         <div className="roster-grid">
           {reserve.map((hero) => (
-            <CharacterCard key={hero.id} game={game} hero={hero} reserve />
+            <CharacterCard
+              key={hero.id}
+              game={game}
+              hero={hero}
+              reserve
+              onOpenFamily={setFamilyHead}
+            />
           ))}
         </div>
       )}
@@ -130,6 +175,10 @@ export function CharactersScreen({ game }: { game: GameState }) {
         <div className="dim" style={{ fontSize: '0.78rem', marginTop: 12 }}>
           Swap the roster during the assignment phase.
         </div>
+      )}
+
+      {familyHead && (
+        <FamilyTree game={game} headId={familyHead} onClose={() => setFamilyHead(null)} />
       )}
     </div>
   );

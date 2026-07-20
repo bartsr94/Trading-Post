@@ -71,6 +71,25 @@ export function isNativeHeritage(h: Heritage): boolean {
   return h !== 'imanian';
 }
 
+/** A named person's gender (FAMILY_SPEC.md §3.1). Drives marriage, child gender,
+ *  and the bloodline read — mechanical, so it rides the runtime Hero (like
+ *  heritage), not just the content-only portraitKey. */
+export type Gender = 'male' | 'female';
+
+export function oppositeGender(g: Gender): Gender {
+  return g === 'male' ? 'female' : 'male';
+}
+
+/** How a union was formed (FAMILY_SPEC.md §2.2). Set on the spouse record. */
+export type UnionSource = 'homeland' | 'alliance' | 'informal';
+
+/** A named person's descent (FAMILY_SPEC.md §3.3). One people = a pure line;
+ *  two or more = mixed. Only dependants carry this; heroes stay single-heritage. */
+export interface Ancestry {
+  /** The peoples this person descends from, deduped, dominant-first. */
+  peoples: Heritage[];
+}
+
 export const ACTIVITY_IDS = [
   'trade',
   'explore',
@@ -125,7 +144,7 @@ export interface LocationState {
   market?: Record<GoodId, MarketGoodState>;
 }
 
-export type ExpeditionKind = 'caravan' | 'explore' | 'diplomacy' | 'labor';
+export type ExpeditionKind = 'caravan' | 'explore' | 'diplomacy' | 'labor' | 'courtship';
 
 export interface ExpeditionState {
   id: string;
@@ -153,6 +172,12 @@ export interface ExpeditionState {
    * homecoming. Optional so non-labor / pre-v7 expeditions deserialize cleanly.
    */
   homelandLabor?: number;
+  /**
+   * Graph-node id a `courtship` run is bringing a homeland spouse home to wed
+   * (FAMILY_SPEC.md §3.5). Optional so non-courtship / pre-v8 expeditions
+   * deserialize cleanly.
+   */
+  courtshipFor?: string;
 }
 
 export type FactionStance = 'Hostile' | 'Wary' | 'Neutral' | 'Friendly' | 'Allied';
@@ -168,14 +193,56 @@ export interface Dependant {
   id: string;
   name: string;
   kind: DependantKind;
-  /** The living named character this dependant belongs to. */
+  /**
+   * Household head this member is displayed under and fed against — the
+   * founding/oldest hero of their branch. For a child, inherited from the parent
+   * that heads the household (FAMILY_SPEC.md §3.2).
+   */
   parentId: string;
+  /** Required going forward (FAMILY_SPEC.md §3.1). */
+  gender: Gender;
+  /**
+   * Biological parents (0–2 graph-node ids: Hero or Dependant). A married-in
+   * spouse has none; a child has both its parents. Drives the family tree
+   * (FAMILY_SPEC.md §3.2).
+   */
+  parentIds?: string[];
+  /** The partner this person is united with (a graph-node id), if any. */
+  spouseId?: string;
+  /** Set on the spouse record of a union: how it was formed. */
+  union?: UnionSource;
+  /** Descent — the source of "mixed" (FAMILY_SPEC.md §3.3). Absent → derive from `heritage`. */
+  ancestry?: Ancestry;
   /** Optional portrait asset key; falls back to the hash-hue tile. */
   portraitKey?: string;
   /** People this dependant belongs to; defaults to the parent's (HERITAGE_SPEC.md §3.3). */
   heritage?: Heritage;
-  /** Turn a child was born, for aging (forward hook, Phase C). */
+  /** Turn a child was born, for aging (FAMILY_SPEC.md §7). */
   bornTurn?: number;
+  /** False until coming-of-age promotes a child to grown kin; then true (FAMILY_SPEC.md §7). */
+  comeOfAge?: boolean;
+}
+
+/**
+ * Data to instantiate a recruited named character (CHARACTERS_SPEC.md §6). Content
+ * provides instances (content/recruits.ts); the engine builds the runtime Hero,
+ * so the engine stays content-free (injected via TurnContext, like good names).
+ */
+export interface RecruitDef {
+  /** Template id, e.g. 'renowned_trader'. Runtime hero ids are minted separately. */
+  id: string;
+  name: string;
+  epithet: string;
+  bio: string;
+  heritage: Heritage;
+  gender: Gender;
+  stats: Record<StatId, number>;
+  skills: Partial<Record<SkillId, number>>;
+  traits: TraitId[];
+  /** Optional portrait asset key; falls back to the hash-hue tile. */
+  portraitKey?: string;
+  /** World flag set on join (an access unlock, CHARACTERS_SPEC.md §6). */
+  joinFlag?: string;
 }
 
 export interface Hero {
@@ -194,6 +261,12 @@ export interface Hero {
   /** The people this character belongs to (HERITAGE_SPEC.md §3.3). Feeds the
    *  Company's read of the active party; runtime because recruits set it live. */
   heritage: Heritage;
+  /** Gender (FAMILY_SPEC.md §3.1). Mechanical (marriage, child gender), so runtime. */
+  gender: Gender;
+  /** Set when a hero heads a union household (FAMILY_SPEC.md §3.4): 'pure' = only
+   *  homeland blood under the roof; 'mixed' = any native partner/descendant.
+   *  Absent = unwed. The lean marker the Company reads — not a floating meter. */
+  bloodline?: 'pure' | 'mixed';
   /** Auto-appended log of notable events for the Hero Sheet. */
   history: string[];
 }
@@ -357,6 +430,8 @@ export interface GameState {
   dependants: Dependant[];
   /** Monotonic counter for dependant ids. */
   nextDependantId: number;
+  /** Monotonic counter for recruited-character runtime ids (CHARACTERS_SPEC.md §3.1). */
+  nextCharacterId: number;
   /** The post's unnamed population (RESIDENTS_SPEC.md). */
   residents: ResidentState;
   /** Transient outsiders (Phase B); empty until spawn hooks land. */

@@ -14,6 +14,7 @@ import {
 import type { CheckModifier } from './checks';
 import { priceAt } from './economy';
 import type { GoodDef } from './economy';
+import { canWed, formUnion, unionError } from './family';
 import {
   addResidents,
   addTransientGroup,
@@ -30,13 +31,16 @@ import {
   discoveryAtLeast,
   getHero,
   nextDiscovery,
+  oppositeGender,
   RESIDENT_ROLES,
 } from './types';
 import type {
   ExpeditionKind,
   ExpeditionState,
   GameState,
+  Gender,
   GoodId,
+  Heritage,
   Hero,
   LocationDef,
   LocationId,
@@ -51,6 +55,8 @@ export interface ExpeditionContext {
   traitDefs: ReadonlyMap<string, TraitDef>;
   goodNames: ReadonlyMap<GoodId, string>;
   locationDefs: ReadonlyMap<LocationId, LocationDef>;
+  /** A dependant name for a people + gender, for a homeland courtship spouse. */
+  dependantName: (heritage: Heritage, gender: Gender, seed: number) => string;
 }
 
 export interface DispatchParams {
@@ -64,6 +70,8 @@ export interface DispatchParams {
   residents?: Partial<Record<ResidentRole, number>>;
   /** For `labor` runs: homeland hands to fetch from Thornwatch (HERITAGE_SPEC.md §5.2). */
   laborCount?: number;
+  /** For `courtship` runs: the graph-node id to wed (defaults to heroIds[0]). */
+  courtshipFor?: string;
 }
 
 export function cargoUnits(cargo: Partial<Record<GoodId, number>>): number {
@@ -133,6 +141,13 @@ export function dispatchError(
     if (residentTotal(state) + inFlightHomelandLabor(state) + count > residentCap(state)) {
       return 'No room to house them yet.';
     }
+  } else if (params.kind === 'courtship') {
+    if (def.faction !== 'CHARTER_COMPANY') return 'Homeland matches are arranged only through the Company landing.';
+    if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to the garrison yet.';
+    const subjectId = params.courtshipFor ?? heroIds[0];
+    const err = unionError(state, subjectId);
+    if (err) return err;
+    if (state.silver < TUNING.family.homelandBridePrice) return 'Not enough silver for the bride-price.';
   } else {
     if (!def.hasMarket) return 'There is no market there.';
     if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to that market yet.';
@@ -187,6 +202,13 @@ export function dispatchExpedition(
     homelandLabor = count;
   }
 
+  // A courtship run pays the bride-price up front and records who is to be wed.
+  let courtshipFor: string | undefined;
+  if (params.kind === 'courtship') {
+    state.silver -= TUNING.family.homelandBridePrice;
+    courtshipFor = params.courtshipFor ?? params.heroIds[0];
+  }
+
   // Second residents onto the party: they leave the post pool until homecoming.
   const escort: Partial<Record<ResidentRole, number>> = {};
   for (const role of RESIDENT_ROLES) {
@@ -208,6 +230,7 @@ export function dispatchExpedition(
     buyOrders: { ...(params.buyOrders ?? {}) },
     residentEscort: escort,
     ...(homelandLabor !== undefined ? { homelandLabor } : {}),
+    ...(courtshipFor !== undefined ? { courtshipFor } : {}),
   });
   state.nextExpeditionId += 1;
   return true;
@@ -262,7 +285,8 @@ export function advanceExpeditions(
       if (exp.kind === 'caravan') resolveCaravanArrival(state, ctx, exp, def, rng, report);
       else if (exp.kind === 'explore') resolveExploreArrival(state, ctx, exp, def, rng, report);
       else if (exp.kind === 'diplomacy') resolveDiplomacyArrival(state, ctx, exp, def, rng, report);
-      else resolveLaborArrival(state, exp, def, report);
+      else if (exp.kind === 'labor') resolveLaborArrival(state, exp, def, report);
+      else resolveCourtshipArrival(state, exp, def, report);
       exp.leg = 'returning';
       exp.turnsLeft = Math.max(1, def.travelTurns);
     } else {
@@ -462,6 +486,24 @@ function resolveLaborArrival(
   );
 }
 
+/** A courtship run reaches Thornwatch: the Company approves of its people marrying
+ *  its people (FAMILY_SPEC.md §5.1). The match itself is sealed on homecoming. */
+function resolveCourtshipArrival(
+  state: GameState,
+  exp: ExpeditionState,
+  def: LocationDef,
+  report: (icon: string, text: string) => void,
+): void {
+  if (def.faction) {
+    const faction = state.factions[def.faction];
+    faction.standing = clamp(faction.standing + TUNING.family.homelandMatchStanding, -100, 100);
+  }
+  report(
+    '💍',
+    `${partyNames(state, exp)} arrange a homeland match at ${def.name}, and start for home.`,
+  );
+}
+
 /** Word of neighbouring places reaches the party once a node is truly visited. */
 function spreadRumors(
   state: GameState,
@@ -514,17 +556,38 @@ function resolveHomecoming(
     }
   }
 
+  // A courtship run brings a certified homeland spouse home to wed (FAMILY_SPEC.md §5.1).
+  let matchLine = '';
+  if (exp.kind === 'courtship' && exp.courtshipFor) {
+    const subject = state.heroes.find((h) => h.id === exp.courtshipFor);
+    if (subject && canWed(state, subject.id)) {
+      const spouseGender: Gender = oppositeGender(subject.gender);
+      const heritage: Heritage = 'imanian';
+      const spouse = formUnion(state, subject.id, {
+        source: 'homeland',
+        heritage,
+        name: ctx.dependantName(heritage, spouseGender, state.nextDependantId),
+      });
+      if (spouse) {
+        subject.history.push(`Wed ${spouse.name}, brought upriver from Thornwatch (turn ${state.turn}).`);
+        matchLine = ` ${subject.name} weds ${spouse.name}, newly come upriver.`;
+      }
+    } else {
+      matchLine = ' But the match came to nothing.';
+    }
+  }
+
   const haul: string[] = [];
   if (exp.silver > 0) haul.push(`${exp.silver} silver`);
   if (goodsBrought.length > 0) haul.push(goodsBrought.join(', '));
   const tail =
     haul.length > 0
       ? ` with ${haul.join(' and ')}.`
-      : exp.kind === 'diplomacy' || exp.kind === 'labor'
+      : exp.kind === 'diplomacy' || exp.kind === 'labor' || exp.kind === 'courtship'
         ? '.'
         : ' with empty hands.';
   report(
     '🏠',
-    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${def.name}${tail}${laborLine}`,
+    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${def.name}${tail}${laborLine}${matchLine}`,
   );
 }

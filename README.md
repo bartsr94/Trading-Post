@@ -40,7 +40,13 @@ Faction standing moves two ways: a hero on the **Diplomacy** standing order host
 
 ## The company & its roster
 
-The named characters are more than the six on active duty at any one moment. The **active party** — up to six — are the heroes you assign to work, send on expeditions, and who star in events. Everyone else who has thrown in with the post waits on a **reserve bench**: they live at the post, eating and drawing a retainer, but take no orders until you call them up. From the **Characters** screen you swap freely between the active party and the reserve between turns, so the six who define your post can change across a long campaign as heroes are recruited, wounded, or set aside. (The recruitment chains that fill the bench, and the marriage and childbirth events that give characters named families — spouses and children who cost food but do no work — are the next layer; see the roadmap.)
+The named characters are more than the six on active duty at any one moment. The **active party** — up to six — are the heroes you assign to work, send on expeditions, and who star in events. Everyone else who has thrown in with the post waits on a **reserve bench**: they live at the post, eating and drawing a retainer, but take no orders until you call them up. From the **Characters** screen you swap freely between the active party and the reserve between turns, so the six who define your post can change across a long campaign. New characters arrive through **recruitment events** — a renowned trader who steps off the supply boat, a river-town clan-mother's daughter who would rather keep your books than shout at them from the wharf — never a menu purchase.
+
+## Families & the line
+
+Your heroes put down roots the frontier did not have before. A character can take a **spouse** three ways, and the *way* is the whole choice: send a party down to Thornwatch on a **courtship** run to bring a certified **homeland** bride upriver — dear and slow, but the Company approves and the bloodline stays Imanian; wed into a friendly river town in a **tribal alliance** that seals a standing bond between two peoples; or keep an informal **hearth-companion** by frontier custom — cheap, quiet, and unblessed. A hero may keep more than one household. Unions and their children move the post's cultural character, and a mixed household is one the Company's factor eyes more warily than a pure one.
+
+Marriages bear **children** on a Communal, contented post — each a person of *both* parents' peoples, so a child of an Imanian father and a Kiswani mother is genuinely of a mixed line. Children cost food but no work, and in a couple of years **come of age**: they stay named kin at the post, able in their turn to marry and raise children of their own. Over a long campaign a founder's line branches down the generations — visible as a **family tree** you open from any character, spouses and descendants shown with their portraits, mixed lines marked as such. It is the *King of Dragon Pass* "your clan grows across the years" payoff for a post that chooses to become a home.
 
 ## The post's people
 
@@ -84,7 +90,8 @@ src/
     economy.ts     # prices, drift, trade math (post market + per-location markets)
     expeditions.ts # caravan, explore & envoy dispatch and per-turn resolution
     residents.ts   # unnamed population: roles, contentment, upkeep, escorts
-    roster.ts      # named-character roster: active party ↔ reserve bench, dependants
+    roster.ts      # named-character roster: active party ↔ reserve bench, recruitment
+    family.ts      # the family graph: unions, children, ancestry, coming of age
     buildings.ts   # construction projects, building effects, tier advancement
     events/        # event selection, conditions, hero binding, outcomes
     rng.ts         # seeded PRNG (runs are reproducible)
@@ -104,7 +111,7 @@ The engine never hardcodes content: new events, heroes, traits, or locations are
 ## Roadmap
 
 - **MVP 1 — the loop works** *(complete)*: core turn loop, heroes, visible checks, event engine, post market, saves.
-- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅, with its transient outsiders & craftsfolk build-crews ✅; the active-party ↔ reserve character roster ✅; buildings, construction & tier 1→2 advancement ✅; the peoples of the Ashmark & the post's cultural character — heritage, the culture axis, and local-vs-homeland hiring ✅; still open — the rest of the buildings & post tiers 2→4, the Company's reaction to a compromised post (standing pressure & the charter-revoked ending), recruitment chains & marriage/dependant events, raids & their defence, event count to ~60 (29 so far).
+- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅, with its transient outsiders & craftsfolk build-crews ✅; the active-party ↔ reserve character roster ✅ and recruitment chains ✅; buildings, construction & tier 1→2 advancement ✅; the peoples of the Ashmark & the post's cultural character — heritage, the culture axis, and local-vs-homeland hiring ✅; marriage, partners, children & the multi-generational family tree ✅; still open — the rest of the buildings & post tiers 2→4, the Company's reaction to a compromised post (standing pressure, the charter-revoked ending, and its read of a household's bloodline), raids & their defence, event count to ~60 (~38 so far).
 - **MVP 3 — it's a game**: balance pass, seasonal content, endgame variants, art, audio, onboarding.
 
 Hero names, cultures, faction identities, and location names are grounded in the Ashmark region of Palusteria; a handful of minor wilderness-node names and one trait name are still open.

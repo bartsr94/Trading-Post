@@ -32,6 +32,8 @@ export function MapScreen({ game }: { game: GameState }) {
   const [laborParty, setLaborParty] = useState<string[]>([]);
   const [laborCount, setLaborCount] = useState(1);
   const [laborError, setLaborError] = useState<string | null>(null);
+  const [matchHeroId, setMatchHeroId] = useState<string | null>(null);
+  const [matchError, setMatchError] = useState<string | null>(null);
 
   const available = heroesAtPost(game);
   const selected = selectedId ? LOCATION_DEFS.get(selectedId) ?? null : null;
@@ -115,6 +117,25 @@ export function MapScreen({ game }: { game: GameState }) {
       setLaborParty([]);
       setLaborCount(1);
       setLaborError(null);
+    }
+  };
+
+  const seekMatch = () => {
+    if (!selected || !matchHeroId) return;
+    const params = {
+      kind: 'courtship' as const,
+      destination: selected.id,
+      heroIds: [matchHeroId],
+      courtshipFor: matchHeroId,
+    };
+    const reason = dispatchError(game, params, LOCATION_DEFS);
+    if (reason) {
+      setMatchError(reason);
+      return;
+    }
+    if (dispatch(params)) {
+      setMatchHeroId(null);
+      setMatchError(null);
     }
   };
 
@@ -384,6 +405,51 @@ export function MapScreen({ game }: { game: GameState }) {
                   onClick={callForHands}
                 >
                   Send for Hands ▸
+                </button>
+                {game.phase !== 'assignment' && (
+                  <div className="dim" style={{ fontSize: '0.78rem', marginTop: 4 }}>
+                    Parties set out during the assignment phase.
+                  </div>
+                )}
+              </>
+            )}
+
+            {canCallHands && (
+              <>
+                <h3 style={{ marginTop: 14 }}>Seek a Match</h3>
+                <p className="dim" style={{ fontSize: '0.8rem', margin: '0 0 6px' }}>
+                  Send one of the company to Thornwatch to bring a certified homeland
+                  spouse upriver — dear, and away {selected.travelTurns * 2} turns, but
+                  the Company approves and the line stays Imanian.
+                </p>
+                {available.map((hero) => (
+                  <label key={hero.id} className="pick-row">
+                    <input
+                      type="radio"
+                      name="match-hero"
+                      checked={matchHeroId === hero.id}
+                      onChange={() => {
+                        setMatchHeroId(hero.id);
+                        setMatchError(null);
+                      }}
+                    />{' '}
+                    {hero.name}
+                  </label>
+                ))}
+                <div className="faction-row" style={{ marginTop: 6 }}>
+                  <span className="dim">Bride-price</span>
+                  <span className="dim">{TUNING.family.homelandBridePrice} silver</span>
+                </div>
+                {matchError && (
+                  <div className="bad" style={{ fontSize: '0.85rem', margin: '6px 0' }}>{matchError}</div>
+                )}
+                <button
+                  className="primary"
+                  style={{ marginTop: 8 }}
+                  disabled={game.phase !== 'assignment' || matchHeroId === null}
+                  onClick={seekMatch}
+                >
+                  Send for a Match ▸
                 </button>
                 {game.phase !== 'assignment' && (
                   <div className="dim" style={{ fontSize: '0.78rem', marginTop: 4 }}>

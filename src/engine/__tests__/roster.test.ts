@@ -118,7 +118,7 @@ describe('reserve upkeep and dependant food in the turn pipeline', () => {
 
   it('dependants add to the grain the post eats', () => {
     const s = testState(1);
-    s.dependants.push({ id: 'd1', name: 'Anele', kind: 'spouse', parentId: 'p1' });
+    s.dependants.push({ id: 'd1', name: 'Anele', kind: 'spouse', parentId: 'p1', gender: 'female' });
     expect(dependantCount(s)).toBe(1);
     resolveTurn(s, TEST_CONTENT);
     const eatLine = s.report.lines.find((l) => l.text.includes('eats'));
