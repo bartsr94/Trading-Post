@@ -4,6 +4,7 @@
 import { TUNING } from '../content/tuning';
 import { freshResidents, residentTotal } from './residents';
 import { createLocationStates } from './state';
+import { defaultSubPeople } from './types';
 import type { Gender, GameState, Heritage, LocationDef } from './types';
 
 /** Content the migrations need; injected so the engine stays content-free. */
@@ -13,6 +14,31 @@ export interface MigrationContext {
   heroHeritage?: ReadonlyMap<string, Heritage>;
   /** hero id → gender, so v7→v8 can backfill each hero (FAMILY_SPEC.md §12). */
   heroGender?: ReadonlyMap<string, Gender>;
+  /** hero id → tribe/region, so v8→v9 can backfill each hero (PEOPLES_SPEC.md §11). */
+  heroSubPeople?: ReadonlyMap<string, string>;
+}
+
+/** v9 two-tier people remap: Dustwalker folds into the Hanjoda people, and the
+ *  Bejasi Hills folk are Kiswani (their region survives as `subPeople`). */
+function remapPeople(h: string): Heritage {
+  if (h === 'dustwalker') return 'hanjoda';
+  if (h === 'bejasi') return 'kiswani';
+  return h as Heritage;
+}
+
+/** The tribe/region for a pre-v9 heritage value (PEOPLES_SPEC.md §11). */
+function subPeopleFromLegacy(h: string): string {
+  return h === 'bejasi' ? 'bejasi_hills' : defaultSubPeople(remapPeople(h));
+}
+
+/** Remap a mixed-line's peoples and drop now-redundant duplicates (§11). */
+function remapAncestry(peoples: Heritage[]): Heritage[] {
+  const out: Heritage[] = [];
+  for (const p of peoples) {
+    const r = remapPeople(p);
+    if (!out.includes(r)) out.push(r);
+  }
+  return out;
 }
 
 export function serialize(state: GameState): string {
@@ -52,6 +78,9 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
         break;
       case 7:
         current = migrateV7toV8(current, ctx);
+        break;
+      case 8:
+        current = migrateV8toV9(current, ctx);
         break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
@@ -159,6 +188,36 @@ function migrateV7toV8(save: GameState, ctx?: MigrationContext): GameState {
       ...d,
       gender: d.gender ?? 'female',
       ancestry: d.ancestry ?? (d.heritage ? { peoples: [d.heritage] } : undefined),
+    })),
+  };
+}
+
+/**
+ * v9 restructures peoples to the two-tier model (PEOPLES_SPEC.md): the `Heritage`
+ * enum becomes the true peoples (Dustwalker→Hanjoda, Bejasi Hills folk→Kiswani),
+ * every named person gains a `subPeople` tribe/region, and the Knights of Saint
+ * Eirwen join as a faction. The resident tally is unchanged (Weri are native,
+ * heroes-only — no new bucket). Hero tribes come from the injected map, falling
+ * back to the legacy heritage.
+ */
+function migrateV8toV9(save: GameState, ctx?: MigrationContext): GameState {
+  return {
+    ...save,
+    saveVersion: 9,
+    factions: {
+      ...save.factions,
+      KNIGHTS_EIRWEN: save.factions.KNIGHTS_EIRWEN ?? { standing: 0 },
+    },
+    heroes: save.heroes.map((h) => ({
+      ...h,
+      heritage: remapPeople(h.heritage),
+      subPeople: h.subPeople ?? ctx?.heroSubPeople?.get(h.id) ?? subPeopleFromLegacy(h.heritage),
+    })),
+    dependants: save.dependants.map((d) => ({
+      ...d,
+      heritage: d.heritage ? remapPeople(d.heritage) : undefined,
+      subPeople: d.subPeople ?? (d.heritage ? subPeopleFromLegacy(d.heritage) : undefined),
+      ancestry: d.ancestry ? { peoples: remapAncestry(d.ancestry.peoples) } : undefined,
     })),
   };
 }

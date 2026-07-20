@@ -49,7 +49,7 @@ describe('saves', () => {
     v1.silver = 123;
 
     const migrated = deserialize(JSON.stringify(v1), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(8);
+    expect(migrated.saveVersion).toBe(9);
     expect(migrated.silver).toBe(123);
     expect(migrated.expeditions).toEqual([]);
     expect(migrated.locations.river_meet.discovery).toBe('visited');
@@ -84,7 +84,7 @@ describe('saves', () => {
     v2.silver = 77;
 
     const migrated = deserialize(JSON.stringify(v2), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(8);
+    expect(migrated.saveVersion).toBe(9);
     expect(migrated.silver).toBe(77);
     expect(migrated.charterMissedStreak).toBe(0);
     expect(migrated.residents.contentment).toBeGreaterThan(0);
@@ -104,7 +104,7 @@ describe('saves', () => {
     v3.silver = 88;
 
     const migrated = deserialize(JSON.stringify(v3), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(8);
+    expect(migrated.saveVersion).toBe(9);
     expect(migrated.silver).toBe(88);
     expect(migrated.residents.idle).toBe(0);
     expect(migrated.nextTransientId).toBe(1);
@@ -121,7 +121,7 @@ describe('saves', () => {
     v4.silver = 99;
 
     const migrated = deserialize(JSON.stringify(v4), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(8);
+    expect(migrated.saveVersion).toBe(9);
     expect(migrated.silver).toBe(99);
     expect(migrated.activePartyIds).toEqual(migrated.heroes.map((h) => h.id));
     expect(migrated.dependants).toEqual([]);
@@ -136,7 +136,7 @@ describe('saves', () => {
     v5.silver = 111;
 
     const migrated = deserialize(JSON.stringify(v5), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(8);
+    expect(migrated.saveVersion).toBe(9);
     expect(migrated.silver).toBe(111);
     expect(migrated.buildings).toEqual([]);
     expect(migrated.construction).toBeNull();
@@ -157,19 +157,19 @@ describe('saves', () => {
     v6.residents!.roles.farmers = 3;
     v6.saveVersion = 6;
 
-    const heroHeritage = new Map([['p4', 'kiswani'], ['p5', 'dustwalker']] as const);
+    const heroHeritage = new Map([['p4', 'kiswani'], ['p5', 'hanjoda']] as const);
     const migrated = deserialize(JSON.stringify(v6), {
       locationDefs: TEST_LOCATIONS,
       heroHeritage,
     });
-    expect(migrated.saveVersion).toBe(8);
+    expect(migrated.saveVersion).toBe(9);
     expect(migrated.axes.culture).toBe(0);
     expect(migrated.charterCompromisedStreak).toBe(0);
     // Pre-feature residents are treated as homeland founders.
     expect(migrated.residents.heritage).toEqual({ homeland: 3, native: 0 });
     // Hero heritage comes from the injected map; unknown ids default to imanian.
     expect(migrated.heroes.find((h) => h.id === 'p4')!.heritage).toBe('kiswani');
-    expect(migrated.heroes.find((h) => h.id === 'p5')!.heritage).toBe('dustwalker');
+    expect(migrated.heroes.find((h) => h.id === 'p5')!.heritage).toBe('hanjoda');
     expect(migrated.heroes.find((h) => h.id === 'p1')!.heritage).toBe('imanian');
   });
 
@@ -193,13 +193,57 @@ describe('saves', () => {
       locationDefs: TEST_LOCATIONS,
       heroGender,
     });
-    expect(migrated.saveVersion).toBe(8);
+    expect(migrated.saveVersion).toBe(9);
     expect(migrated.nextCharacterId).toBe(1);
     // Gender from the injected map; unknown ids default to male.
     expect(migrated.heroes.find((h) => h.id === 'p2')!.gender).toBe('female');
     expect(migrated.heroes.find((h) => h.id === 'p1')!.gender).toBe('male');
     // Dependant gets a default gender and ancestry derived from its heritage.
     expect(migrated.dependants[0].gender).toBe('female');
+    expect(migrated.dependants[0].ancestry).toEqual({ peoples: ['kiswani'] });
+  });
+
+  it('migrates v8 saves: two-tier peoples remap + subPeople + Knights faction', () => {
+    // Build a legacy v8 save as a plain object so the pre-v9 heritage strings
+    // ('dustwalker'/'bejasi') are allowed past the type system.
+    const v8 = JSON.parse(serialize(testState(562))) as Record<string, unknown>;
+    v8.saveVersion = 8;
+    const factions = v8.factions as Record<string, unknown>;
+    delete factions.KNIGHTS_EIRWEN;
+    const heroes = v8.heroes as Array<Record<string, unknown>>;
+    const hDust = heroes.find((h) => h.id === 'p5')!;
+    hDust.heritage = 'dustwalker';
+    delete hDust.subPeople;
+    const hBej = heroes.find((h) => h.id === 'p2')!;
+    hBej.heritage = 'bejasi';
+    delete hBej.subPeople;
+    v8.dependants = [
+      {
+        id: 'd1',
+        name: 'Mixed Kin',
+        kind: 'kin',
+        parentId: 'p1',
+        gender: 'female',
+        heritage: 'bejasi',
+        ancestry: { peoples: ['kiswani', 'bejasi'] },
+      },
+    ];
+
+    const migrated = deserialize(JSON.stringify(v8), { locationDefs: TEST_LOCATIONS });
+    expect(migrated.saveVersion).toBe(9);
+    // Knights of Saint Eirwen seeded neutral.
+    expect(migrated.factions.KNIGHTS_EIRWEN.standing).toBe(0);
+    // Dustwalker folds into the Hanjoda people; the tribe survives as subPeople.
+    const p5 = migrated.heroes.find((h) => h.id === 'p5')!;
+    expect(p5.heritage).toBe('hanjoda');
+    expect(p5.subPeople).toBe('dustwalker');
+    // Bejasi Hills folk are Kiswani; the region survives as subPeople.
+    const p2 = migrated.heroes.find((h) => h.id === 'p2')!;
+    expect(p2.heritage).toBe('kiswani');
+    expect(p2.subPeople).toBe('bejasi_hills');
+    // A [kiswani, bejasi] line collapses to a pure Kiswani line after the remap.
+    expect(migrated.dependants[0].heritage).toBe('kiswani');
+    expect(migrated.dependants[0].subPeople).toBe('bejasi_hills');
     expect(migrated.dependants[0].ancestry).toEqual({ peoples: ['kiswani'] });
   });
 });

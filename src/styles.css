@@ -459,14 +459,14 @@ h4 {
 }
 /* Denser rows inside the read-only dashboard columns so three stacked
    sections still clear the fold on short viewports (no-scroll rule). */
-.outpost-overview .faction-row { padding: 3px 0; }
-.outpost-overview h4 { margin-top: 10px !important; }
-.outpost-overview .panel { padding: 12px 14px; }
+.outpost-overview .faction-row { padding: 1px 0; }
+.outpost-overview h4 { margin-top: 8px !important; }
+.outpost-overview .panel { padding: 10px 14px; }
 .post-banner {
   position: relative;
   overflow: hidden;
-  min-height: 112px;
-  max-height: 19vh;
+  min-height: 108px;
+  max-height: 18vh;
   border-radius: 8px;
   border: 1px solid var(--border);
   display: flex;

@@ -16,13 +16,13 @@ const NAMES: Pools = {
     male: ['Abasi', 'Chiro', 'Dawit', 'Jelani', 'Kofi', 'Njoro', 'Simba', 'Tumo', 'Zuberi', 'Baraka'],
     female: ['Amara', 'Chuma', 'Dalila', 'Imani', 'Kesi', 'Nia', 'Sela', 'Themba', 'Zola', 'Ashaki'],
   },
-  dustwalker: {
+  hanjoda: {
     male: ['Baturu', 'Erke', 'Ganta', 'Khenbish', 'Mergen', 'Naranbat', 'Sube', 'Temujin', 'Yesugei', 'Chuluun'],
     female: ['Altani', 'Bolormaa', 'Enkhee', 'Khulan', 'Nomin', 'Oyuun', 'Saran', 'Tuya', 'Uranchimeg', 'Yesui'],
   },
-  bejasi: {
-    male: ['Adaro', 'Batu', 'Iri', 'Kaveh', 'Mbeki', 'Oru', 'Serat', 'Turi', 'Vesh', 'Zhoran'],
-    female: ['Ashka', 'Dela', 'Iyari', 'Kessa', 'Mira', 'Osei', 'Ravah', 'Suri', 'Vessa', 'Yenni'],
+  weri: {
+    male: ['Bathar', 'Dokrun', 'Garruk', 'Hedrol', 'Korgan', 'Molvan', 'Rurmok', 'Thagan', 'Voldar', 'Zurmek'],
+    female: ['Brunna', 'Dagrun', 'Halmka', 'Korra', 'Molgra', 'Nurvi', 'Rathka', 'Torgna', 'Velka', 'Yurna'],
   },
 };
 

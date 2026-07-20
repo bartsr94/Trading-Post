@@ -20,9 +20,28 @@ const DEPENDANT_LABEL: Record<Dependant['kind'], string> = {
 const HERITAGE_LABEL: Record<Heritage, string> = {
   imanian: 'Imanian (homeland)',
   kiswani: 'Kiswani',
-  dustwalker: 'Dustwalker',
-  bejasi: 'Bejasi',
+  hanjoda: 'Hanjoda',
+  weri: 'Weri',
 };
+
+/** Tribe/region → display label (PEOPLES_SPEC.md §2). Unknown keys title-case. */
+const SUBPEOPLE_LABEL: Record<string, string> = {
+  ansberrian: 'Ansberrian',
+  creole: 'Creole',
+  tributary: 'Tributary Towns',
+  bejasi_hills: 'Bejasi Hills',
+  dustwalker: 'Dustwalker',
+  sunspear: 'Sunspear',
+  redsand: 'Redsand',
+  weri: 'Weri',
+};
+
+/** "People — Tribe/Region", omitting a redundant or default sub-identity. */
+function heritageText(hero: { heritage: Heritage; subPeople?: string }): string {
+  const people = HERITAGE_LABEL[hero.heritage];
+  const sub = hero.subPeople ? (SUBPEOPLE_LABEL[hero.subPeople] ?? hero.subPeople) : undefined;
+  return sub && sub !== people ? `${people} — ${sub}` : people;
+}
 
 function hueOf(key: string): number {
   let hash = 0;
@@ -86,7 +105,7 @@ export function HeroSheet({ hero }: { hero: Hero }) {
               {hero.name} <span className="dim">{hero.epithet}</span>
             </h2>
             <p className="dim" style={{ fontSize: '0.78rem', margin: '0 0 4px' }}>
-              {HERITAGE_LABEL[hero.heritage]}
+              {heritageText(hero)}
             </p>
             <p className="dim" style={{ fontSize: '0.88rem' }}>{hero.bio}</p>
             <ConditionBars hero={hero} />

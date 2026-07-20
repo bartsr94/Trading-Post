@@ -45,6 +45,7 @@ export const FACTION_IDS = [
   'HILL_TRIBES',
   'OLD_PEOPLE',
   'CHARTER_COMPANY',
+  'KNIGHTS_EIRWEN',
 ] as const;
 export type FactionId = (typeof FACTION_IDS)[number];
 
@@ -54,10 +55,13 @@ export type Season = (typeof SEASONS)[number];
 // Aloof(−)↔Integrated(+), Mercantile(−)↔Communal(+), Homeland/Imanian(−)↔Frontier/Sauromatian(+)
 export type AxisId = 'integration' | 'communal' | 'culture';
 
-/** Peoples of the Ashmark (HERITAGE_SPEC.md §2). Reuses the portrait "race"
- *  pools, promoted to a mechanical type carried by named people & the resident
- *  tally. `imanian` = the Company's homeland folk; the rest are native. */
-export const HERITAGES = ['imanian', 'kiswani', 'dustwalker', 'bejasi'] as const;
+/** Peoples of the Ashmark (PEOPLES_SPEC.md §2) — the two-tier "people" level.
+ *  Promoted to a mechanical type carried by named people & the resident tally.
+ *  `imanian` = the Company's homeland folk; everyone else (Kiswani, Hanjoda,
+ *  Weri) is native — anything not Imanian is suspect to the Company. The tribe/
+ *  region (Dustwalker/Sunspear/Redsand; Tributary/Bejasi Hills) is the separate
+ *  free-form `subPeople` flavor, not an enum the engine branches on. */
+export const HERITAGES = ['imanian', 'kiswani', 'hanjoda', 'weri'] as const;
 export type Heritage = (typeof HERITAGES)[number];
 
 /** The coarse origin split the culture axis & Company care about. */
@@ -69,6 +73,20 @@ export function heritageGroup(h: Heritage): HeritageGroup {
 
 export function isNativeHeritage(h: Heritage): boolean {
   return h !== 'imanian';
+}
+
+/** The per-people default tribe/region when a `subPeople` is unset (PEOPLES_SPEC.md §2). */
+export function defaultSubPeople(h: Heritage): string {
+  switch (h) {
+    case 'imanian':
+      return 'ansberrian';
+    case 'kiswani':
+      return 'tributary';
+    case 'hanjoda':
+      return 'dustwalker';
+    case 'weri':
+      return 'weri';
+  }
 }
 
 /** A named person's gender (FAMILY_SPEC.md §3.1). Drives marriage, child gender,
@@ -217,6 +235,8 @@ export interface Dependant {
   portraitKey?: string;
   /** People this dependant belongs to; defaults to the parent's (HERITAGE_SPEC.md §3.3). */
   heritage?: Heritage;
+  /** Tribe/region within the people (PEOPLES_SPEC.md §2); defaults to the parent's. */
+  subPeople?: string;
   /** Turn a child was born, for aging (FAMILY_SPEC.md §7). */
   bornTurn?: number;
   /** False until coming-of-age promotes a child to grown kin; then true (FAMILY_SPEC.md §7). */
@@ -235,6 +255,8 @@ export interface RecruitDef {
   epithet: string;
   bio: string;
   heritage: Heritage;
+  /** Tribe/region within the people (PEOPLES_SPEC.md §2); defaults per-people. */
+  subPeople?: string;
   gender: Gender;
   stats: Record<StatId, number>;
   skills: Partial<Record<SkillId, number>>;
@@ -261,6 +283,10 @@ export interface Hero {
   /** The people this character belongs to (HERITAGE_SPEC.md §3.3). Feeds the
    *  Company's read of the active party; runtime because recruits set it live. */
   heritage: Heritage;
+  /** Tribe/region within the people (PEOPLES_SPEC.md §2), e.g. 'dustwalker',
+   *  'bejasi_hills', 'tributary'. Flavor + hire-source routing; absent → a
+   *  per-people default. Never branched on by the engine. */
+  subPeople?: string;
   /** Gender (FAMILY_SPEC.md §3.1). Mechanical (marriage, child gender), so runtime. */
   gender: Gender;
   /** Set when a hero heads a union household (FAMILY_SPEC.md §3.4): 'pure' = only

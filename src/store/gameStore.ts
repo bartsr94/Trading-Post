@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { STARTING_STANDINGS } from '../content/factions';
-import { HERO_POOL, createHero, genderOf, heritageOf } from '../content/heroes';
+import { HERO_POOL, createHero, genderOf, heritageOf, subPeopleOf } from '../content/heroes';
 import { LOCATIONS } from '../content/locations';
 import { CONTENT } from '../content/registry';
 import {
@@ -37,7 +37,6 @@ import type {
   BuildingId,
   GameState,
   GoodId,
-  Heritage,
   ResidentRole,
 } from '../engine/types';
 
@@ -56,6 +55,7 @@ const MIGRATION_CTX = {
   locationDefs: LOCATIONS,
   heroHeritage: new Map(HERO_POOL.map((t) => [t.id, heritageOf(t)] as const)),
   heroGender: new Map(HERO_POOL.map((t) => [t.id, genderOf(t)] as const)),
+  heroSubPeople: new Map(HERO_POOL.map((t) => [t.id, subPeopleOf(t)] as const)),
 };
 
 interface GameStore {
@@ -100,8 +100,8 @@ interface GameStore {
   startConstruction: (buildingId: BuildingId) => boolean;
   /** Abandon the active project — paid costs are forfeit. */
   cancelConstruction: () => void;
-  /** Hire native residents of a role from a specific people. Returns false if invalid. */
-  hire: (role: ResidentRole, count: number, people: Heritage) => boolean;
+  /** Hire native residents of a role from a local source (tribe/region). Returns false if invalid. */
+  hire: (role: ResidentRole, count: number, source: string) => boolean;
   /** Move residents between roles/idle at the post. Returns false if invalid. */
   reallocateResidents: (
     from: ResidentRole | 'idle',
@@ -300,11 +300,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ game: next });
   },
 
-  hire: (role, count, people) => {
+  hire: (role, count, source) => {
     const { game } = get();
     if (!game || game.phase !== 'assignment') return false;
     const next = draft(game);
-    if (!hireResidents(next, role, count, people)) return false;
+    if (!hireResidents(next, role, count, source)) return false;
     autosave(next);
     set({ game: next });
     return true;

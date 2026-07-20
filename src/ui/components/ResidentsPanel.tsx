@@ -13,7 +13,7 @@ import {
   residentTotal,
 } from '../../engine/residents';
 import { RESIDENT_ROLES } from '../../engine/types';
-import type { GameState, Heritage, ResidentRole, TransientKind } from '../../engine/types';
+import type { GameState, ResidentRole, TransientKind } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 
 const TRANSIENT_LABELS: Record<TransientKind, string> = {
@@ -22,11 +22,14 @@ const TRANSIENT_LABELS: Record<TransientKind, string> = {
   supplierCrew: 'Supplier crew',
 };
 
-/** Native peoples hireable at their seats (HERITAGE_SPEC.md §4). */
-const NATIVE_PEOPLES: { id: Heritage; label: string }[] = [
-  { id: 'kiswani', label: 'Kiswani' },
+/** Native hire sources by tribe/region (PEOPLES_SPEC.md §7.1) — the key is the
+ *  TUNING.heritage.hireSources id. Weri are heroes-only, so not listed here. */
+const HIRE_SOURCES: { id: string; label: string }[] = [
+  { id: 'tributary', label: 'Tributary Kiswani' },
+  { id: 'bejasi_hills', label: 'Bejasi Hills' },
   { id: 'dustwalker', label: 'Dustwalker' },
-  { id: 'bejasi', label: 'Bejasi' },
+  { id: 'sunspear', label: 'Sunspear' },
+  { id: 'redsand', label: 'Redsand' },
 ];
 
 const ROLE_LABELS: Record<ResidentRole, string> = {
@@ -53,7 +56,8 @@ export function ResidentsPanel({ game }: { game: GameState }) {
   const hire = useGameStore((s) => s.hire);
   const reallocate = useGameStore((s) => s.reallocateResidents);
   const canAct = game.phase === 'assignment';
-  const [people, setPeople] = useState<Heritage>('kiswani');
+  const [source, setSource] = useState<string>('tributary');
+  const sourceLabel = HIRE_SOURCES.find((s) => s.id === source)?.label ?? source;
 
   const r = game.residents;
   const total = residentTotal(game);
@@ -130,20 +134,20 @@ export function ResidentsPanel({ game }: { game: GameState }) {
       )}
 
       <h4 style={{ marginTop: 14 }}>Hire Local Hands</h4>
-      <div className="people-picker" style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
-        {NATIVE_PEOPLES.map((p) => (
+      <div className="people-picker" style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+        {HIRE_SOURCES.map((s) => (
           <button
-            key={p.id}
-            className={people === p.id ? 'small primary' : 'small'}
-            onClick={() => setPeople(p.id)}
+            key={s.id}
+            className={source === s.id ? 'small primary' : 'small'}
+            onClick={() => setSource(s.id)}
           >
-            {p.label}
+            {s.label}
           </button>
         ))}
       </div>
       <div className="hands-grid">
         {RESIDENT_ROLES.map((role) => {
-          const reason = hireError(game, role, 1, people);
+          const reason = hireError(game, role, 1, source);
           const cost = localHireCost(role, 1);
           return (
             <div key={role} className="hand-cell" title={ROLE_NOTES[role]}>
@@ -164,8 +168,8 @@ export function ResidentsPanel({ game }: { game: GameState }) {
                 <button
                   className="small primary"
                   disabled={!canAct || reason !== null}
-                  title={reason ?? `Hire a ${people} ${ROLE_LABELS[role].toLowerCase()} for ${cost} silver`}
-                  onClick={() => hire(role, 1, people)}
+                  title={reason ?? `Hire a ${sourceLabel} ${ROLE_LABELS[role].toLowerCase()} for ${cost} silver`}
+                  onClick={() => hire(role, 1, source)}
                 >
                   Hire ({cost})
                 </button>
