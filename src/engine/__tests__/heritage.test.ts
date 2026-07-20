@@ -47,6 +47,8 @@ function outcomeCtx(state: GameState): OutcomeContext {
     traitNames: new Map(),
     locationNames: new Map(),
     buildingNames: new Map(),
+    recruitDefs: new Map(),
+    dependantName: () => 'Test',
   };
 }
 

@@ -884,3 +884,146 @@ select:focus {
 @media (max-width: 640px) {
   .build-menu { grid-template-columns: 1fr; }
 }
+
+/* Family strip on the Characters cards + the family-tree overlay (FAMILY_SPEC.md §10) */
+.char-family {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  margin-top: 2px;
+}
+.union-badge {
+  color: var(--accent);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.74rem;
+}
+.link-btn:hover { text-decoration: underline; }
+.ft-blood {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--border);
+}
+.ft-blood.pure { color: var(--accent); border-color: var(--accent-dim); }
+.ft-blood.mixed { color: var(--good); border-color: var(--good); }
+
+.ft-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 6, 4, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 20px;
+}
+.ft-modal {
+  width: min(960px, 96vw);
+  max-height: 90vh;
+  background: var(--panel);
+  border: 1px solid var(--accent-dim);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+}
+.ft-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.ft-canvas {
+  padding: 20px;
+  overflow: auto;
+}
+.ft-branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.ft-couple {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ft-bond {
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+.ft-children {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.ft-person {
+  width: 96px;
+  text-align: center;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 6px;
+}
+.ft-person.ft-dead { opacity: 0.5; }
+.ft-face {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 5px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.ft-name { font-size: 0.8rem; font-weight: 600; }
+.ft-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.66rem;
+  margin-top: 2px;
+}
+.ft-mixed { color: var(--good); }
+.ft-role { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.03em; }
+
+/* Small family portrait tiles in the Hero Sheet (FAMILY_SPEC.md §10) */
+.fam-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.fam-tile {
+  width: 64px;
+  text-align: center;
+}
+.fam-face {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 3px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.fam-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.fam-rel { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.03em; }

@@ -6,6 +6,8 @@ import { EVENT_MAP } from './events';
 import { GOOD_DEFS, GOOD_NAMES } from './goods';
 import { FACTION_NAMES } from './factions';
 import { LOCATION_DEFS, LOCATION_NAMES } from './locations';
+import { dependantName } from './names';
+import { RECRUIT_DEFS } from './recruits';
 import { TRAIT_DEFS, TRAIT_NAMES } from './traits';
 
 export const CONTENT: TurnContext = {
@@ -18,4 +20,6 @@ export const CONTENT: TurnContext = {
   locationDefs: LOCATION_DEFS,
   locationNames: LOCATION_NAMES,
   buildingNames: BUILDING_NAMES,
+  recruitDefs: RECRUIT_DEFS,
+  dependantName,
 };

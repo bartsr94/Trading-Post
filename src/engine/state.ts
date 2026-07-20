@@ -77,6 +77,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     factions,
     dependants: [],
     nextDependantId: 1,
+    nextCharacterId: 1,
     residents: freshResidents(),
     transients: [],
     nextTransientId: 1,

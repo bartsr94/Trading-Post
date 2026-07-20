@@ -165,6 +165,39 @@ export const TRAITS: TraitDef[] = [
       { tag: 'RIVER_CLANS', value: -1, label: 'Friend of the Dustwalkers' },
     ],
   },
+
+  // Union traits (FAMILY_SPEC.md §5.4): flavor markers content reads for in-law
+  // chains and reactions. No standing check-mods in v1.
+  {
+    id: 'wed',
+    name: 'Wed',
+    description: 'Married to a certified homeland spouse, brought upriver from Thornwatch.',
+    checkMods: [],
+  },
+  {
+    id: 'wed_river',
+    name: 'Wed to the Tributary Towns',
+    description: 'Married into the river towns — an alliance sealed the old way.',
+    checkMods: [{ tag: 'RIVER_CLANS', value: 2, label: 'Wed to the Tributary Towns' }],
+  },
+  {
+    id: 'wed_hills',
+    name: 'Wed to the Dustwalkers',
+    description: 'Married into the drylands clans — kin now, by the matriarchs’ leave.',
+    checkMods: [{ tag: 'HILL_TRIBES', value: 2, label: 'Wed to the Dustwalkers' }],
+  },
+  {
+    id: 'wed_bejasi',
+    name: 'Wed to the Old People',
+    description: 'Married into the Bejasi hills — a rare and watched-over bond.',
+    checkMods: [{ tag: 'OLD_PEOPLE', value: 2, label: 'Wed to the Old People' }],
+  },
+  {
+    id: 'informal_household',
+    name: 'Hearth-Companion',
+    description: 'Keeps an informal household by frontier custom — no ceremony, no Company blessing.',
+    checkMods: [],
+  },
 ];
 
 export const TRAIT_DEFS: ReadonlyMap<string, TraitDef> = new Map(TRAITS.map((t) => [t.id, t]));

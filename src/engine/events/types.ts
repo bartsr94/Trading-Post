@@ -4,11 +4,13 @@
 import type {
   AxisId,
   BuildingId,
+  DependantKind,
   DiscoveryState,
   ExpeditionKind,
   ExpeditionState,
   FactionId,
   GameState,
+  Gender,
   GoodId,
   Heritage,
   HeritageGroup,
@@ -20,6 +22,7 @@ import type {
   StatId,
   TraitId,
   TransientKind,
+  UnionSource,
 } from '../types';
 
 /** Present while evaluating travel events: the expedition they happen to. */
@@ -51,6 +54,10 @@ export type Condition =
   | { type: 'flag'; flag: string }
   | { type: 'notFlag'; flag: string }
   | { type: 'partySizeAtLeast'; value: number }
+  | { type: 'rosterAtLeast'; scope: 'active' | 'reserve' | 'living'; value: number }
+  | { type: 'rosterBelow'; scope: 'active' | 'reserve' | 'living'; value: number }
+  | { type: 'heroHasSpouse'; heroId?: string }
+  | { type: 'heroUnmarried'; heroId?: string }
   | { type: 'residentsAtLeast'; role?: ResidentRole; value: number }
   | { type: 'residentsBelow'; role?: ResidentRole; value: number }
   | { type: 'contentmentAtLeast'; value: number }
@@ -113,6 +120,27 @@ export type Outcome =
   | { type: 'completeBuilding'; building: BuildingId }
   | { type: 'addBuildProgress'; delta: number }
   | { type: 'heroDeparts' }
+  /** Recruit a named character from a template (CHARACTERS_SPEC.md §6). */
+  | { type: 'recruitCharacter'; templateId: string; toActive?: boolean }
+  /** A named character leaves the frontier; defaults to the bound hero. */
+  | { type: 'departCharacter'; heroId?: string }
+  /** Add a family member (FAMILY_SPEC.md §9). parentId/otherParentId default to
+   *  the bound hero; unset heritage/gender resolve from parents + union rules. */
+  | {
+      type: 'addDependant';
+      kind: DependantKind;
+      parentId?: string;
+      otherParentId?: string;
+      union?: UnionSource;
+      heritage?: Heritage;
+      gender?: Gender;
+    }
+  | { type: 'removeDependant'; parentId?: string; kind?: DependantKind; dependantId?: string }
+  /** Form a union for a subject (defaults to the bound hero): spouse + bloodline
+   *  + culture nudge + union trait (FAMILY_SPEC.md §9). */
+  | { type: 'formUnion'; subjectId?: string; source: UnionSource; heritage?: Heritage }
+  /** A child comes of age (FAMILY_SPEC.md §7); grown kin by default. */
+  | { type: 'comeOfAge'; dependantId: string; promoteToRecruit?: boolean }
   | { type: 'history'; text: string }
   /** Advance a location's discovery (default: the expedition's destination). */
   | { type: 'discover'; location?: LocationId; to?: DiscoveryState }

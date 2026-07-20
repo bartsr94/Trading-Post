@@ -2,12 +2,14 @@
 // plus roster status (active/reserve) and swap action (CHARACTERS_SPEC.md §9).
 
 import { TRAIT_DEFS } from '../../content/traits';
+import { dominantHeritage } from '../../engine/family';
 import { activateError, benchError, dependantsOf } from '../../engine/roster';
 import { SKILL_IDS, STAT_IDS } from '../../engine/types';
 import type { Dependant, Hero, Heritage } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from '../components/ConditionBars';
 import { Portrait } from '../components/Portrait';
+import { pickPortraitKey, portraitUrl } from '../portraits';
 
 const DEPENDANT_LABEL: Record<Dependant['kind'], string> = {
   spouse: 'Spouse',
@@ -21,6 +23,40 @@ const HERITAGE_LABEL: Record<Heritage, string> = {
   dustwalker: 'Dustwalker',
   bejasi: 'Bejasi',
 };
+
+function hueOf(key: string): number {
+  let hash = 0;
+  for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+  return ((hash % 360) + 360) % 360;
+}
+
+/** A small family portrait tile: real art from the person's people+gender pool
+ *  where one exists, else the hash-hue initial tile. */
+function DependantTile({ dep }: { dep: Dependant }) {
+  const key = dep.portraitKey ?? pickPortraitKey(`${dominantHeritage(dep)}_${dep.gender}`, dep.id);
+  const url = portraitUrl(key);
+  return (
+    <div className="fam-tile" title={`${DEPENDANT_LABEL[dep.kind]} — fed, does no work`}>
+      <div className="fam-face">
+        {url ? (
+          <img className="portrait-art" src={url} alt="" draggable={false} />
+        ) : (
+          <span
+            className="portrait-fallback"
+            aria-hidden="true"
+            style={{
+              background: `linear-gradient(160deg, hsl(${hueOf(dep.name)}, 28%, 32%), hsl(${(hueOf(dep.name) + 40) % 360}, 30%, 16%))`,
+            }}
+          >
+            {dep.name.charAt(0)}
+          </span>
+        )}
+      </div>
+      <div className="fam-name">{dep.name}</div>
+      <div className="fam-rel dim">{DEPENDANT_LABEL[dep.kind].toLowerCase()}</div>
+    </div>
+  );
+}
 
 export function HeroSheet({ hero }: { hero: Hero }) {
   const selectHero = useGameStore((s) => s.selectHero);
@@ -79,11 +115,9 @@ export function HeroSheet({ hero }: { hero: Hero }) {
         {isLiving && deps.length > 0 && (
           <>
             <h3 style={{ marginTop: 14 }}>Family</h3>
-            <div>
+            <div className="fam-row">
               {deps.map((d) => (
-                <span key={d.id} className="trait-tag" title={`${DEPENDANT_LABEL[d.kind]} — fed, does no work`}>
-                  {d.name} <span className="dim">· {DEPENDANT_LABEL[d.kind].toLowerCase()}</span>
-                </span>
+                <DependantTile key={d.id} dep={d} />
               ))}
             </div>
           </>

@@ -40,6 +40,8 @@ function outcomeCtx(state: GameState): OutcomeContext {
     traitNames: TEST_CONTENT.traitNames,
     locationNames: TEST_CONTENT.locationNames,
     buildingNames: TEST_CONTENT.buildingNames,
+    recruitDefs: TEST_CONTENT.recruitDefs,
+    dependantName: TEST_CONTENT.dependantName,
   };
 }
 
@@ -49,6 +51,7 @@ function expeditionCtx(): ExpeditionContext {
     traitDefs: TEST_CONTENT.traitDefs,
     goodNames: TEST_CONTENT.goodNames,
     locationDefs: TEST_CONTENT.locationDefs,
+    dependantName: TEST_CONTENT.dependantName,
   };
 }
 

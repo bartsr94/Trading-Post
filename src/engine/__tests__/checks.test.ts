@@ -27,6 +27,7 @@ function hero(overrides: Partial<Hero> = {}): Hero {
     stress: 0,
     status: 'active',
     heritage: 'imanian',
+    gender: 'male',
     history: [],
     ...overrides,
   };

@@ -2,9 +2,11 @@
 // (seeded) choices — the MVP 1 "survive the first season" loop, sans UI.
 
 import { describe, expect, it } from 'vitest';
+import { TUNING } from '../../content/tuning';
 import { constructionError, startConstruction } from '../buildings';
 import { evalConditions } from '../events/conditions';
 import { dispatchExpedition } from '../expeditions';
+import { addChild, canWed, childrenOf, formUnion, isMarried, spousesOf } from '../family';
 import type { TravelContext } from '../events/types';
 import { Rng } from '../rng';
 import {
@@ -93,6 +95,43 @@ function maybeDispatch(state: GameState, rng: Rng): void {
   }
 }
 
+/** Exercise the family system: courtship runs, informal unions, and births. */
+function maybeFamily(state: GameState, rng: Rng): void {
+  const atPost = heroesAtPost(state);
+  if (atPost.length === 0) return;
+  const roll = rng.next();
+
+  // A homeland courtship run, if the landing is reachable and coin allows.
+  if (state.turn % 5 === 0 && roll < 0.2 && state.silver > TUNING.family.homelandBridePrice + 60) {
+    const loc = state.locations.charter_landing;
+    const subject = atPost.find((h) => canWed(state, h.id));
+    if (subject && loc && discoveryAtLeast(loc.discovery, 'visited')) {
+      dispatchExpedition(
+        state,
+        { kind: 'courtship', destination: 'charter_landing', heroIds: [subject.id], courtshipFor: subject.id },
+        TEST_CONTENT.locationDefs,
+      );
+      return;
+    }
+  }
+
+  // An informal union for an unwed hero at the post.
+  const unwed = atPost.find((h) => !isMarried(state, h.id) && canWed(state, h.id));
+  if (unwed && roll < 0.45) {
+    formUnion(state, unwed.id, { source: 'informal', heritage: 'kiswani', name: 'Companion' });
+    return;
+  }
+
+  // A child to a married hero whose family is not already large.
+  const wed = atPost.find((h) => isMarried(state, h.id) && childrenOf(state, h.id).length < 3);
+  if (wed && roll > 0.6) {
+    addChild(state, wed.id, {
+      nameFor: (g, h) => TEST_CONTENT.dependantName(h, g, state.nextDependantId),
+      rand: () => rng.next(),
+    });
+  }
+}
+
 /** Every so often, break ground on whatever the post can afford to build. */
 function maybeBuild(state: GameState): void {
   if (state.construction || state.turn % 4 !== 0) return;
@@ -115,6 +154,7 @@ function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
     if (state.residents.idle > 0) reallocate(state, 'idle', 'guards', state.residents.idle);
     maybeDispatch(state, choiceRng);
     maybeBuild(state);
+    maybeFamily(state, choiceRng);
     // Standing orders: a sensible default spread.
     const party = heroesAtPost(state);
     party.forEach((hero, idx) => {
@@ -187,6 +227,16 @@ describe('full-season simulation', () => {
       // Transient invariants: positive head counts, at most one inspector group.
       for (const t of s.transients) expect(t.count).toBeGreaterThan(0);
       expect(s.transients.filter((t) => t.kind === 'companyAgents').length).toBeLessThanOrEqual(1);
+      // Family invariants: every dependant has a gender, no one parents themselves,
+      // the spouse cap holds, and dependants never inflate the residents cap.
+      for (const d of s.dependants) {
+        expect(d.gender === 'male' || d.gender === 'female').toBe(true);
+        expect(d.parentIds?.includes(d.id) ?? false).toBe(false);
+      }
+      for (const h of s.heroes) {
+        expect(spousesOf(s, h.id).length).toBeLessThanOrEqual(TUNING.family.maxSpousesPerHero);
+      }
+      expect(residentTotal(s)).toBeLessThanOrEqual(residentCap(s)); // dependants excluded from the pool
     }
   });
 

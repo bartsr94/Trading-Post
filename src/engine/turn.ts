@@ -35,6 +35,7 @@ import {
 } from './residents';
 import { applyOutcomes } from './events/outcomes';
 import type { OutcomeContext } from './events/outcomes';
+import { childrenComingOfAge, comeOfAge, grownKinCount } from './family';
 import { dependantCount, reconcileRoster } from './roster';
 import { selectEvents } from './events/selection';
 import type { Choice, GameEvent, TierResult } from './events/types';
@@ -51,10 +52,13 @@ import type {
   BuildingId,
   ExpeditionState,
   GameState,
+  Gender,
   GoodId,
+  Heritage,
   Hero,
   LocationDef,
   LocationId,
+  RecruitDef,
   TraitDef,
 } from './types';
 
@@ -70,12 +74,16 @@ export interface TurnContext {
   locationDefs: ReadonlyMap<LocationId, LocationDef>;
   locationNames: ReadonlyMap<LocationId, string>;
   buildingNames: ReadonlyMap<BuildingId, string>;
+  recruitDefs: ReadonlyMap<string, RecruitDef>;
+  /** A dependant name for a people + gender, picked deterministically by seed. */
+  dependantName: (heritage: Heritage, gender: Gender, seed: number) => string;
 }
 
 function outcomeCtx(
   ctx: TurnContext,
   heroId: string,
   expedition?: ExpeditionState,
+  rng?: Rng,
 ): OutcomeContext {
   return {
     heroId,
@@ -85,6 +93,9 @@ function outcomeCtx(
     traitNames: ctx.traitNames,
     locationNames: ctx.locationNames,
     buildingNames: ctx.buildingNames,
+    recruitDefs: ctx.recruitDefs,
+    dependantName: ctx.dependantName,
+    rng,
   };
 }
 
@@ -265,11 +276,13 @@ function payResidentWages(
   if (!isSeasonEnd(state.turn)) return false;
   const total = residentTotal(state);
   const reserve = reserveHeroes(state).length;
-  // Residents draw a wage; reserve characters draw a retainer. Active heroes
-  // (partners in the venture) and dependants draw neither.
+  // Residents draw a wage; reserve characters draw a retainer; grown kin draw a
+  // lighter retainer (FAMILY_SPEC.md §11). Active heroes (partners in the venture),
+  // spouses, and children draw none.
   const bill =
     total * TUNING.residents.seasonWagePerResident +
-    reserve * TUNING.roster.retainerWagePerReserve;
+    reserve * TUNING.roster.retainerWagePerReserve +
+    grownKinCount(state) * TUNING.family.grownKinRetainer;
   if (bill === 0) return false;
 
   if (state.silver >= bill) {
@@ -542,7 +555,7 @@ export function resolveChoice(
   }
 
   const result = pickTierResult(choice, tier);
-  const log = applyOutcomes(state, result.outcomes, outcomeCtx(ctx, heroId, expedition));
+  const log = applyOutcomes(state, result.outcomes, outcomeCtx(ctx, heroId, expedition, rng));
 
   state.rngState = rng.getState();
   checkBrokenCompany(state);
@@ -594,6 +607,13 @@ export function advanceTurn(state: GameState): string[] {
         }
       }
       hero.skillMarks = [];
+    }
+
+    // Children old enough become named grown kin — the family line continues
+    // (FAMILY_SPEC.md §7). Grown kin stay in the tree, marriageable and fertile.
+    for (const child of childrenComingOfAge(state)) {
+      const grown = comeOfAge(state, child.id);
+      if (grown) growthLines.push(`${grown.name} comes of age at the post.`);
     }
   }
 

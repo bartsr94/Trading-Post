@@ -3,7 +3,7 @@
 // event chain without spelling it out.
 
 import { HERITAGES } from '../engine/types';
-import type { Hero, Heritage, SkillId, StatId } from '../engine/types';
+import type { Gender, Hero, Heritage, SkillId, StatId } from '../engine/types';
 
 export interface HeroTemplate {
   id: string;
@@ -18,6 +18,8 @@ export interface HeroTemplate {
   /** People this character belongs to (HERITAGE_SPEC.md §2). Optional here —
    *  falls back to the portrait-key prefix, which already encodes the race pool. */
   heritage?: Heritage;
+  /** Gender (FAMILY_SPEC.md §3.1). Optional — falls back to the portrait-key middle token. */
+  gender?: Gender;
   stats: Record<StatId, number>;
   skills: Partial<Record<SkillId, number>>;
   traits: string[];
@@ -28,6 +30,13 @@ export function heritageOf(template: Pick<HeroTemplate, 'portraitKey' | 'heritag
   if (template.heritage) return template.heritage;
   const prefix = template.portraitKey.split('_')[0];
   return (HERITAGES as readonly string[]).includes(prefix) ? (prefix as Heritage) : 'imanian';
+}
+
+/** A template's gender: explicit if set, else read from the portrait-key middle
+ *  token (`imanian_male_02` → 'male'). Mirrors heritageOf (FAMILY_SPEC.md §3.1). */
+export function genderOf(template: Pick<HeroTemplate, 'portraitKey' | 'gender'>): Gender {
+  if (template.gender) return template.gender;
+  return template.portraitKey.split('_')[1] === 'female' ? 'female' : 'male';
 }
 
 const NO_SKILLS: Record<SkillId, number> = {
@@ -56,6 +65,7 @@ export function createHero(template: HeroTemplate): Hero {
     stress: 0,
     status: 'active',
     heritage: heritageOf(template),
+    gender: genderOf(template),
     history: [],
   };
 }

@@ -25,6 +25,7 @@ const EXPEDITION_KIND_ICONS: Record<ExpeditionState['kind'], IconName> = {
   explore: 'explore',
   diplomacy: 'diplomacy',
   labor: 'people',
+  courtship: 'heart',
 };
 
 const BAND_LABEL = {

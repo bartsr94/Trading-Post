@@ -4,13 +4,15 @@
 import { TUNING } from '../content/tuning';
 import { freshResidents, residentTotal } from './residents';
 import { createLocationStates } from './state';
-import type { GameState, Heritage, LocationDef } from './types';
+import type { Gender, GameState, Heritage, LocationDef } from './types';
 
 /** Content the migrations need; injected so the engine stays content-free. */
 export interface MigrationContext {
   locationDefs: readonly LocationDef[];
   /** hero id → heritage, so v6→v7 can backfill each living hero (HERITAGE_SPEC.md §10). */
   heroHeritage?: ReadonlyMap<string, Heritage>;
+  /** hero id → gender, so v7→v8 can backfill each hero (FAMILY_SPEC.md §12). */
+  heroGender?: ReadonlyMap<string, Gender>;
 }
 
 export function serialize(state: GameState): string {
@@ -47,6 +49,9 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
         break;
       case 6:
         current = migrateV6toV7(current, ctx);
+        break;
+      case 7:
+        current = migrateV7toV8(current, ctx);
         break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
@@ -130,6 +135,30 @@ function migrateV6toV7(save: GameState, ctx?: MigrationContext): GameState {
     heroes: save.heroes.map((h) => ({
       ...h,
       heritage: ctx?.heroHeritage?.get(h.id) ?? 'imanian',
+    })),
+  };
+}
+
+/**
+ * v8 adds families (FAMILY_SPEC.md): gender on every named person, the recruit-id
+ * counter, and the richer relationship-carrying dependant. Hero gender comes from
+ * the injected content map (falling back to 'male'); bloodline stays undefined
+ * (unwed). Pre-v8 dependants (none in practice) default gender 'female' and derive
+ * ancestry from their single heritage.
+ */
+function migrateV7toV8(save: GameState, ctx?: MigrationContext): GameState {
+  return {
+    ...save,
+    saveVersion: 8,
+    nextCharacterId: save.nextCharacterId ?? 1,
+    heroes: save.heroes.map((h) => ({
+      ...h,
+      gender: h.gender ?? ctx?.heroGender?.get(h.id) ?? 'male',
+    })),
+    dependants: save.dependants.map((d) => ({
+      ...d,
+      gender: d.gender ?? 'female',
+      ancestry: d.ancestry ?? (d.heritage ? { peoples: [d.heritage] } : undefined),
     })),
   };
 }
