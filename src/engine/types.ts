@@ -46,6 +46,7 @@ export const FACTION_IDS = [
   'OLD_PEOPLE',
   'CHARTER_COMPANY',
   'KNIGHTS_EIRWEN',
+  'BEASTFOLK',
 ] as const;
 export type FactionId = (typeof FACTION_IDS)[number];
 
@@ -58,10 +59,13 @@ export type AxisId = 'integration' | 'communal' | 'culture';
 /** Peoples of the Ashmark (PEOPLES_SPEC.md §2) — the two-tier "people" level.
  *  Promoted to a mechanical type carried by named people & the resident tally.
  *  `imanian` = the Company's homeland folk; everyone else (Kiswani, Hanjoda,
- *  Weri) is native — anything not Imanian is suspect to the Company. The tribe/
- *  region (Dustwalker/Sunspear/Redsand; Tributary/Bejasi Hills) is the separate
- *  free-form `subPeople` flavor, not an enum the engine branches on. */
-export const HERITAGES = ['imanian', 'kiswani', 'hanjoda', 'weri'] as const;
+ *  Weri, and — BEASTFOLK_SPEC.md — Orcs/Goblins) is native — anything not
+ *  Imanian is suspect to the Company. The tribe/region (Dustwalker/Sunspear/
+ *  Redsand; Tributary/Bejasi Hills) is the separate free-form `subPeople`
+ *  flavor, not an enum the engine branches on. Orcs and Goblins are distinct
+ *  *species* (not sub-tribes of one people), so they get their own values
+ *  here rather than a shared `beastfolk` value + subPeople. */
+export const HERITAGES = ['imanian', 'kiswani', 'hanjoda', 'weri', 'orc', 'goblin'] as const;
 export type Heritage = (typeof HERITAGES)[number];
 
 /** The coarse origin split the culture axis & Company care about. */
@@ -86,6 +90,10 @@ export function defaultSubPeople(h: Heritage): string {
       return 'dustwalker';
     case 'weri':
       return 'weri';
+    case 'orc':
+      return 'orc';
+    case 'goblin':
+      return 'goblin';
   }
 }
 
@@ -336,8 +344,15 @@ export interface ResidentState {
   idle: number;
   /** Pool-wide mood, 0–10. Gates output, growth, desertion, unrest events. */
   contentment: number;
-  /** Composition flavor for conditions/text (e.g. 'native-kin', 'settlers'). */
-  tags: string[];
+  /**
+   * Per-flavor head counts (e.g. 'kiswani', 'orc', 'goblin', 'native-kin') —
+   * a finer, partial breakdown *within* the coarse `heritage` bucket a tag's
+   * heads belong to. Partial by design: untagged residents (organic growth,
+   * unlabeled hires) simply have no entry here, so counts need not sum to
+   * `residentTotal`. Free-form strings, not an enum the engine branches on
+   * (same discipline as location/composition tags elsewhere).
+   */
+  tags: Record<string, number>;
   /**
    * Coarse origin tally kept summed-equal to residentTotal(state)
    * (HERITAGE_SPEC.md §3.2). Homeland = Imanian company folk; native =

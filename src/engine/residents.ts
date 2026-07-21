@@ -25,7 +25,7 @@ export function freshResidents(): ResidentState {
     roles: emptyRoles(),
     idle: 0,
     contentment: TUNING.residents.contentment.start,
-    tags: [],
+    tags: {},
     heritage: { homeland: 0, native: 0 },
   };
 }
@@ -79,6 +79,18 @@ export function heritageCount(state: GameState, group: HeritageGroup): number {
 export function nativeShare(state: GameState): number {
   const total = residentTotal(state);
   return total === 0 ? 0 : state.residents.heritage.native / total;
+}
+
+/**
+ * Non-zero flavor-tag head counts, largest first — a finer breakdown than
+ * the coarse homeland/native tally (e.g. distinguishing Kiswani from
+ * Beastfolk within the same 'native' bucket). Partial: residents added
+ * without a tag (organic growth, unlabeled hires) aren't represented here.
+ */
+export function residentTagCounts(state: GameState): [string, number][] {
+  return Object.entries(state.residents.tags)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1]);
 }
 
 /** Whichever origin currently forms the majority (ties → homeland). */
@@ -151,7 +163,7 @@ export function addResidents(
   if (role === 'idle') state.residents.idle += added;
   else state.residents.roles[role] += added;
   state.residents.heritage[group] += added;
-  if (tag && !state.residents.tags.includes(tag)) state.residents.tags.push(tag);
+  if (tag) state.residents.tags[tag] = (state.residents.tags[tag] ?? 0) + added;
   return added;
 }
 
@@ -172,6 +184,30 @@ function debitHeritage(state: GameState, n: number, prefer?: HeritageGroup): voi
   native = clamp(native, Math.max(0, n - h.homeland), Math.min(n, h.native));
   h.native -= native;
   h.homeland -= n - native;
+}
+
+/**
+ * Debits flavor-tag counts by `n` heads, proportionally to each tag's share
+ * of the *pre-loss* population (not just the tagged subset — untagged heads
+ * silently absorb their share, same as the heritage tally leaves no room for
+ * a phantom "unlabeled" bucket). Called alongside `debitHeritage` so tag
+ * counts stay a live, roughly-accurate breakdown rather than sticking at
+ * their high-water mark forever.
+ */
+function debitTags(state: GameState, n: number): void {
+  if (n <= 0) return;
+  const tags = state.residents.tags;
+  const entries = Object.entries(tags);
+  if (entries.length === 0) return;
+  const preLossTotal = residentTotal(state) + n;
+  if (preLossTotal <= 0) return;
+  for (const [tag, count] of entries) {
+    const debit = Math.min(count, Math.round(n * (count / preLossTotal)));
+    if (debit <= 0) continue;
+    const next = count - debit;
+    if (next <= 0) delete tags[tag];
+    else tags[tag] = next;
+  }
 }
 
 /**
@@ -218,6 +254,7 @@ export function loseResidents(
 
   const lost = count - remaining;
   debitHeritage(state, lost, group);
+  debitTags(state, lost);
   return lost;
 }
 

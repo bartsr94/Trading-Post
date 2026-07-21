@@ -459,7 +459,11 @@ h4 {
 }
 /* Denser rows inside the read-only dashboard columns so three stacked
    sections still clear the fold on short viewports (no-scroll rule). */
-.outpost-overview .faction-row { padding: 1px 0; }
+.outpost-overview .faction-row {
+  padding: 0;
+  border-bottom: none;
+  font-size: 0.82rem;
+}
 .outpost-overview h4 { margin-top: 8px !important; }
 .outpost-overview .panel { padding: 10px 14px; }
 .post-banner {

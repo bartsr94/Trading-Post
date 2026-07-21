@@ -10,6 +10,7 @@ import {
   localHireCost,
   nativeShare,
   residentCap,
+  residentTagCounts,
   residentTotal,
 } from '../../engine/residents';
 import { RESIDENT_ROLES } from '../../engine/types';
@@ -46,6 +47,16 @@ const ROLE_NOTES: Record<ResidentRole, string> = {
   craftsfolk: 'Keep the post mended — easier upkeep.',
 };
 
+/** 'native-kin' -> 'Native Kin'. Tags are free-form content strings (no fixed
+ *  enum), so unknown ones just title-case rather than needing a lookup table
+ *  kept in sync with every new tag any event ever introduces. */
+function formatTag(tag: string): string {
+  return tag
+    .split(/[-_]/)
+    .map((w) => (w.length > 0 ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ');
+}
+
 const BAND_LABEL = {
   content: { text: 'Content', cls: 'good' },
   grumbling: { text: 'Grumbling', cls: 'dim' },
@@ -67,6 +78,7 @@ export function ResidentsPanel({ game }: { game: GameState }) {
   const homeland = heritageCount(game, 'homeland');
   const native = heritageCount(game, 'native');
   const nativePct = Math.round(nativeShare(game) * 100);
+  const tagCounts = residentTagCounts(game);
 
   const grainPerTurn = total * TUNING.residents.grainPerResidentPerTurn;
   const wagePerSeason = total * TUNING.residents.seasonWagePerResident;
@@ -104,6 +116,16 @@ export function ResidentsPanel({ game }: { game: GameState }) {
               <span className={nativePct >= 50 ? 'bad' : 'dim'}>({nativePct}% native)</span>
             </span>
           </div>
+          {tagCounts.length > 0 && (
+            <div className="faction-row" title="Specific origins within the makeup above — a partial breakdown; unlabeled hires and organic growth aren't tracked by people.">
+              <span className="dim" style={{ fontSize: '0.82rem' }}>
+                Origins
+              </span>
+              <span className="dim" style={{ fontSize: '0.82rem', textAlign: 'right' }}>
+                {tagCounts.map(([tag, count]) => `${formatTag(tag)} ${count}`).join(' · ')}
+              </span>
+            </div>
+          )}
           <div className="faction-row">
             <span className="dim">Food</span>
             <span className="dim">{grainPerTurn} grain / turn</span>

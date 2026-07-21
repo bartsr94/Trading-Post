@@ -198,6 +198,18 @@ export const TRAITS: TraitDef[] = [
     description: 'Keeps an informal household by frontier custom — no ceremony, no Company blessing.',
     checkMods: [],
   },
+  {
+    id: 'wed_orc',
+    name: 'Wed to a War-Band',
+    description: 'Married into an orc war-band by its own reckoning — an alliance most factors would rather not hear about.',
+    checkMods: [{ tag: 'BEASTFOLK', value: 2, label: 'Wed to a War-Band' }],
+  },
+  {
+    id: 'wed_goblin',
+    name: 'Wed to a Goblin Clan',
+    description: 'Married into a goblin clan — chosen, not taken, and rarer for it.',
+    checkMods: [{ tag: 'BEASTFOLK', value: 2, label: 'Wed to a Goblin Clan' }],
+  },
 ];
 
 export const TRAIT_DEFS: ReadonlyMap<string, TraitDef> = new Map(TRAITS.map((t) => [t.id, t]));
