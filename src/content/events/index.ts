@@ -1,6 +1,7 @@
 // Event registry: all content events in one map for the engine.
 
 import type { GameEvent } from '../../engine/events/types';
+import { BEASTFOLK_EVENTS } from './beastfolkEvents';
 import { FAMILY_EVENTS } from './familyEvents';
 import { GENERIC_HERO_EVENTS, HERO_EVENTS } from './heroEvents';
 import { POST_EVENTS } from './postEvents';
@@ -16,6 +17,7 @@ export const ALL_EVENTS: GameEvent[] = [
   ...FAMILY_EVENTS,
   ...SEASON_EVENTS,
   ...TRAVEL_EVENTS,
+  ...BEASTFOLK_EVENTS,
 ];
 
 export const EVENT_MAP: ReadonlyMap<string, GameEvent> = new Map(

@@ -98,10 +98,23 @@ export const LOCATIONS: LocationDef[] = [
     hasMarket: false,
     travelTurns: 2,
     initialDiscovery: 'rumored',
-    connections: ['post', 'hill_fort', 'high_pass', 'blackstone_plateau'],
+    connections: ['post', 'hill_fort', 'high_pass', 'blackstone_plateau', 'beast_wilds'],
     tags: ['ruin', 'road'],
     mapX: 38,
     mapY: 40,
+  },
+  {
+    id: 'beast_wilds',
+    name: 'The Gnawback Camp', // working name (BEASTFOLK_SPEC.md §9) — Bartosz to confirm/replace
+    blurb:
+      'A scatter of bone-hung stakes and cook-fire smoke where the broken causeways give out into deep scrub. Orc war-bands and goblin clans hold this stretch of the wilds; no chief speaks for all of it, and no map agrees where it ends. Deliberately not a diplomacy seat — nobody here answers for the rest.',
+    hasMarket: false,
+    travelTurns: 5,
+    initialDiscovery: 'rumored',
+    connections: ['old_road'],
+    tags: ['wilds', 'beastfolk', 'danger'],
+    mapX: 44,
+    mapY: 18,
   },
   {
     id: 'drowned_ruins',

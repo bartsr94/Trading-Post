@@ -49,7 +49,7 @@ describe('saves', () => {
     v1.silver = 123;
 
     const migrated = deserialize(JSON.stringify(v1), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(9);
+    expect(migrated.saveVersion).toBe(11);
     expect(migrated.silver).toBe(123);
     expect(migrated.expeditions).toEqual([]);
     expect(migrated.locations.river_meet.discovery).toBe('visited');
@@ -84,7 +84,7 @@ describe('saves', () => {
     v2.silver = 77;
 
     const migrated = deserialize(JSON.stringify(v2), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(9);
+    expect(migrated.saveVersion).toBe(11);
     expect(migrated.silver).toBe(77);
     expect(migrated.charterMissedStreak).toBe(0);
     expect(migrated.residents.contentment).toBeGreaterThan(0);
@@ -104,7 +104,7 @@ describe('saves', () => {
     v3.silver = 88;
 
     const migrated = deserialize(JSON.stringify(v3), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(9);
+    expect(migrated.saveVersion).toBe(11);
     expect(migrated.silver).toBe(88);
     expect(migrated.residents.idle).toBe(0);
     expect(migrated.nextTransientId).toBe(1);
@@ -121,7 +121,7 @@ describe('saves', () => {
     v4.silver = 99;
 
     const migrated = deserialize(JSON.stringify(v4), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(9);
+    expect(migrated.saveVersion).toBe(11);
     expect(migrated.silver).toBe(99);
     expect(migrated.activePartyIds).toEqual(migrated.heroes.map((h) => h.id));
     expect(migrated.dependants).toEqual([]);
@@ -136,7 +136,7 @@ describe('saves', () => {
     v5.silver = 111;
 
     const migrated = deserialize(JSON.stringify(v5), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(9);
+    expect(migrated.saveVersion).toBe(11);
     expect(migrated.silver).toBe(111);
     expect(migrated.buildings).toEqual([]);
     expect(migrated.construction).toBeNull();
@@ -162,7 +162,7 @@ describe('saves', () => {
       locationDefs: TEST_LOCATIONS,
       heroHeritage,
     });
-    expect(migrated.saveVersion).toBe(9);
+    expect(migrated.saveVersion).toBe(11);
     expect(migrated.axes.culture).toBe(0);
     expect(migrated.charterCompromisedStreak).toBe(0);
     // Pre-feature residents are treated as homeland founders.
@@ -193,7 +193,7 @@ describe('saves', () => {
       locationDefs: TEST_LOCATIONS,
       heroGender,
     });
-    expect(migrated.saveVersion).toBe(9);
+    expect(migrated.saveVersion).toBe(11);
     expect(migrated.nextCharacterId).toBe(1);
     // Gender from the injected map; unknown ids default to male.
     expect(migrated.heroes.find((h) => h.id === 'p2')!.gender).toBe('female');
@@ -230,7 +230,7 @@ describe('saves', () => {
     ];
 
     const migrated = deserialize(JSON.stringify(v8), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(9);
+    expect(migrated.saveVersion).toBe(11);
     // Knights of Saint Eirwen seeded neutral.
     expect(migrated.factions.KNIGHTS_EIRWEN.standing).toBe(0);
     // Dustwalker folds into the Hanjoda people; the tribe survives as subPeople.
@@ -245,5 +245,17 @@ describe('saves', () => {
     expect(migrated.dependants[0].heritage).toBe('kiswani');
     expect(migrated.dependants[0].subPeople).toBe('bejasi_hills');
     expect(migrated.dependants[0].ancestry).toEqual({ peoples: ['kiswani'] });
+  });
+
+  it('migrates v10 saves: resident tags become countable (presence-only backfills to 1)', () => {
+    const v10 = JSON.parse(serialize(testState(563))) as Record<string, unknown>;
+    v10.saveVersion = 10;
+    const residents = v10.residents as Record<string, unknown>;
+    // Pre-v11 shape: a bare array of tag strings, no counts.
+    residents.tags = ['kiswani', 'orc'];
+
+    const migrated = deserialize(JSON.stringify(v10), { locationDefs: TEST_LOCATIONS });
+    expect(migrated.saveVersion).toBe(11);
+    expect(migrated.residents.tags).toEqual({ kiswani: 1, orc: 1 });
   });
 });

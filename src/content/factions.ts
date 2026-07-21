@@ -45,6 +45,13 @@ export const FACTIONS: FactionDef[] = [
       'An Imanian holy order holding the Stormwall pass at Pemba-Jasiri, where the rare Weri metalworkers keep their forges. Allied to the Company in the broad Imanian cause, but their own power, with their own price.',
     startingStanding: 0,
   },
+  {
+    id: 'BEASTFOLK',
+    name: 'The Greenskins',
+    blurb:
+      'Orc war-bands and goblin clans of the deep wilds beyond the palisade — "Beastfolk" to those who study them, "Greenskins" to every frontier tongue that fears them. No chief speaks for them all; standing here reflects how the wilds as a whole have come to read your post.',
+    startingStanding: -60,
+  },
 ];
 
 export const FACTION_DEFS: ReadonlyMap<FactionId, FactionDef> = new Map(

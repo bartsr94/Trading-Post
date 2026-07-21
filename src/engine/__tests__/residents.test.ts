@@ -21,6 +21,7 @@ import {
   reallocate,
   residentCount,
   residentsAvailable,
+  residentTagCounts,
   residentTotal,
   updateContentment,
 } from '../residents';
@@ -108,7 +109,7 @@ describe('resident mutators', () => {
     expect(addResidents(s, 'farmers', 3, 'settlers')).toBe(3);
     expect(addResidents(s, 'idle', 5)).toBe(1); // only 1 slot left
     expect(residentTotal(s)).toBe(4);
-    expect(s.residents.tags).toContain('settlers');
+    expect(s.residents.tags.settlers).toBe(3);
   });
 
   it('loseResidents takes idle first, then the largest role', () => {
@@ -145,6 +146,22 @@ describe('resident mutators', () => {
     expect(hireResidents(s, 'farmers', 2, 'tributary')).toBe(true);
     expect(s.residents.roles.farmers).toBe(2);
     expect(s.silver).toBe(500 - 2 * farmerCost);
+  });
+
+  it('addResidents accumulates a tag count across multiple calls, not just presence', () => {
+    const s = testState();
+    expect(addResidents(s, 'farmers', 2, 'kiswani', 'native')).toBe(2);
+    expect(addResidents(s, 'guards', 1, 'kiswani', 'native')).toBe(1);
+    expect(s.residents.tags.kiswani).toBe(3);
+    expect(residentTagCounts(s)).toEqual([['kiswani', 3]]);
+  });
+
+  it('loseResidents proportionally debits tag counts, and drops a tag once it hits zero', () => {
+    const s = testState(); // tier 1 cap = 4
+    addResidents(s, 'farmers', 4, 'orc', 'native');
+    expect(loseResidents(s, undefined, 4)).toBe(4);
+    expect(s.residents.tags.orc).toBeUndefined();
+    expect(residentTagCounts(s)).toEqual([]);
   });
 });
 
@@ -219,7 +236,7 @@ describe('contentment, desertion, growth', () => {
     const arrivals = applyAxisArrivals(s);
     expect(arrivals.map((a) => a.tag).sort()).toEqual(['native-kin', 'settlers']);
     expect(residentTotal(s)).toBe(2);
-    expect(s.residents.tags).toContain('native-kin');
+    expect(s.residents.tags['native-kin']).toBe(1);
   });
 });
 

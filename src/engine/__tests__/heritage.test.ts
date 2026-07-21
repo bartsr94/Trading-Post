@@ -168,7 +168,7 @@ describe('local (native) hiring', () => {
     expect(s.silver).toBe(silverBefore - localHireCost('farmers', 2));
     expect(localHireCost('farmers', 1)).toBeLessThan(TUNING.residents.hire.costPerHead.farmers);
     expect(s.axes.culture).toBeCloseTo(cultureBefore + TUNING.heritage.hireAxisNudge * 2);
-    expect(s.residents.tags).toContain('kiswani');
+    expect(s.residents.tags.kiswani).toBeGreaterThan(0);
     expectTallyInvariant(s);
   });
 

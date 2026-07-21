@@ -24,6 +24,23 @@ const NAMES: Pools = {
     male: ['Bathar', 'Dokrun', 'Garruk', 'Hedrol', 'Korgan', 'Molvan', 'Rurmok', 'Thagan', 'Voldar', 'Zurmek'],
     female: ['Brunna', 'Dagrun', 'Halmka', 'Korra', 'Molgra', 'Nurvi', 'Rathka', 'Torgna', 'Velka', 'Yurna'],
   },
+  orc: {
+    // Rare among orcs themselves (BEASTFOLK_SPEC.md) — mostly heard as the name
+    // of a captured-and-kept or wed-in outsider, or a war-band's few sons.
+    male: ['Ashgor', 'Brakk', 'Dulgan', 'Grask', 'Hurgan', 'Krosk', 'Mudrak', 'Ognar', 'Uzgash', 'Vorlag'],
+    female: ['Agra', 'Bulgra', 'Drazka', 'Gharza', 'Krusha', 'Mogda', 'Ruzka', 'Ushka', 'Vragna', 'Zulka'],
+  },
+  goblin: {
+    // No pure male goblins exist (BEASTFOLK_SPEC.md) — every goblin union
+    // partner is female by construction (formUnion assigns the spouse the
+    // opposite gender from the post hero they're wedding). This small male
+    // slice only ever gets read for a mixed child whose dominant ancestry
+    // happens to be goblin but whose rolled gender is male (childGender can
+    // still roll male for a mixed line — the "no male goblins" rule is about
+    // pure goblins, not human-goblin offspring).
+    male: ['Skarn', 'Grubbik', 'Nizzle', 'Rottick', 'Skreel'],
+    female: ['Cazza', 'Fenka', 'Grizna', 'Ikka', 'Nettla', 'Ovka', 'Pikka', 'Skree', 'Tikra', 'Wretta'],
+  },
 };
 
 /**

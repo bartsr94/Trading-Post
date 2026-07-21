@@ -82,6 +82,12 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
       case 8:
         current = migrateV8toV9(current, ctx);
         break;
+      case 9:
+        current = migrateV9toV10(current);
+        break;
+      case 10:
+        current = migrateV10toV11(current);
+        break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
     }
@@ -219,6 +225,50 @@ function migrateV8toV9(save: GameState, ctx?: MigrationContext): GameState {
       subPeople: d.subPeople ?? (d.heritage ? subPeopleFromLegacy(d.heritage) : undefined),
       ancestry: d.ancestry ? { peoples: remapAncestry(d.ancestry.peoples) } : undefined,
     })),
+  };
+}
+
+/**
+ * v10 adds the Beastfolk (BEASTFOLK_SPEC.md): a new `BEASTFOLK` faction, and
+ * `orc`/`goblin` join `Heritage` as native-group peoples. Nothing existing is
+ * restructured — `orc`/`goblin` are new enum values a save simply never had
+ * before, so heroes/dependants/residents need no backfill. The only missing
+ * key on a pre-v10 save is the faction standing itself.
+ */
+function migrateV9toV10(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 10,
+    factions: {
+      ...save.factions,
+      BEASTFOLK: save.factions.BEASTFOLK ?? { standing: -60 },
+    },
+  };
+}
+
+/**
+ * v11 makes resident flavor tags countable, not just present. Pre-v11 `tags`
+ * was a presence-only `string[]` (pushed once, never incremented or
+ * decremented) — the People screen had no way to show how many of a coarse
+ * 'native' bucket were, say, Kiswani vs Beastfolk. There is no true
+ * historical count to recover from a `string[]`, so each existing tag
+ * backfills to 1 — the only honest floor, not a fabricated guess.
+ */
+function migrateV10toV11(save: GameState): GameState {
+  const rawTags = save.residents.tags as unknown;
+  let tags: Record<string, number>;
+  if (Array.isArray(rawTags)) {
+    tags = {};
+    for (const t of rawTags as string[]) tags[t] = 1;
+  } else {
+    // Already object-shaped (e.g. a save built directly in the new shape by
+    // a test fixture) — nothing to convert.
+    tags = rawTags as Record<string, number>;
+  }
+  return {
+    ...save,
+    saveVersion: 11,
+    residents: { ...save.residents, tags },
   };
 }
 

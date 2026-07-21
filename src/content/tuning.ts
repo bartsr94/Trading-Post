@@ -5,7 +5,7 @@ import type { BuildingDefData, FactionId, Heritage, TierRequirement } from '../e
 
 export const TUNING = {
   save: {
-    version: 9,
+    version: 11,
     autosaveKey: 'trading-post-save',
   },
 

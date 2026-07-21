@@ -148,8 +148,10 @@ export function applyOutcomes(
       }
       case 'addResidents': {
         const added = addResidents(state, outcome.role, outcome.count, outcome.tag, outcome.group);
-        if (added > 0) log.push(`+${added} resident${added === 1 ? '' : 's'}`);
-        else log.push('No room for newcomers');
+        if (added > 0) {
+          const tagNote = outcome.tag ? ` (${outcome.tag})` : '';
+          log.push(`+${added} resident${added === 1 ? '' : 's'}${tagNote}`);
+        } else log.push('No room for newcomers');
         break;
       }
       case 'loseResidents': {

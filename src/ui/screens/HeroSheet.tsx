@@ -22,6 +22,8 @@ const HERITAGE_LABEL: Record<Heritage, string> = {
   kiswani: 'Kiswani',
   hanjoda: 'Hanjoda',
   weri: 'Weri',
+  orc: 'Orc',
+  goblin: 'Goblin',
 };
 
 /** Tribe/region → display label (PEOPLES_SPEC.md §2). Unknown keys title-case. */
@@ -34,6 +36,8 @@ const SUBPEOPLE_LABEL: Record<string, string> = {
   sunspear: 'Sunspear',
   redsand: 'Redsand',
   weri: 'Weri',
+  orc: 'Orc',
+  goblin: 'Goblin',
 };
 
 /** "People — Tribe/Region", omitting a redundant or default sub-identity. */
