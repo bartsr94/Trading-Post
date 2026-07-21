@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { LOCATION_DEFS } from '../../content/locations';
+import { MAP_FEATURES, MAP_REGIONS } from '../../content/map';
+import { dispatchExpedition } from '../expeditions';
 import { deserialize, migrate, serialize } from '../save';
 import type { GameState } from '../types';
 import { TEST_LOCATIONS, testState } from './helpers';
@@ -49,7 +52,7 @@ describe('saves', () => {
     v1.silver = 123;
 
     const migrated = deserialize(JSON.stringify(v1), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(11);
+    expect(migrated.saveVersion).toBe(13);
     expect(migrated.silver).toBe(123);
     expect(migrated.expeditions).toEqual([]);
     expect(migrated.locations.river_meet.discovery).toBe('visited');
@@ -84,7 +87,7 @@ describe('saves', () => {
     v2.silver = 77;
 
     const migrated = deserialize(JSON.stringify(v2), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(11);
+    expect(migrated.saveVersion).toBe(13);
     expect(migrated.silver).toBe(77);
     expect(migrated.charterMissedStreak).toBe(0);
     expect(migrated.residents.contentment).toBeGreaterThan(0);
@@ -104,7 +107,7 @@ describe('saves', () => {
     v3.silver = 88;
 
     const migrated = deserialize(JSON.stringify(v3), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(11);
+    expect(migrated.saveVersion).toBe(13);
     expect(migrated.silver).toBe(88);
     expect(migrated.residents.idle).toBe(0);
     expect(migrated.nextTransientId).toBe(1);
@@ -121,7 +124,7 @@ describe('saves', () => {
     v4.silver = 99;
 
     const migrated = deserialize(JSON.stringify(v4), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(11);
+    expect(migrated.saveVersion).toBe(13);
     expect(migrated.silver).toBe(99);
     expect(migrated.activePartyIds).toEqual(migrated.heroes.map((h) => h.id));
     expect(migrated.dependants).toEqual([]);
@@ -136,7 +139,7 @@ describe('saves', () => {
     v5.silver = 111;
 
     const migrated = deserialize(JSON.stringify(v5), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(11);
+    expect(migrated.saveVersion).toBe(13);
     expect(migrated.silver).toBe(111);
     expect(migrated.buildings).toEqual([]);
     expect(migrated.construction).toBeNull();
@@ -162,7 +165,7 @@ describe('saves', () => {
       locationDefs: TEST_LOCATIONS,
       heroHeritage,
     });
-    expect(migrated.saveVersion).toBe(11);
+    expect(migrated.saveVersion).toBe(13);
     expect(migrated.axes.culture).toBe(0);
     expect(migrated.charterCompromisedStreak).toBe(0);
     // Pre-feature residents are treated as homeland founders.
@@ -193,7 +196,7 @@ describe('saves', () => {
       locationDefs: TEST_LOCATIONS,
       heroGender,
     });
-    expect(migrated.saveVersion).toBe(11);
+    expect(migrated.saveVersion).toBe(13);
     expect(migrated.nextCharacterId).toBe(1);
     // Gender from the injected map; unknown ids default to male.
     expect(migrated.heroes.find((h) => h.id === 'p2')!.gender).toBe('female');
@@ -230,7 +233,7 @@ describe('saves', () => {
     ];
 
     const migrated = deserialize(JSON.stringify(v8), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(11);
+    expect(migrated.saveVersion).toBe(13);
     // Knights of Saint Eirwen seeded neutral.
     expect(migrated.factions.KNIGHTS_EIRWEN.standing).toBe(0);
     // Dustwalker folds into the Hanjoda people; the tribe survives as subPeople.
@@ -255,7 +258,50 @@ describe('saves', () => {
     residents.tags = ['kiswani', 'orc'];
 
     const migrated = deserialize(JSON.stringify(v10), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(11);
+    expect(migrated.saveVersion).toBe(13);
     expect(migrated.residents.tags).toEqual({ kiswani: 1, orc: 1 });
+  });
+
+  it('migrates v11 saves: spatial knowledge and in-flight journey fields are added', () => {
+    const state = testState(564);
+    dispatchExpedition(
+      state,
+      { kind: 'caravan', destination: 'river_meet', heroIds: ['p1'] },
+      LOCATION_DEFS,
+    );
+    const v11 = JSON.parse(serialize(state)) as Record<string, unknown>;
+    v11.saveVersion = 11;
+    delete v11.mapKnowledge;
+    const expedition = (v11.expeditions as Record<string, unknown>[])[0];
+    delete expedition.target;
+    delete expedition.pace;
+    delete expedition.legTurns;
+
+    const migrated = deserialize(JSON.stringify(v11), {
+      locationDefs: TEST_LOCATIONS,
+      mapRegionDefs: MAP_REGIONS,
+      mapFeatureDefs: MAP_FEATURES,
+    });
+    expect(migrated.saveVersion).toBe(13);
+    expect(migrated.mapKnowledge.surveyedCells.length).toBeGreaterThan(0);
+    expect(migrated.expeditions[0].target).toEqual(LOCATION_DEFS.get('river_meet')!.mapPoint);
+    expect(migrated.expeditions[0].pace).toBe('normal');
+    expect(migrated.expeditions[0].legTurns).toBeGreaterThan(0);
+  });
+
+  it('migrates v12 saves to the revised river chart and location knowledge', () => {
+    const v12 = testState(565);
+    v12.saveVersion = 12;
+    v12.locations.shackle_station.discovery = 'rumored';
+    v12.mapKnowledge.surveyedCells = [];
+
+    const migrated = deserialize(serialize(v12), {
+      locationDefs: TEST_LOCATIONS,
+      mapRegionDefs: MAP_REGIONS,
+      mapFeatureDefs: MAP_FEATURES,
+    });
+    expect(migrated.saveVersion).toBe(13);
+    expect(migrated.locations.shackle_station.discovery).toBe('known');
+    expect(migrated.mapKnowledge.surveyedCells.length).toBeGreaterThan(0);
   });
 });

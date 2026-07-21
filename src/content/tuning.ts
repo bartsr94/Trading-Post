@@ -5,7 +5,7 @@ import type { BuildingDefData, FactionId, Heritage, TierRequirement } from '../e
 
 export const TUNING = {
   save: {
-    version: 11,
+    version: 13,
     autosaveKey: 'trading-post-save',
   },
 
@@ -114,6 +114,33 @@ export const TUNING = {
     caravanStandingGain: 1,
     /** Explore progress check at the destination. */
     exploreCheckDifficulty: 9,
+    /** 4:3 fog grid matching the illustrated Ashmark map. */
+    fogGrid: { width: 64, height: 48 },
+    /** Scaled normalized map distance covered per one-way turn at normal pace. */
+    distancePerTurn: 0.11,
+    pace: {
+      fast: { turnMultiplier: 0.75, checkModifier: -1, eventChanceMultiplier: 1.3 },
+      normal: { turnMultiplier: 1, checkModifier: 0, eventChanceMultiplier: 1 },
+      slow: { turnMultiplier: 1.5, checkModifier: 1, eventChanceMultiplier: 0.35 },
+    },
+    exploration: {
+      /** New games reveal the already-travelled routes to initially visited places. */
+      initialRadius: 0.045,
+      initialRouteWidth: 0.012,
+      routeWidth: { fast: 0.01, normal: 0.016, slow: 0.023 },
+      targetRadius: { fast: 0.05, normal: 0.075, slow: 0.105 },
+      tierRadiusMultiplier: {
+        critSuccess: 1.35,
+        success: 1,
+        failure: 0.42,
+        critFailure: 0.22,
+      },
+      detectionBonus: { critSuccess: 0.04, success: 0.02, failure: 0, critFailure: 0 },
+      rumorRadiusX: 0.055,
+      rumorRadiusY: 0.04,
+      /** Free targets in the same cell are considered duplicate expeditions. */
+      duplicateTargetCellRange: 0,
+    },
   },
 
   stress: {

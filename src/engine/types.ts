@@ -142,6 +142,43 @@ export type TransientKind = (typeof TRANSIENT_KINDS)[number];
 export const DISCOVERY_STATES = ['unknown', 'rumored', 'visited', 'known'] as const;
 export type DiscoveryState = (typeof DISCOVERY_STATES)[number];
 
+/** Normalized point on the 4:3 Ashmark map. */
+export interface MapPoint {
+  x: number;
+  y: number;
+}
+
+export type MapRegionId = string;
+
+/** Monotonic checkpoint which can make a map region reachable. */
+export type MapAccessRequirement =
+  | { type: 'flag'; flag: string }
+  | { type: 'postTierAtLeast'; tier: number }
+  | { type: 'locationDiscovery'; location: LocationId; atLeast: DiscoveryState };
+
+/** Authored access zone. Instances live in content/map.ts. */
+export interface MapRegionDef {
+  id: MapRegionId;
+  name: string;
+  polygon: MapPoint[];
+  requires: MapAccessRequirement[];
+  tags: string[];
+}
+
+/** Coarse terrain/event overlay; several features may overlap. */
+export interface MapFeatureDef {
+  id: string;
+  polygon: MapPoint[];
+  tags: string[];
+  /** Familiar terrain which begins clear of fog on a new or migrated game. */
+  initiallySurveyed?: boolean;
+}
+
+export interface MapKnowledge {
+  /** Sorted unique indexes into the tuned fog grid. */
+  surveyedCells: number[];
+}
+
 /** A map node (spec §10). Content provides instances; engine only consumes. */
 export interface LocationDef {
   id: LocationId;
@@ -152,16 +189,12 @@ export interface LocationDef {
   hasMarket: boolean;
   /** Static local price multiplier per good (what's cheap or dear here). */
   priceBias?: Partial<Record<GoodId, number>>;
-  /** One-way travel turns from the post. */
-  travelTurns: number;
   initialDiscovery: DiscoveryState;
-  /** Adjacent nodes; exploring here turns unknown neighbours to rumored. */
-  connections: LocationId[];
   /** Matched by travel event conditions and trait check tags. */
   tags: string[];
-  /** Map screen position, 0–100 in both axes. */
-  mapX: number;
-  mapY: number;
+  /** Exact point on the illustrated map. */
+  mapPoint: MapPoint;
+  mapRegion: MapRegionId;
 }
 
 export interface LocationState {
@@ -171,11 +204,26 @@ export interface LocationState {
 }
 
 export type ExpeditionKind = 'caravan' | 'explore' | 'diplomacy' | 'labor' | 'courtship';
+export type ExpeditionPace = 'fast' | 'normal' | 'slow';
+
+export interface SurveyResult {
+  tier: 'critSuccess' | 'success' | 'failure' | 'critFailure';
+  surveyedCells: number[];
+  discoveredLocationIds: LocationId[];
+  knownLocationIds: LocationId[];
+}
 
 export interface ExpeditionState {
   id: string;
   kind: ExpeditionKind;
-  destination: LocationId;
+  /** Authored destination; absent for a free-coordinate exploration. */
+  destination?: LocationId;
+  /** Exact destination for spatial travel. Optional only for pre-v12/test fixtures. */
+  target?: MapPoint;
+  /** Selected travel pace. Optional only for pre-v12/test fixtures. */
+  pace?: ExpeditionPace;
+  /** Planned turns per leg before delays. Optional only for pre-v12/test fixtures. */
+  legTurns?: number;
   heroIds: string[]; // 1–2 heroes, away from the post while en route
   leg: 'outbound' | 'returning';
   turnsLeft: number; // turns left in the current leg
@@ -204,6 +252,8 @@ export interface ExpeditionState {
    * deserialize cleanly.
    */
   courtshipFor?: string;
+  /** Survey knowledge carried home by an exploration party. */
+  surveyResult?: SurveyResult;
 }
 
 export type FactionStance = 'Hostile' | 'Wary' | 'Neutral' | 'Friendly' | 'Allied';
@@ -463,6 +513,8 @@ export interface GameState {
   goods: Record<GoodId, number>;
   market: Record<GoodId, MarketGoodState>;
   locations: Record<LocationId, LocationState>;
+  /** Spatial terrain knowledge, distinct from per-location discovery. */
+  mapKnowledge: MapKnowledge;
   expeditions: ExpeditionState[];
   /** Monotonic counter for expedition ids. */
   nextExpeditionId: number;

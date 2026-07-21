@@ -6,13 +6,14 @@ import { create } from 'zustand';
 import { STARTING_STANDINGS } from '../content/factions';
 import { HERO_POOL, createHero, genderOf, heritageOf, subPeopleOf } from '../content/heroes';
 import { LOCATIONS } from '../content/locations';
+import { MAP_FEATURES, MAP_REGIONS } from '../content/map';
 import { CONTENT } from '../content/registry';
 import {
   cancelConstruction as cancelConstructionFn,
   startConstruction as startConstructionFn,
 } from '../engine/buildings';
 import { buyGood, sellGood } from '../engine/economy';
-import { dispatchExpedition } from '../engine/expeditions';
+import { dispatchExpedition, travelContextFor } from '../engine/expeditions';
 import type { DispatchParams } from '../engine/expeditions';
 import { hireResidents, reallocate } from '../engine/residents';
 import { activateHero, benchHero } from '../engine/roster';
@@ -53,6 +54,8 @@ export type Screen =
 
 const MIGRATION_CTX = {
   locationDefs: LOCATIONS,
+  mapRegionDefs: MAP_REGIONS,
+  mapFeatureDefs: MAP_FEATURES,
   heroHeritage: new Map(HERO_POOL.map((t) => [t.id, heritageOf(t)] as const)),
   heroGender: new Map(HERO_POOL.map((t) => [t.id, genderOf(t)] as const)),
   heroSubPeople: new Map(HERO_POOL.map((t) => [t.id, subPeopleOf(t)] as const)),
@@ -145,6 +148,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       heroes,
       startingStandings: STARTING_STANDINGS,
       locationDefs: LOCATIONS,
+      mapRegionDefs: MAP_REGIONS,
+      mapFeatureDefs: MAP_FEATURES,
     });
     for (const hero of heroes) game.assignments[hero.id] = 'trade';
     autosave(game);
@@ -255,7 +260,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { game } = get();
     if (!game || game.phase !== 'assignment') return false;
     const next = draft(game);
-    if (!dispatchExpedition(next, params, CONTENT.locationDefs)) return false;
+    if (!dispatchExpedition(next, params, CONTENT.locationDefs, CONTENT.mapRegionDefs)) return false;
     autosave(next);
     set({ game: next });
     return true;
@@ -357,8 +362,7 @@ export function travelContextOf(game: GameState, active: ActiveEvent): TravelCon
   if (!active.expeditionId) return undefined;
   const expedition = game.expeditions.find((e) => e.id === active.expeditionId);
   if (!expedition) return undefined;
-  const destination = CONTENT.locationDefs.get(expedition.destination);
-  return destination ? { expedition, destination } : undefined;
+  return travelContextFor(expedition, CONTENT);
 }
 
 /** Whether a choice's requirements are met right now (locked choices show why). */

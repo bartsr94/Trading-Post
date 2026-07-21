@@ -78,7 +78,9 @@ export function AssignmentBoard({ game }: { game: GameState }) {
           <h3 style={{ marginTop: 14 }}>On the Road</h3>
           {awayHeroes.map((hero) => {
             const exp = game.expeditions.find((e) => e.heroIds.includes(hero.id));
-            const dest = exp ? LOCATION_NAMES.get(exp.destination) ?? exp.destination : '';
+            const dest = exp?.destination
+              ? LOCATION_NAMES.get(exp.destination) ?? exp.destination
+              : 'the frontier';
             return (
               <div key={hero.id} className="assign-row">
                 <div className="who">

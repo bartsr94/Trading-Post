@@ -32,7 +32,20 @@ One turn is two weeks; six turns make a season, four seasons a year. Each turn y
 
 ## The map
 
-The post sits at the center of a **node graph** of ten locations — four faction seats and five wilderness sites, each with a one-way travel time from the post. Places start `unknown`, `rumored`, or `visited`; sending an **Explore** party (1–2 heroes, from the Map screen) rolls Survival to push discovery forward and spreads rumors of a place's immediate neighbours. Once a market is **visited**, the Market screen's caravan planner can send a party there with cargo, a buy order, and carried silver — profit (or loss) happens on the road, resolved by a Bargain check on arrival, and the party walks home with whatever it earned. Once a faction seat is **visited**, the Map screen's "Send Envoy" section can send a party there instead to treat directly with that faction, resolved by a Diplomacy check on arrival. All three kinds of expedition can trigger **travel events** along the way — fords washed out, tolls demanded, wolves at dusk — bound only to heroes in that party.
+The Ashmark is a continuous **illustrated spatial map**, not a node graph.
+Explorers can target any reachable coordinate; distance and Fast/Normal/Slow
+pace determine how long the outward and return legs take. A 64×48 fog grid
+records surveyed country, while authored places separately progress through
+`unknown → rumored → visited → known`. Rumors indicate deterministic search
+areas; visited and known places use exact markers. Distant regions remain
+blocked until monotonic route checkpoints open them, while the settled Black
+River corridor begins familiar. Survey results only enter the map when the
+party returns—if everyone is lost, their knowledge is lost too.
+
+Known destinations still anchor caravans, envoys, homeland-labor runs, and
+courtship expeditions. Every expedition stores its exact target and pace and
+can trigger travel events bound only to its own heroes. The Map and Market
+screens share the same spatial journey calculation.
 
 ## Diplomacy & the Charter
 
@@ -88,7 +101,8 @@ src/
     checks.ts      # 2d6 skill check resolution
     turn.ts        # turn pipeline: economy → expeditions → activities → events
     economy.ts     # prices, drift, trade math (post market + per-location markets)
-    expeditions.ts # caravan, explore & envoy dispatch and per-turn resolution
+    map.ts         # pure geometry, access checkpoints, fog, rumors, survey helpers
+    expeditions.ts # caravan, explore, envoy, labor & courtship travel resolution
     residents.ts   # unnamed population: roles, contentment, upkeep, escorts
     roster.ts      # named-character roster: active party ↔ reserve bench, recruitment
     family.ts      # the family graph: unions, children, ancestry, coming of age
@@ -96,7 +110,7 @@ src/
     events/        # event selection, conditions, hero binding, outcomes
     rng.ts         # seeded PRNG (runs are reproducible)
     save.ts        # versioned JSON saves + migrations
-  content/     # pure data — heroes, traits, goods, factions, locations, events, tuning
+  content/     # pure data — incl. normalized locations and map regions/features
   ui/          # React screens & components
     components/    # Sidebar, HeroBar, Portrait, Icon, ConditionBars, Illustration
     screens/       # one component per Screen (Post, Assignments, Map, Market, Hero Sheet, ...)

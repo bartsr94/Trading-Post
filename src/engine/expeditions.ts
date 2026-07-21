@@ -12,6 +12,7 @@ import {
   traitModifiers,
 } from './checks';
 import type { CheckModifier } from './checks';
+import type { TravelContext } from './events/types';
 import { priceAt } from './economy';
 import type { GoodDef } from './economy';
 import { canWed, formUnion, unionError } from './family';
@@ -26,16 +27,31 @@ import {
 } from './residents';
 import { Rng } from './rng';
 import {
+  discoveryAfterSurvey,
+  filterCellsToUnlocked,
+  journeyTurns,
+  locationIdsInCells,
+  locationIdsInDetectionRadius,
+  mapCellIndex,
+  mergeSurveyCells,
+  paceCheckModifier,
+  pointReachable,
+  regionAt,
+  routeUnlocked,
+  surveyCells,
+  tagsAt,
+} from './map';
+import {
   awayHeroIds,
   clamp,
   discoveryAtLeast,
   getHero,
-  nextDiscovery,
   oppositeGender,
   RESIDENT_ROLES,
 } from './types';
 import type {
   ExpeditionKind,
+  ExpeditionPace,
   ExpeditionState,
   GameState,
   Gender,
@@ -44,6 +60,9 @@ import type {
   Hero,
   LocationDef,
   LocationId,
+  MapFeatureDef,
+  MapPoint,
+  MapRegionDef,
   ResidentRole,
   SkillId,
   TraitDef,
@@ -55,13 +74,17 @@ export interface ExpeditionContext {
   traitDefs: ReadonlyMap<string, TraitDef>;
   goodNames: ReadonlyMap<GoodId, string>;
   locationDefs: ReadonlyMap<LocationId, LocationDef>;
+  mapRegionDefs?: readonly MapRegionDef[];
+  mapFeatureDefs?: readonly MapFeatureDef[];
   /** A dependant name for a people + gender, for a homeland courtship spouse. */
   dependantName: (heritage: Heritage, gender: Gender, seed: number) => string;
 }
 
 export interface DispatchParams {
   kind: ExpeditionKind;
-  destination: LocationId;
+  destination?: LocationId;
+  target?: MapPoint;
+  pace?: ExpeditionPace;
   heroIds: string[];
   cargo?: Partial<Record<GoodId, number>>;
   silver?: number;
@@ -103,15 +126,66 @@ function escortMods(exp: ExpeditionState): CheckModifier[] {
   return [{ label: `Escort of ${guards}`, value: TUNING.residents.effects.guardEscortBonus }];
 }
 
+/** Builds the generic event destination for authored and free-coordinate trips. */
+export function travelContextFor(
+  expedition: ExpeditionState,
+  ctx: Pick<ExpeditionContext, 'locationDefs' | 'mapRegionDefs' | 'mapFeatureDefs'>,
+): TravelContext | undefined {
+  const def = expedition.destination ? ctx.locationDefs.get(expedition.destination) : undefined;
+  const point = expedition.target ?? def?.mapPoint;
+  if (!point) return undefined;
+  const spatialTags = tagsAt(point, ctx.mapRegionDefs ?? [], ctx.mapFeatureDefs ?? []);
+  return {
+    expedition,
+    destination: {
+      point,
+      ...(def ? { locationId: def.id } : {}),
+      name: def?.name ?? regionAt(point, ctx.mapRegionDefs ?? [])?.name ?? 'the frontier',
+      tags: [...new Set([...spatialTags, ...(def?.tags ?? [])])],
+    },
+    paceCheckModifier: paceCheckModifier(expedition.pace),
+  };
+}
+
+function paceMods(exp: ExpeditionState): CheckModifier[] {
+  const value = paceCheckModifier(exp.pace);
+  return value === 0 ? [] : [{ label: `${exp.pace ?? 'normal'} pace`, value }];
+}
+
+function expeditionTarget(
+  params: DispatchParams,
+  locationDefs: ReadonlyMap<LocationId, LocationDef>,
+): { def?: LocationDef; point?: MapPoint } {
+  const def = params.destination ? locationDefs.get(params.destination) : undefined;
+  return { def, point: def?.mapPoint ?? params.target };
+}
+
 /** Why this dispatch is invalid, or null when it may proceed. */
 export function dispatchError(
   state: GameState,
   params: DispatchParams,
   locationDefs: ReadonlyMap<LocationId, LocationDef>,
+  mapRegionDefs: readonly MapRegionDef[] = [],
 ): string | null {
-  const def = locationDefs.get(params.destination);
-  if (!def) return 'Unknown destination.';
-  if (def.id === TUNING.map.homeLocationId) return 'The party is already there.';
+  const { def, point } = expeditionTarget(params, locationDefs);
+  if (params.destination && !def) return 'Unknown destination.';
+  if (params.kind !== 'explore' && !def) return 'Choose a known destination.';
+  if (!point) return 'Choose a point on the map.';
+  const home = locationDefs.get(TUNING.map.homeLocationId);
+  if (!home) return 'The post is missing from the map.';
+  if (!pointReachable(state, point, mapRegionDefs)) return 'That country lies beyond your known routes.';
+  const discovery = def ? state.locations[def.id]?.discovery ?? def.initialDiscovery : 'unknown';
+  const knownRoute = def !== undefined && discoveryAtLeast(discovery, 'visited');
+  if (!knownRoute && !routeUnlocked(state, home.mapPoint, point, mapRegionDefs)) {
+    return 'No known way crosses the country between here and there.';
+  }
+  const targetCell = mapCellIndex(point);
+  if (
+    params.kind === 'explore' &&
+    state.expeditions.some((exp) => exp.kind === 'explore' && exp.target && mapCellIndex(exp.target) === targetCell)
+  ) {
+    return 'Another party is already searching that country.';
+  }
 
   const { heroIds } = params;
   if (heroIds.length < 1) return 'Someone has to go.';
@@ -125,14 +199,16 @@ export function dispatchError(
     if (away.has(heroId)) return `${hero.name} is already away.`;
   }
 
-  const discovery = state.locations[def.id]?.discovery ?? def.initialDiscovery;
   if (params.kind === 'explore') {
-    if (!discoveryAtLeast(discovery, 'rumored')) return 'You have heard of no such place.';
-    if (discovery === 'known') return 'There is nothing left to learn there.';
+    if (def && def.id !== TUNING.map.homeLocationId && !discoveryAtLeast(discovery, 'rumored')) {
+      return 'You have heard of no such place.';
+    }
   } else if (params.kind === 'diplomacy') {
+    if (!def) return 'Choose a known destination.';
     if (!def.faction) return 'There is no one there to treat with.';
     if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way there yet.';
   } else if (params.kind === 'labor') {
+    if (!def) return 'Choose a known destination.';
     if (def.faction !== 'CHARTER_COMPANY') return 'Only the Company garrison hires out homeland hands.';
     if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to the garrison yet.';
     const count = params.laborCount ?? 0;
@@ -142,6 +218,7 @@ export function dispatchError(
       return 'No room to house them yet.';
     }
   } else if (params.kind === 'courtship') {
+    if (!def) return 'Choose a known destination.';
     if (def.faction !== 'CHARTER_COMPANY') return 'Homeland matches are arranged only through the Company landing.';
     if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to the garrison yet.';
     const subjectId = params.courtshipFor ?? heroIds[0];
@@ -149,6 +226,7 @@ export function dispatchError(
     if (err) return err;
     if (state.silver < TUNING.family.homelandBridePrice) return 'Not enough silver for the bride-price.';
   } else {
+    if (!def) return 'Choose a known destination.';
     if (!def.hasMarket) return 'There is no market there.';
     if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to that market yet.';
   }
@@ -180,10 +258,14 @@ export function dispatchExpedition(
   state: GameState,
   params: DispatchParams,
   locationDefs: ReadonlyMap<LocationId, LocationDef>,
+  mapRegionDefs: readonly MapRegionDef[] = [],
 ): boolean {
-  if (dispatchError(state, params, locationDefs) !== null) return false;
-  const def = locationDefs.get(params.destination);
-  if (!def) return false;
+  if (dispatchError(state, params, locationDefs, mapRegionDefs) !== null) return false;
+  const { def, point } = expeditionTarget(params, locationDefs);
+  const home = locationDefs.get(TUNING.map.homeLocationId);
+  if (!point || !home) return false;
+  const pace = params.pace ?? 'normal';
+  const legTurns = journeyTurns(home.mapPoint, point, pace);
 
   const cargo: Partial<Record<GoodId, number>> = {};
   for (const [good, qty] of Object.entries(params.cargo ?? {}) as [GoodId, number][]) {
@@ -221,10 +303,13 @@ export function dispatchExpedition(
   state.expeditions.push({
     id: `exp_${state.nextExpeditionId}`,
     kind: params.kind,
-    destination: def.id,
+    ...(def ? { destination: def.id } : {}),
+    target: { ...point },
+    pace,
+    legTurns,
     heroIds: [...params.heroIds],
     leg: 'outbound',
-    turnsLeft: Math.max(1, def.travelTurns),
+    turnsLeft: legTurns,
     cargo,
     silver,
     buyOrders: { ...(params.buyOrders ?? {}) },
@@ -251,11 +336,18 @@ export function advanceExpeditions(
   const finished: string[] = [];
 
   for (const exp of state.expeditions) {
-    const def = ctx.locationDefs.get(exp.destination);
-    if (!def) {
+    const def = exp.destination ? ctx.locationDefs.get(exp.destination) : undefined;
+    const home = ctx.locationDefs.get(TUNING.map.homeLocationId);
+    const target = exp.target ?? def?.mapPoint;
+    if (!home || !target || (!def && exp.kind !== 'explore')) {
       finished.push(exp.id);
       continue;
     }
+    exp.target = target;
+    exp.pace ??= 'normal';
+    exp.legTurns ??= journeyTurns(home.mapPoint, target, exp.pace);
+    const destinationName =
+      def?.name ?? regionAt(target, ctx.mapRegionDefs ?? [])?.name ?? 'the frontier';
 
     // A party with no one left standing never comes home.
     exp.heroIds = exp.heroIds.filter((id) => {
@@ -263,7 +355,7 @@ export function advanceExpeditions(
       return hero !== undefined && hero.status === 'active';
     });
     if (exp.heroIds.length === 0) {
-      report('🕯️', `No one returns from the ${def.name} ${exp.kind}. The cargo is lost with them.`);
+      report('🕯️', `No one returns from ${destinationName}. The cargo is lost with them.`);
       finished.push(exp.id);
       continue;
     }
@@ -275,20 +367,20 @@ export function advanceExpeditions(
       report(
         '🧭',
         exp.leg === 'outbound'
-          ? `${names}: ${exp.turnsLeft} turn${exp.turnsLeft === 1 ? '' : 's'} from ${def.name}.`
+          ? `${names}: ${exp.turnsLeft} turn${exp.turnsLeft === 1 ? '' : 's'} from ${destinationName}.`
           : `${names}: ${exp.turnsLeft} turn${exp.turnsLeft === 1 ? '' : 's'} from home.`,
       );
       continue;
     }
 
     if (exp.leg === 'outbound') {
-      if (exp.kind === 'caravan') resolveCaravanArrival(state, ctx, exp, def, rng, report);
+      if (exp.kind === 'caravan' && def) resolveCaravanArrival(state, ctx, exp, def, rng, report);
       else if (exp.kind === 'explore') resolveExploreArrival(state, ctx, exp, def, rng, report);
-      else if (exp.kind === 'diplomacy') resolveDiplomacyArrival(state, ctx, exp, def, rng, report);
-      else if (exp.kind === 'labor') resolveLaborArrival(state, exp, def, report);
-      else resolveCourtshipArrival(state, exp, def, report);
+      else if (exp.kind === 'diplomacy' && def) resolveDiplomacyArrival(state, ctx, exp, def, rng, report);
+      else if (exp.kind === 'labor' && def) resolveLaborArrival(state, exp, def, report);
+      else if (def) resolveCourtshipArrival(state, exp, def, report);
       exp.leg = 'returning';
-      exp.turnsLeft = Math.max(1, def.travelTurns);
+      exp.turnsLeft = Math.max(1, exp.legTurns);
     } else {
       resolveHomecoming(state, ctx, exp, def, report);
       finished.push(exp.id);
@@ -319,7 +411,11 @@ function resolveCaravanArrival(
   const map = TUNING.map;
   const hero = leadHero(state, exp, 'bargain');
   const tags = ['trade', ...def.tags, ...(def.faction ? [def.faction] : [])];
-  const mods = [...traitModifiers(hero, ctx.traitDefs, 'bargain', tags), ...escortMods(exp)];
+  const mods = [
+    ...traitModifiers(hero, ctx.traitDefs, 'bargain', tags),
+    ...escortMods(exp),
+    ...paceMods(exp),
+  ];
   const stat = bestGoverningStat(hero, 'bargain');
   const check = resolveCheck(rng, hero, 'bargain', stat, map.caravanCheckDifficulty, mods);
   if (isSuccess(check.tier)) markSkill(hero, 'bargain');
@@ -379,30 +475,26 @@ function resolveExploreArrival(
   state: GameState,
   ctx: ExpeditionContext,
   exp: ExpeditionState,
-  def: LocationDef,
+  def: LocationDef | undefined,
   rng: Rng,
   report: (icon: string, text: string) => void,
 ): void {
+  const target = exp.target;
+  const home = ctx.locationDefs.get(TUNING.map.homeLocationId);
+  if (!target || !home) return;
   const hero = leadHero(state, exp, 'survival');
-  const tags = ['exploration', ...def.tags];
-  const mods = [...traitModifiers(hero, ctx.traitDefs, 'survival', tags), ...escortMods(exp)];
+  const spatialTags = tagsAt(target, ctx.mapRegionDefs ?? [], ctx.mapFeatureDefs ?? []);
+  const tags = ['exploration', ...spatialTags, ...(def?.tags ?? [])];
+  const mods = [
+    ...traitModifiers(hero, ctx.traitDefs, 'survival', tags),
+    ...escortMods(exp),
+    ...paceMods(exp),
+  ];
   const stat = bestGoverningStat(hero, 'survival');
   const check = resolveCheck(rng, hero, 'survival', stat, TUNING.map.exploreCheckDifficulty, mods);
 
-  const loc = state.locations[def.id];
-  if (isSuccess(check.tier)) {
-    markSkill(hero, 'survival');
-    const steps = check.tier === 'critSuccess' ? 2 : 1;
-    for (let i = 0; i < steps; i++) loc.discovery = nextDiscovery(loc.discovery);
-    if (discoveryAtLeast(loc.discovery, 'visited')) spreadRumors(state, def, ctx.locationDefs);
-    report(
-      '🗺️',
-      `${hero.name} scouts ${def.name}: ${checkBreakdown(check)}. It is now ${loc.discovery}.`,
-    );
-    for (const id of exp.heroIds) {
-      getHero(state, id).history.push(`Explored ${def.name} (turn ${state.turn}).`);
-    }
-  } else {
+  if (isSuccess(check.tier)) markSkill(hero, 'survival');
+  else {
     const stressGain = check.tier === 'critFailure' ? 2 : 1;
     for (const id of exp.heroIds) {
       const h = getHero(state, id);
@@ -411,11 +503,46 @@ function resolveExploreArrival(
         h.health = clamp(h.health - 1, 0, TUNING.condition.maxHealth);
       }
     }
-    report(
-      '🗺️',
-      `${hero.name} scouts ${def.name}: ${checkBreakdown(check)}. Bad ground and worse weather — the party learns little.`,
-    );
   }
+
+  const pace = exp.pace ?? 'normal';
+  const rawCells = surveyCells(home.mapPoint, target, pace, check.tier);
+  const cells = filterCellsToUnlocked(state, rawCells, ctx.mapRegionDefs ?? []);
+  const locations = [...ctx.locationDefs.values()];
+  const visible = new Set(locationIdsInCells(locations, cells));
+  const detected = new Set(
+    isSuccess(check.tier)
+      ? locationIdsInDetectionRadius(locations, target, pace, check.tier)
+      : [],
+  );
+  const discoveredLocationIds: LocationId[] = [];
+  const knownLocationIds: LocationId[] = [];
+  for (const locationId of new Set([...visible, ...detected])) {
+    const location = state.locations[locationId];
+    const locationDef = ctx.locationDefs.get(locationId);
+    if (!location || !locationDef) continue;
+    if (!pointReachable(state, locationDef.mapPoint, ctx.mapRegionDefs ?? [])) continue;
+    const canDetect = visible.has(locationId) || isSuccess(check.tier);
+    if (!canDetect) continue;
+    const next = discoveryAfterSurvey(location.discovery, check.tier, exp.destination === locationId);
+    if (next === 'known' && location.discovery !== 'known') knownLocationIds.push(locationId);
+    else if (next === 'visited' && !discoveryAtLeast(location.discovery, 'visited')) {
+      discoveredLocationIds.push(locationId);
+    }
+  }
+  exp.surveyResult = {
+    tier: check.tier,
+    surveyedCells: cells,
+    discoveredLocationIds,
+    knownLocationIds,
+  };
+
+  const destinationName =
+    def?.name ?? regionAt(target, ctx.mapRegionDefs ?? [])?.name ?? 'the frontier';
+  report(
+    '🗺️',
+    `${hero.name} surveys ${destinationName}: ${checkBreakdown(check)}. The party turns for home.`,
+  );
 }
 
 function resolveDiplomacyArrival(
@@ -429,7 +556,11 @@ function resolveDiplomacyArrival(
   const dip = TUNING.diplomacy;
   const hero = leadHero(state, exp, 'diplomacy');
   const tags = ['diplomacy', ...def.tags, ...(def.faction ? [def.faction] : [])];
-  const mods = [...traitModifiers(hero, ctx.traitDefs, 'diplomacy', tags), ...escortMods(exp)];
+  const mods = [
+    ...traitModifiers(hero, ctx.traitDefs, 'diplomacy', tags),
+    ...escortMods(exp),
+    ...paceMods(exp),
+  ];
   const stat = bestGoverningStat(hero, 'diplomacy');
   const check = resolveCheck(rng, hero, 'diplomacy', stat, dip.expeditionCheckDifficulty, mods);
   if (isSuccess(check.tier)) markSkill(hero, 'diplomacy');
@@ -504,27 +635,50 @@ function resolveCourtshipArrival(
   );
 }
 
-/** Word of neighbouring places reaches the party once a node is truly visited. */
-function spreadRumors(
-  state: GameState,
-  def: LocationDef,
-  locationDefs: ReadonlyMap<LocationId, LocationDef>,
-): void {
-  for (const neighborId of def.connections) {
-    if (!locationDefs.has(neighborId)) continue;
-    const neighbor = state.locations[neighborId];
-    if (neighbor && neighbor.discovery === 'unknown') neighbor.discovery = 'rumored';
-  }
-}
-
 function resolveHomecoming(
   state: GameState,
   ctx: ExpeditionContext,
   exp: ExpeditionState,
-  def: LocationDef,
+  def: LocationDef | undefined,
   report: (icon: string, text: string) => void,
 ): void {
   state.silver += exp.silver;
+  let surveyLine = '';
+  if (exp.surveyResult) {
+    state.mapKnowledge ??= { surveyedCells: [] };
+    const before = state.mapKnowledge.surveyedCells.length;
+    state.mapKnowledge.surveyedCells = mergeSurveyCells(
+      state.mapKnowledge.surveyedCells,
+      exp.surveyResult.surveyedCells,
+    );
+    const learned: string[] = [];
+    for (const locationId of exp.surveyResult.discoveredLocationIds) {
+      const location = state.locations[locationId];
+      if (!location) continue;
+      if (!discoveryAtLeast(location.discovery, 'visited')) {
+        location.discovery = 'visited';
+        learned.push(ctx.locationDefs.get(locationId)?.name ?? locationId);
+      }
+    }
+    for (const locationId of exp.surveyResult.knownLocationIds) {
+      const location = state.locations[locationId];
+      if (!location) continue;
+      if (location.discovery !== 'known') {
+        location.discovery = 'known';
+        learned.push(ctx.locationDefs.get(locationId)?.name ?? locationId);
+      }
+    }
+    const mapped = state.mapKnowledge.surveyedCells.length - before;
+    surveyLine = mapped > 0 ? ` They chart ${mapped} new map sections.` : ' They add detail to familiar country.';
+    if (learned.length > 0) surveyLine += ` They fix ${learned.join(', ')} on the map.`;
+    const exploredName =
+      def?.name ??
+      (exp.target ? regionAt(exp.target, ctx.mapRegionDefs ?? [])?.name : undefined) ??
+      'the frontier';
+    for (const id of exp.heroIds) {
+      getHero(state, id).history.push(`Explored ${exploredName} (turn ${state.turn}).`);
+    }
+  }
   const goodsBrought: string[] = [];
   for (const [good, qty] of Object.entries(exp.cargo) as [GoodId, number][]) {
     if (!qty) continue;
@@ -586,8 +740,12 @@ function resolveHomecoming(
       : exp.kind === 'diplomacy' || exp.kind === 'labor' || exp.kind === 'courtship'
         ? '.'
         : ' with empty hands.';
+  const destinationName =
+    def?.name ??
+    (exp.target ? regionAt(exp.target, ctx.mapRegionDefs ?? [])?.name : undefined) ??
+    'the frontier';
   report(
     '🏠',
-    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${def.name}${tail}${laborLine}${matchLine}`,
+    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${destinationName}${tail}${surveyLine}${laborLine}${matchLine}`,
   );
 }

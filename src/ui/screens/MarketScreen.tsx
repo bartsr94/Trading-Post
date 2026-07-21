@@ -4,12 +4,14 @@
 import { useState } from 'react';
 import { GOODS } from '../../content/goods';
 import { LOCATIONS, LOCATION_DEFS } from '../../content/locations';
+import { MAP_REGIONS } from '../../content/map';
 import { TUNING } from '../../content/tuning';
 import { priceAt, priceOf } from '../../engine/economy';
 import { cargoCapacity, cargoUnits, dispatchError } from '../../engine/expeditions';
+import { journeyTurns } from '../../engine/map';
 import { residentsAvailable } from '../../engine/residents';
 import { discoveryAtLeast, heroesAtPost } from '../../engine/types';
-import type { GameState, GoodId, ResidentRole } from '../../engine/types';
+import type { ExpeditionPace, GameState, GoodId, ResidentRole } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 
 export function MarketScreen({ game }: { game: GameState }) {
@@ -25,6 +27,7 @@ export function MarketScreen({ game }: { game: GameState }) {
   const [silverCarried, setSilverCarried] = useState(0);
   const [escort, setEscort] = useState<Partial<Record<ResidentRole, number>>>({});
   const [error, setError] = useState<string | null>(null);
+  const [pace, setPace] = useState<ExpeditionPace>('normal');
 
   const destinations = LOCATIONS.filter((def) => {
     if (!def.hasMarket || def.id === TUNING.map.homeLocationId) return false;
@@ -37,6 +40,7 @@ export function MarketScreen({ game }: { game: GameState }) {
   const loaded = cargoUnits(cargo);
   const portersFree = residentsAvailable(game, 'porters');
   const guardsFree = residentsAvailable(game, 'guards');
+  const home = LOCATION_DEFS.get(TUNING.map.homeLocationId)!;
 
   const setEscortQty = (role: ResidentRole, raw: string, max: number) => {
     setError(null);
@@ -76,8 +80,9 @@ export function MarketScreen({ game }: { game: GameState }) {
       silver: silverCarried,
       buyOrders,
       residents: escort,
+      pace,
     };
-    const reason = dispatchError(game, params, LOCATION_DEFS);
+    const reason = dispatchError(game, params, LOCATION_DEFS, MAP_REGIONS);
     if (reason) {
       setError(reason);
       return;
@@ -167,9 +172,18 @@ export function MarketScreen({ game }: { game: GameState }) {
                 <option value="">— choose a market —</option>
                 {destinations.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.name} ({d.travelTurns} turn{d.travelTurns === 1 ? '' : 's'} out)
+                    {d.name} ({journeyTurns(home.mapPoint, d.mapPoint, pace)} turns out)
                   </option>
                 ))}
+              </select>
+            </label>
+
+            <label className="dim" style={{ fontSize: '0.85rem', display: 'block', marginTop: 8 }}>
+              Pace
+              <select value={pace} onChange={(e) => setPace(e.target.value as ExpeditionPace)} style={{ marginLeft: 8 }}>
+                <option value="fast">Fast</option>
+                <option value="normal">Normal</option>
+                <option value="slow">Slow</option>
               </select>
             </label>
 

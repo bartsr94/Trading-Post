@@ -24,6 +24,12 @@ async function goto(page: Page, name: string): Promise<void> {
   await page.locator('.sidebar nav button', { hasText: new RegExp(`^${name}`) }).click();
 }
 
+async function clickMap(page: Page, x: number, y: number): Promise<void> {
+  const box = await page.locator('.spatial-map-svg').boundingBox();
+  if (!box) throw new Error('Map has no bounding box');
+  await page.mouse.click(box.x + box.width * x, box.y + box.height * y);
+}
+
 const SCREENS = ['Outpost', 'Assignments', 'Characters', 'Buildings', 'People', 'Map', 'Market'];
 
 test('no in-shell screen scrolls at the 1280x720 floor', async ({ page }) => {
@@ -40,12 +46,22 @@ test('no in-shell screen scrolls at the 1280x720 floor', async ({ page }) => {
   await page.locator('.map-node').first().click();
   expect(await overflow(page), 'Map (node selected) scrolls').toBeLessThanOrEqual(TOLERANCE);
 
+  await page.getByRole('button', { name: /Search near/ }).first().click();
+  expect(await overflow(page), 'Map (rumor selected) scrolls').toBeLessThanOrEqual(TOLERANCE);
+
+  await clickMap(page, 0.58, 0.5);
+  expect(await overflow(page), 'Map (free target selected) scrolls').toBeLessThanOrEqual(TOLERANCE);
+  await page.locator('.map-party-picks input[type="checkbox"]').first().check();
+  await page.getByRole('button', { name: /Send the Party/ }).click();
+  expect(await overflow(page), 'Map (On the Road) scrolls').toBeLessThanOrEqual(TOLERANCE);
+
   // Market with a destination chosen expands the caravan planner — the tallest
   // reachable state. The fresh game already has visited markets to pick.
   await goto(page, 'Market');
-  const options = page.locator('.panel select option');
+  const destinationSelect = page.getByLabel(/Destination/);
+  const options = destinationSelect.locator('option');
   if ((await options.count()) > 1) {
-    await page.locator('.panel select').selectOption({ index: 1 });
+    await destinationSelect.selectOption({ index: 1 });
     expect(await overflow(page), 'Market (destination chosen) scrolls').toBeLessThanOrEqual(
       TOLERANCE,
     );

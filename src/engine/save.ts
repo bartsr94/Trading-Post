@@ -3,13 +3,23 @@
 
 import { TUNING } from '../content/tuning';
 import { freshResidents, residentTotal } from './residents';
+import { journeyTurns, mapKnowledgeFromDiscovery, mergeSurveyCells } from './map';
 import { createLocationStates } from './state';
-import { defaultSubPeople } from './types';
-import type { Gender, GameState, Heritage, LocationDef } from './types';
+import { defaultSubPeople, discoveryAtLeast } from './types';
+import type {
+  Gender,
+  GameState,
+  Heritage,
+  LocationDef,
+  MapFeatureDef,
+  MapRegionDef,
+} from './types';
 
 /** Content the migrations need; injected so the engine stays content-free. */
 export interface MigrationContext {
   locationDefs: readonly LocationDef[];
+  mapRegionDefs?: readonly MapRegionDef[];
+  mapFeatureDefs?: readonly MapFeatureDef[];
   /** hero id → heritage, so v6→v7 can backfill each living hero (HERITAGE_SPEC.md §10). */
   heroHeritage?: ReadonlyMap<string, Heritage>;
   /** hero id → gender, so v7→v8 can backfill each hero (FAMILY_SPEC.md §12). */
@@ -87,6 +97,12 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
         break;
       case 10:
         current = migrateV10toV11(current);
+        break;
+      case 11:
+        current = migrateV11toV12(current, ctx);
+        break;
+      case 12:
+        current = migrateV12toV13(current, ctx);
         break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
@@ -270,6 +286,76 @@ function migrateV10toV11(save: GameState): GameState {
     saveVersion: 11,
     residents: { ...save.residents, tags },
   };
+}
+
+/** v12 replaces the abstract node graph with spatial travel and fog knowledge. */
+function migrateV11toV12(save: GameState, ctx?: MigrationContext): GameState {
+  const locations = ctx?.locationDefs ?? [];
+  const byId = new Map(locations.map((location) => [location.id, location]));
+  const home = byId.get(TUNING.map.homeLocationId);
+  const migrated: GameState = {
+    ...save,
+    saveVersion: 12,
+    mapKnowledge: { surveyedCells: [] },
+    expeditions: save.expeditions.map((expedition) => {
+      const destination = expedition.destination ? byId.get(expedition.destination) : undefined;
+      const target = expedition.target ?? destination?.mapPoint ?? home?.mapPoint ?? { x: 0.5, y: 0.5 };
+      const spatialTurns = home ? journeyTurns(home.mapPoint, target, 'normal') : expedition.turnsLeft;
+      return {
+        ...expedition,
+        target,
+        pace: expedition.pace ?? 'normal',
+        legTurns: expedition.legTurns ?? Math.max(1, expedition.turnsLeft, spatialTurns),
+      };
+    }),
+  };
+  migrated.mapKnowledge = mapKnowledgeFromDiscovery(
+    migrated,
+    locations,
+    ctx?.mapRegionDefs ?? [],
+    ctx?.mapFeatureDefs ?? [],
+  );
+  return migrated;
+}
+
+/** v13 refreshes authored map anchors, initial discoveries, and familiar terrain. */
+function migrateV12toV13(save: GameState, ctx?: MigrationContext): GameState {
+  const locations = ctx?.locationDefs ?? [];
+  const baseline = createLocationStates(locations);
+  const nextLocations = { ...save.locations };
+  for (const def of locations) {
+    const current = nextLocations[def.id] ?? baseline[def.id];
+    if (!current) continue;
+    nextLocations[def.id] = discoveryAtLeast(current.discovery, def.initialDiscovery)
+      ? current
+      : { ...current, discovery: def.initialDiscovery };
+  }
+
+  const byId = new Map(locations.map((location) => [location.id, location]));
+  const migrated: GameState = {
+    ...save,
+    saveVersion: 13,
+    locations: nextLocations,
+    expeditions: save.expeditions.map((expedition) => ({
+      ...expedition,
+      ...(expedition.destination && byId.has(expedition.destination)
+        ? { target: byId.get(expedition.destination)!.mapPoint }
+        : {}),
+    })),
+  };
+  const baselineKnowledge = mapKnowledgeFromDiscovery(
+    migrated,
+    locations,
+    ctx?.mapRegionDefs ?? [],
+    ctx?.mapFeatureDefs ?? [],
+  );
+  migrated.mapKnowledge = {
+    surveyedCells: mergeSurveyCells(
+      save.mapKnowledge?.surveyedCells ?? [],
+      baselineKnowledge.surveyedCells,
+    ),
+  };
+  return migrated;
 }
 
 export function autosave(state: GameState): void {

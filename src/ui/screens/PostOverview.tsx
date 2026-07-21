@@ -215,7 +215,9 @@ export function PostOverview({ game }: { game: GameState }) {
             </p>
           ) : (
             game.expeditions.map((exp) => {
-              const dest = LOCATION_NAMES.get(exp.destination) ?? exp.destination;
+              const dest = exp.destination
+                ? LOCATION_NAMES.get(exp.destination) ?? exp.destination
+                : 'the frontier';
               const names = exp.heroIds
                 .map((id) => game.heroes.find((h) => h.id === id)?.name ?? id)
                 .join(' & ');

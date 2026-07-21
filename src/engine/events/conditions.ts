@@ -97,7 +97,7 @@ export function evalCondition(
     case 'expeditionLeg':
       return travel !== undefined && travel.expedition.leg === cond.leg;
     case 'destinationIs':
-      return travel !== undefined && travel.destination.id === cond.location;
+      return travel !== undefined && travel.destination.locationId === cond.location;
     case 'destinationTag':
       return travel !== undefined && travel.destination.tags.includes(cond.tag);
     case 'cargoUnitsAtLeast':

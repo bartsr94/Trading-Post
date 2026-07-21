@@ -40,6 +40,7 @@ import { dependantCount, reconcileRoster } from './roster';
 import { selectEvents } from './events/selection';
 import type { Choice, GameEvent, TierResult } from './events/types';
 import { Rng } from './rng';
+import { paceCheckModifier } from './map';
 import {
   clamp,
   getHero,
@@ -58,6 +59,8 @@ import type {
   Hero,
   LocationDef,
   LocationId,
+  MapFeatureDef,
+  MapRegionDef,
   RecruitDef,
   TraitDef,
 } from './types';
@@ -72,6 +75,8 @@ export interface TurnContext {
   factionNames: ReadonlyMap<string, string>;
   traitNames: ReadonlyMap<string, string>;
   locationDefs: ReadonlyMap<LocationId, LocationDef>;
+  mapRegionDefs: readonly MapRegionDef[];
+  mapFeatureDefs: readonly MapFeatureDef[];
   locationNames: ReadonlyMap<LocationId, string>;
   buildingNames: ReadonlyMap<BuildingId, string>;
   recruitDefs: ReadonlyMap<string, RecruitDef>;
@@ -167,7 +172,14 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   }
 
   // 5. Event selection.
-  const selected = selectEvents(state, ctx.events, ctx.locationDefs, rng);
+  const selected = selectEvents(
+    state,
+    ctx.events,
+    ctx.locationDefs,
+    rng,
+    ctx.mapRegionDefs,
+    ctx.mapFeatureDefs,
+  );
   state.pendingEvents = selected;
   for (const active of selected) {
     const event = ctx.events.get(active.eventId);
@@ -549,6 +561,10 @@ export function resolveChoice(
         ? choice.check.difficulty(state)
         : choice.check.difficulty;
     const mods = traitModifiers(hero, ctx.traitDefs, choice.check.skill, choice.check.tags ?? []);
+    if (event.category === 'travel' && expedition) {
+      const value = paceCheckModifier(expedition.pace);
+      if (value !== 0) mods.push({ label: `${expedition.pace ?? 'normal'} pace`, value });
+    }
     check = resolveCheck(rng, hero, choice.check.skill, choice.check.stat, difficulty, mods);
     tier = check.tier;
     if (isSuccess(check.tier)) markSkill(hero, choice.check.skill);
