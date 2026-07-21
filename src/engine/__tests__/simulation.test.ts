@@ -5,9 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { TUNING } from '../../content/tuning';
 import { constructionError, startConstruction } from '../buildings';
 import { evalConditions } from '../events/conditions';
-import { dispatchExpedition } from '../expeditions';
+import { dispatchExpedition, travelContextFor } from '../expeditions';
 import { addChild, canWed, childrenOf, formUnion, isMarried, spousesOf } from '../family';
 import type { TravelContext } from '../events/types';
+import { mapCellIndex, pointReachable } from '../map';
 import { Rng } from '../rng';
 import {
   hireResidents,
@@ -25,8 +26,7 @@ function travelCtxOf(state: GameState, active: ActiveEvent): TravelContext | und
   if (!active.expeditionId) return undefined;
   const expedition = state.expeditions.find((e) => e.id === active.expeditionId);
   if (!expedition) return undefined;
-  const destination = TEST_CONTENT.locationDefs.get(expedition.destination);
-  return destination ? { expedition, destination } : undefined;
+  return travelContextFor(expedition, TEST_CONTENT);
 }
 
 /** Every few turns, send whoever can be spared out into the world. */
@@ -43,6 +43,11 @@ function maybeDispatch(state: GameState, rng: Rng): void {
     const loc = state.locations[d.id];
     return d.id !== 'post' && loc && (loc.discovery === 'rumored' || loc.discovery === 'visited');
   });
+  const freeExploreTargets = [
+    { x: 0.58, y: 0.5 }, // reachable interior fog on a new game
+    { x: 0.9, y: 0.4 }, // initially familiar river country
+    { x: 0.7, y: 0.5 },
+  ].filter((point) => pointReachable(state, point, TEST_CONTENT.mapRegionDefs));
   const envoyTargets = defs.filter((d) => {
     const loc = state.locations[d.id];
     return d.faction !== undefined && loc && discoveryAtLeast(loc.discovery, 'visited');
@@ -62,6 +67,7 @@ function maybeDispatch(state: GameState, rng: Rng): void {
       state,
       { kind: 'labor', destination: laborTarget.id, heroIds: [heroIds[0]], laborCount: 1 },
       TEST_CONTENT.locationDefs,
+      TEST_CONTENT.mapRegionDefs,
     );
   } else if (roll < 0.4 && caravanTargets.length > 0) {
     dispatchExpedition(
@@ -79,18 +85,36 @@ function maybeDispatch(state: GameState, rng: Rng): void {
         },
       },
       TEST_CONTENT.locationDefs,
+      TEST_CONTENT.mapRegionDefs,
     );
   } else if (roll < 0.7 && envoyTargets.length > 0) {
     dispatchExpedition(
       state,
       { kind: 'diplomacy', destination: rng.pick(envoyTargets).id, heroIds },
       TEST_CONTENT.locationDefs,
+      TEST_CONTENT.mapRegionDefs,
+    );
+  } else if (freeExploreTargets.length > 0 && rng.next() < 0.5) {
+    const unsurveyed = freeExploreTargets.filter(
+      (point) => !state.mapKnowledge.surveyedCells.includes(mapCellIndex(point)),
+    );
+    dispatchExpedition(
+      state,
+      {
+        kind: 'explore',
+        target: rng.pick(unsurveyed.length > 0 ? unsurveyed : freeExploreTargets),
+        heroIds,
+        pace: rng.pick(['fast', 'normal', 'slow'] as const),
+      },
+      TEST_CONTENT.locationDefs,
+      TEST_CONTENT.mapRegionDefs,
     );
   } else if (exploreTargets.length > 0) {
     dispatchExpedition(
       state,
       { kind: 'explore', destination: rng.pick(exploreTargets).id, heroIds },
       TEST_CONTENT.locationDefs,
+      TEST_CONTENT.mapRegionDefs,
     );
   }
 }
@@ -110,6 +134,7 @@ function maybeFamily(state: GameState, rng: Rng): void {
         state,
         { kind: 'courtship', destination: 'charter_landing', heroIds: [subject.id], courtshipFor: subject.id },
         TEST_CONTENT.locationDefs,
+        TEST_CONTENT.mapRegionDefs,
       );
       return;
     }

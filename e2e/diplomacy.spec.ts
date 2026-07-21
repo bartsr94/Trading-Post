@@ -34,12 +34,12 @@ test('sends an envoy to a faction seat from the Map screen', async ({ page }) =>
   await foundPost(page);
 
   await page.getByRole('button', { name: 'Map', exact: true }).click();
-  await page.getByText('Njaro-Matu').click();
-  await expect(page.getByRole('heading', { name: 'Send Envoy' })).toBeVisible();
+  await page.getByRole('button', { name: 'Njaro-Matu', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Njaro-Matu' })).toBeVisible();
+  await page.getByLabel('Purpose').selectOption('diplomacy');
 
-  // The Envoy section's pick-rows render last in document order.
   await page.locator('label.pick-row').last().locator('input[type="checkbox"]').check();
-  await page.getByRole('button', { name: 'Send the Envoy ▸' }).click();
+  await page.getByRole('button', { name: 'Send the Party ▸' }).click();
 
   await page.getByRole('button', { name: 'Assignments', exact: false }).click();
   await expect(page.getByText('🤝 Envoy')).toBeVisible();

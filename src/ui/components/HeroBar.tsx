@@ -30,7 +30,9 @@ function StatusLine({
   expedition: ExpeditionState | undefined;
 }) {
   if (expedition) {
-    const dest = LOCATION_NAMES.get(expedition.destination) ?? expedition.destination;
+    const dest = expedition.destination
+      ? LOCATION_NAMES.get(expedition.destination) ?? expedition.destination
+      : 'the frontier';
     const turns = `${expedition.turnsLeft} turn${expedition.turnsLeft === 1 ? '' : 's'}`;
     return (
       <>

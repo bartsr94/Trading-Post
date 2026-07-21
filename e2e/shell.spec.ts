@@ -35,10 +35,11 @@ test('dispatched heroes are dimmed as away, and the bar keeps all tiles', async 
 
   // Send a one-hero envoy from the Map screen (same flow as diplomacy.spec).
   await page.getByRole('button', { name: 'Map', exact: true }).click();
-  await page.getByText('Njaro-Matu').click();
-  await expect(page.getByRole('heading', { name: 'Send Envoy' })).toBeVisible();
+  await page.getByRole('button', { name: 'Njaro-Matu', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Njaro-Matu' })).toBeVisible();
+  await page.getByLabel('Purpose').selectOption('diplomacy');
   await page.locator('label.pick-row').last().locator('input[type="checkbox"]').check();
-  await page.getByRole('button', { name: 'Send the Envoy ▸' }).click();
+  await page.getByRole('button', { name: 'Send the Party ▸' }).click();
 
   await expect(page.locator('.hero-tile.away')).toHaveCount(1);
   await expect(page.locator('.hero-tile')).toHaveCount(6);

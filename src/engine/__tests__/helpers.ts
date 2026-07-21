@@ -4,6 +4,7 @@ import { CONTENT } from '../../content/registry';
 import { STARTING_STANDINGS } from '../../content/factions';
 import { HERO_POOL, createHero } from '../../content/heroes';
 import { LOCATIONS } from '../../content/locations';
+import { MAP_FEATURES, MAP_REGIONS } from '../../content/map';
 import { createInitialState } from '../state';
 import type { GameState } from '../types';
 
@@ -18,5 +19,7 @@ export function testState(seed = 12345, heroIds?: string[]): GameState {
     heroes,
     startingStandings: STARTING_STANDINGS,
     locationDefs: LOCATIONS,
+    mapRegionDefs: MAP_REGIONS,
+    mapFeatureDefs: MAP_FEATURES,
   });
 }

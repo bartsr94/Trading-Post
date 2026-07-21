@@ -641,6 +641,115 @@ table.market td.num { text-align: right; font-variant-numeric: tabular-nums; fon
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+.spatial-map-panel { min-width: 0; }
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.map-toolbar button:last-child { margin-left: auto; }
+.map-coordinate-readout {
+  min-width: 116px;
+  padding: 3px 7px;
+  color: var(--gold);
+  background: rgba(18, 15, 12, 0.75);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.78rem;
+  text-align: center;
+}
+.spatial-map-svg {
+  aspect-ratio: 4 / 3;
+  max-height: calc(100dvh - 300px);
+  background: #17130f;
+  cursor: crosshair;
+  touch-action: none;
+  user-select: none;
+}
+.map-fog {
+  fill: rgba(39, 34, 27, 0.78);
+  stroke: none;
+}
+.map-fog.locked { fill: rgba(11, 10, 9, 0.94); }
+.spatial-map-svg .map-node circle {
+  fill: rgba(29, 25, 20, 0.9);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.spatial-map-svg .map-node .map-node-hit {
+  fill: transparent;
+  stroke: none;
+  pointer-events: all;
+}
+.spatial-map-svg .map-node.known circle:not(.map-node-hit) { fill: rgba(29, 25, 20, 0.9); }
+.spatial-map-svg .map-node.selected circle { stroke-width: 3; }
+.spatial-map-svg .map-label {
+  font-size: 12px;
+  stroke-width: 3px;
+  vector-effect: non-scaling-stroke;
+}
+.map-rumor { cursor: pointer; }
+.map-rumor ellipse {
+  fill: rgba(193, 153, 72, 0.08);
+  stroke: rgba(215, 183, 117, 0.85);
+  stroke-width: 2;
+  stroke-dasharray: 7 6;
+  vector-effect: non-scaling-stroke;
+}
+.map-rumor:hover ellipse,
+.map-rumor:focus ellipse { fill: rgba(193, 153, 72, 0.18); stroke: var(--accent); }
+.map-rumor-label {
+  fill: var(--text);
+  font-size: 12px;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  paint-order: stroke;
+  stroke: rgba(20, 17, 13, 0.9);
+  stroke-width: 3px;
+}
+.map-target circle,
+.map-target line {
+  fill: none;
+  stroke: #e2bc68;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.map-route {
+  stroke: rgba(226, 188, 104, 0.65);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  vector-effect: non-scaling-stroke;
+}
+.map-party-marker { fill: #2b2419; stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.map-party-letter { fill: var(--text); font-size: 7px; font-weight: bold; text-anchor: middle; }
+.map-help { font-size: 0.74rem; margin: 6px 0 0; }
+.map-detail-panel { min-width: 0; }
+.map-description { font-size: 0.82rem; margin: 0 0 6px; }
+.compact-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.84rem;
+  margin: 6px 0;
+}
+.compact-field select { max-width: 68%; }
+.compact-field input[type='number'] { width: 72px; }
+.map-party-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; margin-bottom: 6px; }
+.map-party-picks .pick-row { font-size: 0.8rem; padding: 2px 0; white-space: nowrap; }
+.map-error { font-size: 0.82rem; margin: 4px 0; }
+.road-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 6px;
+  text-align: left;
+}
+.road-row span:last-child { font-size: 0.78rem; }
 .map-edge {
   stroke: var(--border);
   stroke-width: 0.4;

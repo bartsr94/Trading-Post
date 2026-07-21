@@ -7,6 +7,7 @@ import { GOOD_DEFS, GOOD_NAMES } from './goods';
 import { FACTION_NAMES } from './factions';
 import { LOCATION_DEFS, LOCATION_NAMES } from './locations';
 import { dependantName } from './names';
+import { MAP_FEATURES, MAP_REGIONS } from './map';
 import { RECRUIT_DEFS } from './recruits';
 import { TRAIT_DEFS, TRAIT_NAMES } from './traits';
 
@@ -18,6 +19,8 @@ export const CONTENT: TurnContext = {
   factionNames: FACTION_NAMES,
   traitNames: TRAIT_NAMES,
   locationDefs: LOCATION_DEFS,
+  mapRegionDefs: MAP_REGIONS,
+  mapFeatureDefs: MAP_FEATURES,
   locationNames: LOCATION_NAMES,
   buildingNames: BUILDING_NAMES,
   recruitDefs: RECRUIT_DEFS,

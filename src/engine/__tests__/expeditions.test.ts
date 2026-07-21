@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { TUNING } from '../../content/tuning';
+import { MAP_REGIONS } from '../../content/map';
+import { regionAt, validMapPoint } from '../map';
 import { priceAt, priceOf } from '../economy';
-import { dispatchError, dispatchExpedition } from '../expeditions';
+import { advanceExpeditions, dispatchError, dispatchExpedition } from '../expeditions';
 import { selectEvents } from '../events/selection';
 import { Rng } from '../rng';
 import { resolveTurn } from '../turn';
@@ -63,7 +65,7 @@ describe('dispatch validation', () => {
     ).toBeTruthy();
     // hill_fort starts rumored: no caravans until visited.
     expect(dispatchError(s, { kind: 'caravan', destination: 'hill_fort', heroIds: ['p1'] }, DEFS)).toBeTruthy();
-    // explore to a known place is pointless; to an unknown place impossible.
+    // A hidden authored place cannot be targeted by id (free spatial searching can still find it).
     expect(dispatchError(s, { kind: 'explore', destination: 'black_mere', heroIds: ['p1'] }, DEFS)).toBeTruthy();
     // cargo beyond stock or capacity fails.
     expect(
@@ -99,33 +101,30 @@ describe('expedition lifecycle', () => {
     dispatchCaravan(s, { cargo: { tools: 4 } });
     const before = silverAfterDispatch();
 
-    // river_meet is 2 turns out: outbound 2, arrival on 2nd, return 2.
-    tick(s); // 1 turn out
-    expect(s.expeditions[0].leg).toBe('outbound');
-    tick(s); // arrival: cargo sold
+    const outboundTurns = s.expeditions[0].turnsLeft;
+    const travelTick = () => advanceExpeditions(s, TEST_CONTENT, new Rng(777), () => undefined);
+    for (let i = 0; i < outboundTurns; i++) travelTick();
     expect(s.expeditions[0].leg).toBe('returning');
     expect(s.expeditions[0].silver).toBeGreaterThan(0);
-    tick(s);
-    tick(s); // homecoming
+    while (s.expeditions.length > 0) travelTick();
     expect(s.expeditions).toHaveLength(0);
     expect(s.silver).toBeGreaterThan(before);
     expect(heroesAtPost(s).map((h) => h.id)).toContain('p1');
   });
 
-  it('explore pushes discovery forward and spreads rumors', () => {
-    // Across seeds, at least one run should succeed on the check and reveal
-    // hill_fort's neighbours (high_pass starts unknown).
+  it('explore commits spatial survey and place discovery on homecoming', () => {
     let advanced = 0;
-    let rumored = 0;
+    let mapped = 0;
     for (let seed = 1; seed <= 10; seed++) {
       const s = testState(seed);
-      dispatchExpedition(s, { kind: 'explore', destination: 'hill_fort', heroIds: ['p1', 'p4'] }, DEFS);
-      for (let i = 0; i < 8 && s.expeditions.length > 0; i++) tick(s);
-      if (s.locations.hill_fort.discovery !== 'rumored') advanced++;
-      if (s.locations.high_pass.discovery === 'rumored') rumored++;
+      const before = s.mapKnowledge.surveyedCells.length;
+      dispatchExpedition(s, { kind: 'explore', destination: 'old_road', heroIds: ['p1', 'p4'] }, DEFS);
+      for (let i = 0; i < 20 && s.expeditions.length > 0; i++) tick(s);
+      if (s.locations.old_road.discovery !== 'rumored') advanced++;
+      if (s.mapKnowledge.surveyedCells.length > before) mapped++;
     }
     expect(advanced).toBeGreaterThan(0);
-    expect(rumored).toBeGreaterThan(0);
+    expect(mapped).toBeGreaterThan(0);
   });
 
   it('loses the expedition when the whole party dies en route', () => {
@@ -176,13 +175,10 @@ describe('tuning sanity', () => {
     expect(DEFS.has(TUNING.map.homeLocationId)).toBe(true);
   });
 
-  it('all connections are symmetric and known', () => {
+  it('all locations have valid points in their declared map region', () => {
     for (const def of DEFS.values()) {
-      for (const other of def.connections) {
-        const target = DEFS.get(other);
-        expect(target, `${def.id} connects to unknown ${other}`).toBeDefined();
-        expect(target!.connections, `${other} should connect back to ${def.id}`).toContain(def.id);
-      }
+      expect(validMapPoint(def.mapPoint), `${def.id} has an invalid map point`).toBe(true);
+      expect(regionAt(def.mapPoint, MAP_REGIONS)?.id).toBe(def.mapRegion);
     }
   });
 });

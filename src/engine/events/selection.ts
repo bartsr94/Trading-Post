@@ -3,8 +3,10 @@
 // never goes flat. Travel events are extra: up to one per expedition en route.
 
 import { TUNING } from '../../content/tuning';
+import { paceEventChance } from '../map';
+import { travelContextFor } from '../expeditions';
 import { getHero } from '../types';
-import type { ActiveEvent, GameState, LocationDef, LocationId } from '../types';
+import type { ActiveEvent, GameState, LocationDef, LocationId, MapFeatureDef, MapRegionDef } from '../types';
 import type { Rng } from '../rng';
 import { bindHero } from './binding';
 import { evalConditions } from './conditions';
@@ -35,6 +37,8 @@ export function selectEvents(
   allEvents: ReadonlyMap<string, GameEvent>,
   locationDefs: ReadonlyMap<LocationId, LocationDef>,
   rng: Rng,
+  mapRegionDefs: readonly MapRegionDef[] = [],
+  mapFeatureDefs: readonly MapFeatureDef[] = [],
 ): ActiveEvent[] {
   const selected: ActiveEvent[] = [];
   const usedIds = new Set<string>();
@@ -81,10 +85,9 @@ export function selectEvents(
   // 4. Travel events: up to one per expedition, on top of the post budgets.
   const travelPool = [...allEvents.values()].filter((e) => e.category === 'travel');
   for (const expedition of state.expeditions) {
-    const destination = locationDefs.get(expedition.destination);
-    if (!destination) continue;
-    if (rng.next() >= TUNING.events.travelEventChance) continue;
-    const travel: TravelContext = { expedition, destination };
+    if (rng.next() >= paceEventChance(expedition.pace)) continue;
+    const travel = travelContextFor(expedition, { locationDefs, mapRegionDefs, mapFeatureDefs });
+    if (!travel) continue;
     const candidates = travelPool.filter(
       (e) => !usedIds.has(e.id) && isEligible(state, e, travel),
     );

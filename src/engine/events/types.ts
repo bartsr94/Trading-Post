@@ -14,8 +14,8 @@ import type {
   GoodId,
   Heritage,
   HeritageGroup,
-  LocationDef,
   LocationId,
+  MapPoint,
   ResidentRole,
   Season,
   SkillId,
@@ -28,7 +28,13 @@ import type {
 /** Present while evaluating travel events: the expedition they happen to. */
 export interface TravelContext {
   expedition: ExpeditionState;
-  destination: LocationDef;
+  destination: {
+    point: MapPoint;
+    locationId?: LocationId;
+    name: string;
+    tags: string[];
+  };
+  paceCheckModifier: number;
 }
 
 export type EventCategory = 'post' | 'travel' | 'faction' | 'hero' | 'season' | 'chain';

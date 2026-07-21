@@ -1,6 +1,6 @@
-// The map (spec §10): a node graph of ~10 locations. Ashmark grounding per
-// docs/ASHMARK_LORE_SPEC.md. Travel turns are one-way from the post;
-// connections drive the map drawing and rumor spread.
+// Authored places on the illustrated Ashmark map. Stable ids retain save and
+// event compatibility; normalized points were calibrated from the guide labels
+// on assets/ui/ashmark_map.jpg.
 
 import type { LocationDef, LocationId } from '../engine/types';
 
@@ -10,12 +10,10 @@ export const LOCATIONS: LocationDef[] = [
     name: 'The Trading Post',
     blurb: 'Your clearing on the frontier. Tents, a firepit, and ambition.',
     hasMarket: true,
-    travelTurns: 0,
     initialDiscovery: 'known',
-    connections: ['river_meet', 'old_road', 'elder_grove', 'charter_landing'],
     tags: ['post'],
-    mapX: 50,
-    mapY: 55,
+    mapPoint: { x: 0.59, y: 0.164 },
+    mapRegion: 'northern_river',
   },
 
   // ------------------------------------------------------------ faction seats
@@ -27,12 +25,10 @@ export const LOCATIONS: LocationDef[] = [
     faction: 'RIVER_CLANS',
     hasMarket: true,
     priceBias: { grain: 0.8, hides: 0.7, furs: 0.9, salt: 1.2, tools: 1.4, cloth: 1.3 },
-    travelTurns: 2,
     initialDiscovery: 'visited',
-    connections: ['post', 'drowned_ruins'],
     tags: ['river', 'natives'],
-    mapX: 28,
-    mapY: 70,
+    mapPoint: { x: 0.71, y: 0.154 },
+    mapRegion: 'northern_river',
   },
   {
     id: 'hill_fort',
@@ -42,12 +38,10 @@ export const LOCATIONS: LocationDef[] = [
     faction: 'HILL_TRIBES',
     hasMarket: true,
     priceBias: { furs: 0.6, hides: 0.8, grain: 1.2, salt: 1.3, tools: 1.5, cloth: 1.4 },
-    travelTurns: 3,
     initialDiscovery: 'rumored',
-    connections: ['old_road', 'high_pass'],
     tags: ['hills', 'natives'],
-    mapX: 26,
-    mapY: 24,
+    mapPoint: { x: 0.2, y: 0.35 },
+    mapRegion: 'western_interior',
   },
   {
     id: 'elder_grove',
@@ -57,12 +51,10 @@ export const LOCATIONS: LocationDef[] = [
     faction: 'OLD_PEOPLE',
     hasMarket: true,
     priceBias: { amber: 0.6, herbs: 0.7, salt: 1.2, tools: 1.3, cloth: 1.3 },
-    travelTurns: 4,
     initialDiscovery: 'rumored',
-    connections: ['post', 'black_mere', 'amber_shore'],
     tags: ['forest', 'ritual', 'natives'],
-    mapX: 76,
-    mapY: 28,
+    mapPoint: { x: 0.682, y: 0.375 },
+    mapRegion: 'eastern_ashmark',
   },
   {
     id: 'charter_landing',
@@ -81,12 +73,10 @@ export const LOCATIONS: LocationDef[] = [
       hides: 1.2,
       timber: 1.1,
     },
-    travelTurns: 3,
     initialDiscovery: 'visited',
-    connections: ['post', 'amber_shore', 'shackle_station'],
     tags: ['homeland', 'river'],
-    mapX: 74,
-    mapY: 82,
+    mapPoint: { x: 0.9, y: 0.491 },
+    mapRegion: 'eastern_ashmark',
   },
 
   // ------------------------------------------------------------- wilderness
@@ -96,12 +86,10 @@ export const LOCATIONS: LocationDef[] = [
     blurb:
       'A paved road from some empire that predates the Sauromatian tribes themselves, broken now into causeways of tilted stone. It leads west toward the Dustwalker range.',
     hasMarket: false,
-    travelTurns: 2,
     initialDiscovery: 'rumored',
-    connections: ['post', 'hill_fort', 'high_pass', 'blackstone_plateau', 'beast_wilds'],
     tags: ['ruin', 'road'],
-    mapX: 38,
-    mapY: 40,
+    mapPoint: { x: 0.44, y: 0.34 },
+    mapRegion: 'charter_corridor',
   },
   {
     id: 'beast_wilds',
@@ -109,12 +97,10 @@ export const LOCATIONS: LocationDef[] = [
     blurb:
       'A scatter of bone-hung stakes and cook-fire smoke where the broken causeways give out into deep scrub. Orc war-bands and goblin clans hold this stretch of the wilds; no chief speaks for all of it, and no map agrees where it ends. Deliberately not a diplomacy seat — nobody here answers for the rest.',
     hasMarket: false,
-    travelTurns: 5,
     initialDiscovery: 'rumored',
-    connections: ['old_road'],
     tags: ['wilds', 'beastfolk', 'danger'],
-    mapX: 44,
-    mapY: 18,
+    mapPoint: { x: 0.35, y: 0.43 },
+    mapRegion: 'western_interior',
   },
   {
     id: 'drowned_ruins',
@@ -122,12 +108,10 @@ export const LOCATIONS: LocationDef[] = [
     blurb:
       'Roofless halls sunk to the lintels where the tributary runs its worst rapids. Even the Tributary Towns give the old weir a wide berth.',
     hasMarket: false,
-    travelTurns: 3,
     initialDiscovery: 'rumored',
-    connections: ['river_meet'],
     tags: ['ruin', 'marsh'],
-    mapX: 12,
-    mapY: 56,
+    mapPoint: { x: 0.56, y: 0.235 },
+    mapRegion: 'northern_river',
   },
   {
     id: 'black_mere',
@@ -135,24 +119,20 @@ export const LOCATIONS: LocationDef[] = [
     blurb:
       'A lake like spilled ink below the Bejasi Hills, where the boundary between the living country and whatever the Veil touches runs thin. Greyleaf grows thick on its margins.',
     hasMarket: false,
-    travelTurns: 4,
     initialDiscovery: 'unknown',
-    connections: ['elder_grove', 'high_pass'],
     tags: ['marsh', 'ritual'],
-    mapX: 58,
-    mapY: 12,
+    mapPoint: { x: 0.58, y: 0.39 },
+    mapRegion: 'charter_corridor',
   },
   {
     id: 'high_pass',
     name: 'The Stormwall Pass',
     blurb: 'The only way over the Stormwall Mountains, when it is open at all.',
     hasMarket: false,
-    travelTurns: 4,
     initialDiscovery: 'unknown',
-    connections: ['hill_fort', 'old_road', 'black_mere', 'pemba_jasiri', 'blackstone_plateau'],
     tags: ['hills', 'pass'],
-    mapX: 10,
-    mapY: 10,
+    mapPoint: { x: 0.3, y: 0.205 },
+    mapRegion: 'stormwall',
   },
   {
     id: 'amber_shore',
@@ -160,12 +140,10 @@ export const LOCATIONS: LocationDef[] = [
     blurb:
       'An old dig cut into the jungle rock, amber-veined and half-swallowed by vines. The Bejasi Hills folk still visit it by moonlight, though no one will say what for.',
     hasMarket: false,
-    travelTurns: 4,
     initialDiscovery: 'unknown',
-    connections: ['elder_grove', 'charter_landing'],
     tags: ['ruin', 'jungle'],
-    mapX: 92,
-    mapY: 52,
+    mapPoint: { x: 0.72, y: 0.42 },
+    mapRegion: 'eastern_ashmark',
   },
 
   // ---------------------------------------------- the wider peoples (PEOPLES_SPEC)
@@ -177,12 +155,10 @@ export const LOCATIONS: LocationDef[] = [
     faction: 'KNIGHTS_EIRWEN',
     hasMarket: true,
     priceBias: { tools: 0.6, salt: 1.3, grain: 1.3, cloth: 1.1, furs: 1.2 },
-    travelTurns: 5,
     initialDiscovery: 'unknown',
-    connections: ['high_pass'],
     tags: ['pass', 'mountain', 'weri'],
-    mapX: 18,
-    mapY: 4,
+    mapPoint: { x: 0.34, y: 0.198 },
+    mapRegion: 'stormwall',
   },
   {
     id: 'blackstone_plateau',
@@ -192,12 +168,10 @@ export const LOCATIONS: LocationDef[] = [
     faction: 'HILL_TRIBES',
     hasMarket: true,
     priceBias: { furs: 0.7, hides: 0.8, grain: 1.4, salt: 1.4, tools: 1.5, timber: 1.6 },
-    travelTurns: 5,
     initialDiscovery: 'unknown',
-    connections: ['old_road', 'high_pass', 'redsand_range'],
     tags: ['hills', 'badlands', 'natives'],
-    mapX: 22,
-    mapY: 46,
+    mapPoint: { x: 0.274, y: 0.342 },
+    mapRegion: 'western_interior',
   },
   {
     id: 'redsand_range',
@@ -207,12 +181,10 @@ export const LOCATIONS: LocationDef[] = [
     faction: 'HILL_TRIBES',
     hasMarket: true,
     priceBias: { hides: 0.7, furs: 0.8, grain: 1.2, cloth: 1.2, tools: 1.3 },
-    travelTurns: 6,
     initialDiscovery: 'unknown',
-    connections: ['blackstone_plateau'],
     tags: ['plains', 'natives'],
-    mapX: 6,
-    mapY: 78,
+    mapPoint: { x: 0.267, y: 0.481 },
+    mapRegion: 'western_interior',
   },
   {
     id: 'shackle_station',
@@ -222,12 +194,10 @@ export const LOCATIONS: LocationDef[] = [
     faction: 'CHARTER_COMPANY',
     hasMarket: true,
     priceBias: { tools: 0.9, cloth: 0.9, salt: 1.0, furs: 1.3, hides: 1.2, amber: 1.3 },
-    travelTurns: 5,
-    initialDiscovery: 'rumored',
-    connections: ['charter_landing'],
+    initialDiscovery: 'known',
     tags: ['homeland', 'river', 'creole'],
-    mapX: 94,
-    mapY: 90,
+    mapPoint: { x: 0.91, y: 0.322 },
+    mapRegion: 'eastern_ashmark',
   },
 ];
 

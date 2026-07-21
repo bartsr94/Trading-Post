@@ -3,6 +3,7 @@
 
 import { TUNING } from '../content/tuning';
 import { freshResidents } from './residents';
+import { mapKnowledgeFromDiscovery } from './map';
 import { GOOD_IDS, FACTION_IDS } from './types';
 import type {
   FactionId,
@@ -14,6 +15,8 @@ import type {
   LocationId,
   LocationState,
   MarketGoodState,
+  MapFeatureDef,
+  MapRegionDef,
 } from './types';
 
 export interface NewGameOptions {
@@ -21,6 +24,8 @@ export interface NewGameOptions {
   heroes: Hero[];
   startingStandings?: Partial<Record<FactionId, number>>;
   locationDefs?: readonly LocationDef[];
+  mapRegionDefs?: readonly MapRegionDef[];
+  mapFeatureDefs?: readonly MapFeatureDef[];
 }
 
 function freshMarket(): Record<GoodId, MarketGoodState> {
@@ -59,7 +64,7 @@ export function createInitialState(options: NewGameOptions): GameState {
 
   const assignments: Record<string, never> = {};
 
-  return {
+  const state: GameState = {
     saveVersion: TUNING.save.version,
     seed: options.seed,
     rngState: options.seed,
@@ -72,6 +77,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     goods,
     market: freshMarket(),
     locations: createLocationStates(options.locationDefs ?? []),
+    mapKnowledge: { surveyedCells: [] },
     expeditions: [],
     nextExpeditionId: 1,
     factions,
@@ -96,4 +102,11 @@ export function createInitialState(options: NewGameOptions): GameState {
     report: { turn: 1, lines: [], silverDelta: 0, goodsDelta: {} },
     gameOver: null,
   };
+  state.mapKnowledge = mapKnowledgeFromDiscovery(
+    state,
+    options.locationDefs ?? [],
+    options.mapRegionDefs ?? [],
+    options.mapFeatureDefs ?? [],
+  );
+  return state;
 }
