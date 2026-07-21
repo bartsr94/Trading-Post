@@ -1,6 +1,6 @@
-// Portrait asset registry. Art lives in src/assets/portraits/<race>/ named
-// <race>_<gender>_<NN>.png (e.g. imanian/imanian_male_02.png) and is addressed
-// by basename ("imanian_male_02") from HeroTemplate.portraitKey. Race pools:
+// Portrait asset registry. Art lives in src/assets/portraits/<culture>/ named
+// <culture>_<gender>_<NN>.png or <culture>_<ethnicity>_<gender>_<NN>.png and is addressed
+// by basename (e.g. "kiswani_bayuk_female_01") from content `portraitKey` strings.
 // imanian (Ansberrian/Imanian company folk), kiswani, dustwalker, bejasi
 // (per lore spec §6). Keys with no matching file fall back to the hash-hue
 // placeholder in Portrait.tsx, so keys for not-yet-painted pools are fine.
@@ -13,17 +13,69 @@ const modules = import.meta.glob('../assets/portraits/*/*.png', {
 export const PORTRAIT_URLS: Map<string, string> = new Map(
   Object.entries(modules).map(([path, url]) => {
     const file = path.split('/').pop()!;
-    return [file.replace(/\.[^.]+$/, ''), url];
+    return [file.replace(/\.[^.]+$/, '').toLowerCase(), url];
   }),
 );
 
 export function portraitUrl(key: string | undefined): string | undefined {
-  return key !== undefined ? PORTRAIT_URLS.get(key) : undefined;
+  return key !== undefined ? PORTRAIT_URLS.get(key.toLowerCase()) : undefined;
 }
 
-/** Painted portrait keys for a race_gender prefix (e.g. "kiswani_female"). */
+type PortraitGender = 'male' | 'female';
+
+function parsePortraitKey(key: string): {
+  culture: string;
+  ethnicity?: string;
+  gender: PortraitGender;
+  index: string;
+} | null {
+  const parts = key.toLowerCase().split('_');
+  if (parts.length < 3) return null;
+  const index = parts[parts.length - 1] ?? '';
+  const gender = parts[parts.length - 2];
+  if (gender !== 'male' && gender !== 'female') return null;
+  const culture = parts[0] ?? '';
+  if (!culture) return null;
+  const ethnicityParts = parts.slice(1, parts.length - 2);
+  const ethnicity = ethnicityParts.length > 0 ? ethnicityParts.join('_') : undefined;
+  return { culture, ethnicity, gender, index };
+}
+
+function parsePortraitPrefix(prefix: string): {
+  culture: string;
+  ethnicity?: string;
+  gender: PortraitGender;
+} | null {
+  const parts = prefix.toLowerCase().split('_');
+  if (parts.length < 2) return null;
+  const gender = parts[parts.length - 1];
+  if (gender !== 'male' && gender !== 'female') return null;
+  const culture = parts[0] ?? '';
+  if (!culture) return null;
+  const ethnicityParts = parts.slice(1, parts.length - 1);
+  const ethnicity = ethnicityParts.length > 0 ? ethnicityParts.join('_') : undefined;
+  return { culture, ethnicity, gender };
+}
+
+/**
+ * Painted portrait keys for a culture+gender pool (e.g. "kiswani_female").
+ * If an ethnicity is included (e.g. "kiswani_bayuk_female"), the pool is
+ * restricted to that ethnicity; otherwise, all ethnicities for the culture are eligible.
+ */
 export function portraitKeysFor(prefix: string): string[] {
-  return [...PORTRAIT_URLS.keys()].filter((k) => k.startsWith(`${prefix}_`)).sort();
+  const want = parsePortraitPrefix(prefix);
+  if (!want) return [];
+
+  const out: string[] = [];
+  for (const key of PORTRAIT_URLS.keys()) {
+    const got = parsePortraitKey(key);
+    if (!got) continue;
+    if (got.culture !== want.culture) continue;
+    if (got.gender !== want.gender) continue;
+    if (want.ethnicity !== undefined && got.ethnicity !== want.ethnicity) continue;
+    out.push(key);
+  }
+  return out.sort();
 }
 
 /**

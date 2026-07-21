@@ -11,7 +11,7 @@ export interface HeroTemplate {
   epithet: string;
   bio: string;
   hookHint: string;
-  /** Portrait asset key (<race>_<gender>_<NN>, see src/ui/portraits.ts).
+  /** Portrait asset key (<culture>_<gender>_<NN> or <culture>_<ethnicity>_<gender>_<NN>, see src/ui/portraits.ts).
    *  UI-only — never copied onto the runtime Hero (that lives in GameState
    *  and would force a save migration). */
   portraitKey: string;
@@ -31,7 +31,7 @@ export interface HeroTemplate {
 /** A template's heritage: explicit if set, else read from the portrait-key prefix. */
 export function heritageOf(template: Pick<HeroTemplate, 'portraitKey' | 'heritage'>): Heritage {
   if (template.heritage) return template.heritage;
-  const prefix = template.portraitKey.split('_')[0];
+  const prefix = template.portraitKey.toLowerCase().split('_')[0];
   return (HERITAGES as readonly string[]).includes(prefix) ? (prefix as Heritage) : 'imanian';
 }
 
@@ -46,7 +46,9 @@ export function subPeopleOf(
  *  token (`imanian_male_02` → 'male'). Mirrors heritageOf (FAMILY_SPEC.md §3.1). */
 export function genderOf(template: Pick<HeroTemplate, 'portraitKey' | 'gender'>): Gender {
   if (template.gender) return template.gender;
-  return template.portraitKey.split('_')[1] === 'female' ? 'female' : 'male';
+  const parts = template.portraitKey.toLowerCase().split('_');
+  const token = parts.length >= 2 ? parts[parts.length - 2] : '';
+  return token === 'female' ? 'female' : 'male';
 }
 
 const NO_SKILLS: Record<SkillId, number> = {
@@ -119,7 +121,7 @@ export const HERO_POOL: HeroTemplate[] = [
     id: 'p4',
     name: 'Sela',
     epithet: 'the River Guide',
-    portraitKey: 'kiswani_female_01',
+    portraitKey: 'kiswani_bayuk_female_01',
     bio: 'Born on the tributary to a Kiswani clan-mother of Njaro-Matu and an Ansberrian trader. Both worlds claim her; neither fully trusts her.',
     hookHint: 'Her mother’s kin in Njaro-Matu will come asking for things.',
     stats: { might: 2, agility: 4, wits: 3, charm: 3, resolve: 2 },
@@ -209,7 +211,7 @@ export const HERO_POOL: HeroTemplate[] = [
     id: 'p12',
     name: 'Ashka',
     epithet: 'the Outcast Ritualist',
-    portraitKey: 'kiswani_female_03',
+    portraitKey: 'kiswani_bayuk_female_02',
     heritage: 'kiswani',
     subPeople: 'bejasi_hills',
     bio: 'Cast out of Mandaro, in the Bejasi Hills, for a transgression she will not name. Kiswani by blood like all the hill settlements, she knows the jungle’s courtesies and the jungle’s prices better than anyone living among strangers.',

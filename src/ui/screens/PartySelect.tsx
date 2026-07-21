@@ -6,6 +6,13 @@ import { TRAIT_NAMES } from '../../content/traits';
 import { TUNING } from '../../content/tuning';
 import { STAT_IDS } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
+import { portraitUrl } from '../portraits';
+
+function hueOf(key: string): number {
+  let hash = 0;
+  for (const ch of key) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+  return ((hash % 360) + 360) % 360;
+}
 
 export function PartySelect() {
   const [picked, setPicked] = useState<string[]>([]);
@@ -58,14 +65,34 @@ export function PartySelect() {
         {importError && <span className="bad">{importError}</span>}
       </div>
       <div className="hero-grid">
-        {HERO_POOL.map((h) => (
+        {HERO_POOL.map((h) => {
+          const url = portraitUrl(h.portraitKey);
+          return (
           <div
             key={h.id}
             className={`hero-card ${picked.includes(h.id) ? 'picked' : ''}`}
             onClick={() => toggle(h.id)}
           >
-            <div className="name">
-              {h.name} <span className="dim">{h.epithet}</span>
+            <div className="hero-card-head">
+              <div className="hero-card-portrait" aria-hidden="true">
+                {url ? (
+                  <img className="portrait-art" src={url} alt="" draggable={false} />
+                ) : (
+                  <span
+                    className="portrait-fallback"
+                    style={{
+                      background: `linear-gradient(160deg, hsl(${hueOf(h.id)}, 28%, 32%), hsl(${(hueOf(h.id) + 40) % 360}, 30%, 16%))`,
+                    }}
+                  >
+                    {h.name.charAt(0)}
+                  </span>
+                )}
+              </div>
+              <div className="hero-card-title">
+                <div className="name">
+                  {h.name} <span className="dim">{h.epithet}</span>
+                </div>
+              </div>
             </div>
             <div className="statline">
               {STAT_IDS.map((s) => (
@@ -93,7 +120,8 @@ export function PartySelect() {
             <div className="bio">{h.bio}</div>
             <div className="hook">“{h.hookHint}”</div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

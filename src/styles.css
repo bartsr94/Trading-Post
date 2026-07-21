@@ -281,6 +281,22 @@ h4 {
   cursor: pointer;
   transition: border-color 0.12s, transform 0.08s;
 }
+.hero-card-head {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.hero-card-portrait {
+  width: 64px;
+  height: 80px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  flex: 0 0 auto;
+}
+.hero-card-portrait .portrait-fallback { font-size: 2.05rem; }
+.hero-card-title { min-width: 0; }
 .hero-card:hover { border-color: var(--accent-dim); }
 .hero-card.picked {
   border-color: var(--accent);
@@ -824,7 +840,7 @@ select:focus {
 /* ---------- report / modals ---------- */
 .report-lines { margin: 10px 0 16px; }
 .report-lines .line { padding: 3px 0; font-size: 0.95rem; }
-.hero-sheet { width: min(560px, 94vw); }
+.hero-sheet { width: min(620px, 94vw); }
 .hero-sheet-head {
   display: flex;
   gap: 14px;
@@ -833,8 +849,8 @@ select:focus {
 .hero-sheet-head > div:last-child { min-width: 0; }
 .hero-sheet-portrait {
   flex: none;
-  width: 104px;
-  height: 130px;
+  width: 125px;
+  height: 156px;
   border: 1px solid var(--accent-dim);
   border-radius: 8px;
   overflow: hidden;
