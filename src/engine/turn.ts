@@ -475,9 +475,10 @@ function resolveActivity(
     }
     case 'rest': {
       const cond = TUNING.condition;
-      // A Common House (and later an Infirmary) makes rest go further.
+      // A Common House makes rest go further; an Infirmary heals faster too.
       const stressRecovery = cond.restStressRecovery + buildingEffect(state, 'stressReliefBonus');
-      hero.health = clamp(hero.health + cond.restHealthRecovery, 0, cond.maxHealth);
+      const healthRecovery = cond.restHealthRecovery + buildingEffect(state, 'healingBonus');
+      hero.health = clamp(hero.health + healthRecovery, 0, cond.maxHealth);
       hero.stress = clamp(hero.stress - stressRecovery, 0, cond.maxStress);
       let line = `${hero.name} rests and recovers.`;
       if (rng.next() < cond.restTraitRecoveryChance) {

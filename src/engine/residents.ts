@@ -415,6 +415,9 @@ export function updateContentment(state: GameState, flags: UpkeepFlags): number 
   // Company inspectors and the like weigh on the mood while they linger.
   delta -= transientEffect(state, 'contentmentPressure');
 
+  // A shrine, warren, or longhouse that speaks to the residents' own people.
+  delta += buildingEffect(state, 'contentmentBonus');
+
   // Nothing went wrong this turn → the pool settles upward.
   if (delta === 0) delta = t.fedPaidDrift;
 

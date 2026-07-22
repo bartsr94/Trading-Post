@@ -29,14 +29,54 @@ export function buildingEffect(state: GameState, field: keyof BuildingEffects): 
 
 // ------------------------------------------------------------ construction
 
+/**
+ * Why building `id` is structurally out of reach right now — prerequisites,
+ * post tier, or a resident/heritage/tag/standing requirement — or null if
+ * every non-resource gate is satisfied. Distinct from `constructionError`
+ * so the UI can tell "just needs more silver/goods" (worth a full project
+ * card) apart from "not eligible yet at all" (worth a compact locked chip;
+ * BuildingsPanel uses this to keep the project menu from growing without
+ * bound as the building set does).
+ */
+export function buildingGateError(state: GameState, id: BuildingId): string | null {
+  const def = B.defs[id];
+  if (!def) return 'No such building.';
+  if (hasBuilding(state, id)) return 'Already built.';
+  for (const req of def.prerequisites) {
+    if (!hasBuilding(state, req)) return `Requires the ${req.replace('_', ' ')} first.`;
+  }
+  if (def.minTier && state.postTier < def.minTier) return 'Not until the post grows.';
+  if (def.requiresResidents) {
+    const { role, value } = def.requiresResidents;
+    if (state.residents.roles[role] < value) return `Needs ${value} ${role} at the post.`;
+  }
+  if (def.requiresHeritageGroup) {
+    const { group, value } = def.requiresHeritageGroup;
+    if (state.residents.heritage[group] < value) return `Needs ${value} ${group} residents.`;
+  }
+  if (def.requiresTag) {
+    const { tag, value } = def.requiresTag;
+    if ((state.residents.tags[tag] ?? 0) < value) return `Needs ${value} ${tag} residents.`;
+  }
+  if (def.requiresStanding) {
+    const { faction, value } = def.requiresStanding;
+    if ((state.factions[faction]?.standing ?? 0) < value) {
+      return `Needs ${faction} standing at least ${value}.`;
+    }
+  }
+  return null;
+}
+
 /** Why building `id` can't be started right now, or null if it may proceed. */
 export function constructionError(state: GameState, id: BuildingId): string | null {
   const def = B.defs[id];
   if (!def) return 'No such building.';
   if (hasBuilding(state, id)) return 'Already built.';
   if (state.construction) return 'Finish or cancel the current project first.';
-  for (const req of def.prerequisites) {
-    if (!hasBuilding(state, req)) return `Requires the ${req.replace('_', ' ')} first.`;
+  const gate = buildingGateError(state, id);
+  if (gate) return gate;
+  if (def.minSilverHeld && state.silver < def.minSilverHeld) {
+    return `Needs ${def.minSilverHeld} silver on hand (have ${state.silver}).`;
   }
   if (state.silver < def.cost.silver) return `Short ${def.cost.silver - state.silver} silver.`;
   for (const [good, qty] of Object.entries(def.cost.goods ?? {}) as [GoodId, number][]) {

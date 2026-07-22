@@ -58,6 +58,63 @@ export const POST_EVENTS: GameEvent[] = [
     ],
   },
   {
+    id: 'post_found_settlement',
+    category: 'post',
+    illustration: 'settlement_founding',
+    title: 'Founding the Settlement',
+    text: "The trade hall does steady business, the workshop's forge never quite goes cold, and the common house is loud most nights with people who no longer sleep in tents. This is not a Post anymore — not really. It wants a charter, a proper name on the Company's ledgers, and someone willing to stand behind both. {hero} has the standing to make the case.",
+    conditions: [{ type: 'canAdvanceTier' }],
+    weight: 40,
+    cooldownTurns: 4,
+    binding: { type: 'highestSkill', skill: 'leadership' },
+    choices: [
+      {
+        label: 'Petition the Company yourself — put your name on the charter.',
+        check: { skill: 'leadership', stat: 'resolve', difficulty: 11, tags: ['build', 'diplomacy'] },
+        outcomes: {
+          critSuccess: {
+            text: "{hero} lays it out plainly — the trade, the works, the people who now call this place home — and the factor barely finishes reading before reaching for the seal. The Post is a Settlement now, chartered and named, and word of the charter travels faster than the ink dries.",
+            outcomes: [
+              { type: 'advanceTier' },
+              { type: 'standing', faction: 'CHARTER_COMPANY', delta: 2 },
+              { type: 'history', text: 'Petitioned the Company and founded the Settlement.' },
+            ],
+          },
+          success: {
+            text: 'The factor asks harder questions than expected, but the ledgers hold up and the charter is granted. What was a Post is a Settlement now — the difference is mostly paperwork, and entirely real.',
+            outcomes: [
+              { type: 'advanceTier' },
+              { type: 'history', text: 'Saw the Settlement chartered.' },
+            ],
+          },
+          failure: {
+            text: 'The factor wants more assurances than {hero} came prepared to give, and the petition stalls in a drawer at Thornwatch. Nothing is lost but the fortnight and the goodwill spent chasing it.',
+            outcomes: [{ type: 'stress', delta: 1, allHeroes: true }],
+          },
+          critFailure: {
+            text: "A clumsy answer to a pointed question leaves the factor doubting the whole account. The petition is refused outright, and the Company makes a note of the doubt for later.",
+            outcomes: [
+              { type: 'stress', delta: 2, allHeroes: true },
+              { type: 'standing', faction: 'CHARTER_COMPANY', delta: -2 },
+            ],
+          },
+        },
+      },
+      {
+        label: 'Pay the Company surveyors to make it official without the fuss.',
+        outcomes: {
+          success: {
+            text: 'Silver moves and surveyors arrive within the month, measure the works, and stamp the charter without ceremony. It costs more than a petition would have — but it costs no one any standing.',
+            outcomes: [
+              { type: 'advanceTier' },
+              { type: 'silver', delta: -40 },
+            ],
+          },
+        },
+      },
+    ],
+  },
+  {
     id: 'post_leaky_stores',
     category: 'post',
     illustration: 'rain_stores',

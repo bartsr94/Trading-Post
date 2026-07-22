@@ -16,7 +16,7 @@ import { prosperity } from '../economy';
 import { evalConditions } from '../events/conditions';
 import { applyOutcomes } from '../events/outcomes';
 import type { OutcomeContext } from '../events/outcomes';
-import { postDefense, residentCap } from '../residents';
+import { postDefense, residentCap, updateContentment } from '../residents';
 import { advancePendingEvent, advanceTurn, resolveChoice, resolveTurn } from '../turn';
 import { heroesAtPost } from '../types';
 import type { GameState } from '../types';
@@ -76,6 +76,68 @@ describe('construction validation', () => {
     expect(constructionError(s, 'storehouse')).toMatch(/timber/i);
     s.buildings.push('storehouse');
     expect(constructionError(s, 'storehouse')).toMatch(/already/i);
+  });
+});
+
+describe('Phase B requirement gates', () => {
+  it('gates on postTier (minTier)', () => {
+    const s = testState();
+    s.silver = 500;
+    s.goods.timber = 100;
+    s.buildings.push('storehouse');
+    s.postTier = 1;
+    expect(constructionError(s, 'storehouse_ii')).toMatch(/grows/i);
+    s.postTier = 2;
+    expect(constructionError(s, 'storehouse_ii')).toBeNull();
+  });
+
+  it('gates on resident role headcount', () => {
+    const s = testState();
+    s.silver = 500;
+    s.goods.timber = 100;
+    s.goods.tools = 100;
+    s.buildings.push('palisade');
+    s.postTier = 2;
+    expect(constructionError(s, 'palisade_ii')).toMatch(/guards/i);
+    s.residents.roles.guards = 3;
+    expect(constructionError(s, 'palisade_ii')).toBeNull();
+  });
+
+  it('gates on heritage-group headcount', () => {
+    const s = testState();
+    s.silver = 500;
+    s.goods.timber = 100;
+    s.buildings.push('common_house');
+    s.postTier = 2;
+    expect(constructionError(s, 'river_shrine')).toMatch(/native/i);
+    s.residents.heritage.native = 6;
+    expect(constructionError(s, 'river_shrine')).toBeNull();
+  });
+
+  it('gates on a specific composition tag and faction standing together', () => {
+    const s = testState();
+    s.silver = 500;
+    s.goods.timber = 100;
+    s.postTier = 2;
+    // Neither gate is met yet: no goblin residents, and starting BEASTFOLK
+    // standing (-60) is well below the -20 threshold. requiresTag is checked
+    // first, so its reason surfaces before requiresStanding's.
+    expect(constructionError(s, 'goblin_warren')).toMatch(/goblin/i);
+    s.residents.tags.goblin = 4;
+    expect(constructionError(s, 'goblin_warren')).toMatch(/BEASTFOLK/);
+    s.factions.BEASTFOLK.standing = -10;
+    expect(constructionError(s, 'goblin_warren')).toBeNull();
+  });
+
+  it('gates on silver held — a wealth threshold distinct from cost', () => {
+    const s = testState();
+    s.goods.tools = 100;
+    s.buildings.push('trade_hall');
+    s.postTier = 2;
+    s.silver = 200; // enough for the 150 cost, short of the 400 wealth gate
+    expect(constructionError(s, 'counting_house')).toMatch(/400 silver/i);
+    s.silver = 400;
+    expect(constructionError(s, 'counting_house')).toBeNull();
   });
 });
 
@@ -163,6 +225,44 @@ describe('building effects feed derived selectors', () => {
     const withSpent = 1000 - withB.silver;
     expect(withSpent - baseSpent).toBe(TUNING.building.defs.storehouse.effects.upkeepSilver);
   });
+
+  it('healingBonus (Infirmary) adds to Rest health recovery', () => {
+    const base = testState(9);
+    base.silver = 1000;
+    base.goods.grain = 1000;
+    for (const h of base.heroes) {
+      h.health = 5;
+      h.stress = 0;
+    }
+    for (const h of base.heroes) base.assignments[h.id] = 'rest';
+    const withB = structuredClone(base);
+    withB.buildings.push('infirmary'); // healingBonus +2
+
+    resolveTurn(base, TEST_CONTENT);
+    resolveTurn(withB, TEST_CONTENT);
+
+    expect(withB.heroes[0].health - base.heroes[0].health).toBe(
+      TUNING.building.defs.infirmary.effects.healingBonus,
+    );
+  });
+
+  it('contentmentBonus (Rivermeet Shrine) lifts resident contentment', () => {
+    const base = testState();
+    base.residents.roles.farmers = 3; // within the tier-1 cap — no over-cap penalty
+    base.residents.contentment = 5;
+    const withB = structuredClone(base);
+    withB.buildings.push('river_shrine'); // contentmentBonus +1
+
+    // A bad turn (missed food) so the delta isn't the neutral fedPaidDrift case,
+    // which would otherwise mask the bonus by coincidence.
+    const flags = { missedFood: true, missedWages: false };
+    updateContentment(base, flags);
+    updateContentment(withB, flags);
+
+    expect(withB.residents.contentment - base.residents.contentment).toBe(
+      TUNING.building.defs.river_shrine.effects.contentmentBonus,
+    );
+  });
 });
 
 describe('tier advancement', () => {
@@ -181,9 +281,26 @@ describe('tier advancement', () => {
     expect(s.postTier).toBe(2);
     expect(s.silver).toBe(20); // 120 − 100 recipe cost
 
-    // No tier-3 ladder yet — advancing again is a no-op.
+    // Tier 3's ladder entry needs its own buildings + a much larger purse.
     expect(canAdvanceTier(s)).toBe(false);
     expect(advanceTier(s)).toBeNull();
+  });
+
+  it('advances tier 2 → 3 once the tier-3 recipe is met', () => {
+    const s = testState();
+    s.postTier = 2;
+    s.buildings.push('palisade', 'storehouse');
+    expect(canAdvanceTier(s)).toBe(false); // missing trade_hall/workshop/common_house
+
+    s.buildings.push('trade_hall', 'workshop', 'common_house');
+    s.silver = 100;
+    expect(canAdvanceTier(s)).toBe(false); // short of the 250 silver cost
+
+    s.silver = 250;
+    expect(canAdvanceTier(s)).toBe(true);
+    expect(advanceTier(s)).toBe(3);
+    expect(s.postTier).toBe(3);
+    expect(s.silver).toBe(0);
   });
 });
 

@@ -7,7 +7,7 @@ import { BuildingsPanel } from '../components/BuildingsPanel';
 
 export function BuildingsScreen({ game }: { game: GameState }) {
   return (
-    <div className="manage-screen">
+    <div className="buildings-screen">
       <h2>Buildings &amp; Works</h2>
       <p className="dim" style={{ marginTop: 0 }}>
         Raise the outpost one project at a time — pay for it up front, then set heroes to

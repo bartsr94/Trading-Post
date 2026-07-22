@@ -437,6 +437,8 @@ export interface BuildingEffects {
   craftReliefBonus: number;
   upkeepSilver: number;
   storageBonus: number; // reserved; unused until storage caps land (Phase C)
+  contentmentBonus: number;
+  healingBonus: number; // extra health recovery on a Rest turn, alongside stressReliefBonus
 }
 
 /** A building's cost, effort, prerequisites, and effects (TUNING.building.defs). */
@@ -446,6 +448,19 @@ export interface BuildingDefData {
   buildProgress: number;
   prerequisites: BuildingId[];
   effects: Partial<BuildingEffects>;
+  /** Availability gate: postTier must be at least this (BUILDINGS_SPEC.md Phase B). */
+  minTier?: number;
+  /** Needs at least this many residents in a role present at the post. */
+  requiresResidents?: { role: ResidentRole; value: number };
+  /** Needs at least this many residents of a coarse origin (HERITAGE_SPEC.md). */
+  requiresHeritageGroup?: { group: HeritageGroup; value: number };
+  /** Needs at least this many residents carrying a specific composition tag
+   *  (e.g. 'orc'/'goblin'/'kiswani' — ResidentState.tags). */
+  requiresTag?: { tag: string; value: number };
+  /** Needs a faction's standing at least this high. */
+  requiresStanding?: { faction: FactionId; value: number };
+  /** Needs this much silver currently on hand (a wealth gate, distinct from cost). */
+  minSilverHeld?: number;
 }
 
 /** A tier-advancement recipe (TUNING.building.tierLadder, BUILDINGS_SPEC.md §7). */

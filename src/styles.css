@@ -561,6 +561,22 @@ h4 {
 .manage-screen {
   max-width: 860px;
 }
+/* Buildings gets the full content width — a status rail + a wide project menu
+   (BUILDINGS_SPEC.md §9), rather than the single narrow column the other
+   management screens use. */
+.buildings-screen {
+  max-width: 1180px;
+}
+.buildings-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 14px;
+  align-items: start;
+  margin-top: 10px;
+}
+@media (max-width: 900px) {
+  .buildings-layout { grid-template-columns: 1fr; }
+}
 .axis-row { margin: 8px 0; font-size: 0.85rem; }
 .axis-track {
   position: relative;
@@ -963,6 +979,11 @@ select:focus {
   border: 1px solid var(--accent-dim);
   background: var(--panel-2);
   color: var(--accent);
+}
+.building-chip.locked {
+  border-style: dashed;
+  border-color: var(--border);
+  color: var(--muted, #a99);
 }
 .construction-active {
   margin-top: 10px;
