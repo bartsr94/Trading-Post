@@ -19,7 +19,7 @@ import {
 } from './buildings';
 import { driftMarket, priceOf, prosperity } from './economy';
 import type { GoodDef } from './economy';
-import { advanceExpeditions } from './expeditions';
+import { advanceExpeditions, travelContextFor } from './expeditions';
 import {
   addTransientGroup,
   applyAxisArrivals,
@@ -35,6 +35,7 @@ import {
 } from './residents';
 import { applyOutcomes } from './events/outcomes';
 import type { OutcomeContext } from './events/outcomes';
+import { evalConditions } from './events/conditions';
 import { childrenComingOfAge, comeOfAge, grownKinCount } from './family';
 import { dependantCount, reconcileRoster } from './roster';
 import { selectEvents } from './events/selection';
@@ -172,6 +173,12 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   }
 
   // 5. Event selection.
+  // Permanently impossible pinned chains cannot ever become bindable again.
+  state.queuedEvents = state.queuedEvents.filter(
+    (queued) =>
+      queued.heroId === undefined ||
+      state.heroes.some((hero) => hero.id === queued.heroId && hero.status === 'active'),
+  );
   const selected = selectEvents(
     state,
     ctx.events,
@@ -181,15 +188,21 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
     ctx.mapFeatureDefs,
   );
   state.pendingEvents = selected;
+  const remainingQueued = [...state.queuedEvents];
   for (const active of selected) {
     const event = ctx.events.get(active.eventId);
     if (!event) continue;
     if (event.once) state.firedEvents.push(event.id);
     state.cooldowns[event.id] = state.turn + (event.cooldownTurns ?? TUNING.events.defaultCooldown);
-    state.queuedEvents = state.queuedEvents.filter(
-      (q) => !(q.eventId === active.eventId && q.fireOnTurn <= state.turn),
+    const queuedIndex = remainingQueued.findIndex(
+      (queued) =>
+        queued.eventId === active.eventId &&
+        queued.fireOnTurn <= state.turn &&
+        (queued.heroId === undefined || queued.heroId === active.heroId),
     );
+    if (queuedIndex >= 0) remainingQueued.splice(queuedIndex, 1);
   }
+  state.queuedEvents = remainingQueued;
 
   state.report.silverDelta = state.silver - silverBefore;
   for (const [good, qty] of Object.entries(state.goods) as [GoodId, number][]) {
@@ -339,7 +352,7 @@ function resolveResidentSociety(
       );
     }
     const drift = applyCultureDrift(state);
-    if (Math.abs(drift) >= 0.5) {
+    if (Math.abs(drift) >= TUNING.heritage.axisDriftReportThreshold) {
       report(
         '🧭',
         drift > 0
@@ -439,7 +452,9 @@ function resolveActivity(
         income = Math.round(eco.tradeBaseIncome * prosMult + check.margin * eco.tradeMarginSilver);
         markSkill(hero, 'bargain');
       } else if (check.tier === 'failure') {
-        income = Math.round((eco.tradeBaseIncome * prosMult) / 2);
+        income = Math.round(
+          eco.tradeBaseIncome * prosMult * eco.tradeFailureIncomeMultiplier,
+        );
       }
       state.silver += income;
       report('💰', `${hero.name} runs the market: ${checkBreakdown(check)}. +${income} silver.`);
@@ -544,13 +559,17 @@ export function resolveChoice(
   heroId: string,
   expeditionId?: string,
 ): ChoiceResolution {
-  const rng = new Rng(state.rngState);
   const hero = getHero(state, heroId);
   const choice = event.choices[choiceIndex];
   if (!choice) throw new Error(`Event ${event.id} has no choice ${choiceIndex}`);
   const expedition = expeditionId
     ? state.expeditions.find((e) => e.id === expeditionId)
     : undefined;
+  const travel = expedition ? travelContextFor(expedition, ctx) : undefined;
+  if (choice.requires && !evalConditions(state, choice.requires, { heroId, travel })) {
+    throw new Error(`Choice ${choiceIndex} is not available for event ${event.id}.`);
+  }
+  const rng = new Rng(state.rngState);
 
   let check: CheckResult | null = null;
   let tier: keyof Choice['outcomes'] = 'success';

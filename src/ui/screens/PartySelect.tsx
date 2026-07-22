@@ -31,7 +31,15 @@ export function PartySelect() {
   };
 
   const onImportFile = async (file: File) => {
-    setImportError(importSave(await file.text()));
+    if (file.size > TUNING.save.maxImportBytes) {
+      setImportError('That save file is too large to be a Trading Post save.');
+      return;
+    }
+    try {
+      setImportError(importSave(await file.text()));
+    } catch {
+      setImportError('Could not read that save file.');
+    }
   };
 
   return (

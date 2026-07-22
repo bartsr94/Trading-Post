@@ -5,6 +5,7 @@ import { TUNING } from '../content/tuning';
 import { freshResidents, residentTotal } from './residents';
 import { journeyTurns, mapKnowledgeFromDiscovery, mergeSurveyCells } from './map';
 import { createLocationStates } from './state';
+import { validateGameState } from './saveValidation';
 import { defaultSubPeople, discoveryAtLeast } from './types';
 import type {
   Gender,
@@ -56,11 +57,11 @@ export function serialize(state: GameState): string {
 }
 
 export function deserialize(json: string, ctx?: MigrationContext): GameState {
-  const raw = JSON.parse(json) as GameState;
-  if (typeof raw !== 'object' || raw === null || typeof raw.saveVersion !== 'number') {
+  const raw: unknown = JSON.parse(json);
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw) || typeof (raw as { saveVersion?: unknown }).saveVersion !== 'number') {
     throw new Error('Not a valid Trading Post save.');
   }
-  return migrate(raw, ctx);
+  return validateGameState(migrate(raw as GameState, ctx));
 }
 
 /** Migration chain: bump TUNING.save.version and add a case when the shape changes. */

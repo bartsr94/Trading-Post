@@ -240,20 +240,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   buy: (good, qty) => {
     const { game } = get();
-    if (!game) return;
+    if (!game || game.phase !== 'assignment') return;
     const def = CONTENT.goodDefs.get(good);
     if (!def) return;
     const next = draft(game);
-    if (buyGood(next, def, qty)) set({ game: next });
+    if (buyGood(next, def, qty)) {
+      autosave(next);
+      set({ game: next });
+    }
   },
 
   sell: (good, qty) => {
     const { game } = get();
-    if (!game) return;
+    if (!game || game.phase !== 'assignment') return;
     const def = CONTENT.goodDefs.get(good);
     if (!def) return;
     const next = draft(game);
-    if (sellGood(next, def, qty)) set({ game: next });
+    if (sellGood(next, def, qty)) {
+      autosave(next);
+      set({ game: next });
+    }
   },
 
   dispatch: (params) => {
@@ -370,6 +376,7 @@ export function choiceAvailable(
   game: GameState,
   requires?: Parameters<typeof evalConditions>[1],
   travel?: TravelContext,
+  heroId?: string,
 ) {
-  return !requires || evalConditions(game, requires, travel);
+  return !requires || evalConditions(game, requires, { travel, heroId });
 }

@@ -197,7 +197,11 @@ function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
       const travel = travelCtxOf(state, active);
       const openChoices = event.choices
         .map((c, idx) => ({ c, idx }))
-        .filter(({ c }) => !c.requires || evalConditions(state, c.requires, travel));
+        .filter(
+          ({ c }) =>
+            !c.requires ||
+            evalConditions(state, c.requires, { travel, heroId: active.heroId }),
+        );
       expect(openChoices.length).toBeGreaterThan(0); // every event must stay answerable
       const pick = openChoices[choiceRng.int(0, openChoices.length - 1)];
       resolveChoice(state, TEST_CONTENT, event, pick.idx, active.heroId, active.expeditionId);

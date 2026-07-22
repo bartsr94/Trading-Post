@@ -1,4 +1,7 @@
-// Core shared types for the engine. Pure — no React, no content imports.
+// Core shared types for the engine. Pure — no React or DOM; tuning is the only
+// permitted content dependency.
+
+import { TUNING } from '../content/tuning';
 
 export const STAT_IDS = ['might', 'agility', 'wits', 'charm', 'resolve'] as const;
 export type StatId = (typeof STAT_IDS)[number];
@@ -562,16 +565,20 @@ export interface GameState {
 }
 
 export function seasonOfTurn(turn: number): Season {
-  return SEASONS[Math.floor(((turn - 1) % 24) / 6)];
+  return SEASONS[
+    Math.floor(
+      ((turn - 1) % TUNING.time.turnsPerYear) / TUNING.time.turnsPerSeason,
+    )
+  ];
 }
 
 export function yearOfTurn(turn: number): number {
-  return Math.floor((turn - 1) / 24) + 1;
+  return Math.floor((turn - 1) / TUNING.time.turnsPerYear) + 1;
 }
 
 /** True when `turn` is the last turn of a season (skill growth rolls fire). */
 export function isSeasonEnd(turn: number): boolean {
-  return turn % 6 === 0;
+  return turn % TUNING.time.turnsPerSeason === 0;
 }
 
 export function stanceOf(standing: number): FactionStance {

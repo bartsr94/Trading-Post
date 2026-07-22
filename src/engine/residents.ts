@@ -194,12 +194,15 @@ function debitHeritage(state: GameState, n: number, prefer?: HeritageGroup): voi
  * counts stay a live, roughly-accurate breakdown rather than sticking at
  * their high-water mark forever.
  */
-function debitTags(state: GameState, n: number): void {
+function debitTags(
+  state: GameState,
+  n: number,
+  preLossTotal: number = residentTotal(state) + n,
+): void {
   if (n <= 0) return;
   const tags = state.residents.tags;
   const entries = Object.entries(tags);
   if (entries.length === 0) return;
-  const preLossTotal = residentTotal(state) + n;
   if (preLossTotal <= 0) return;
   for (const [tag, count] of entries) {
     const debit = Math.min(count, Math.round(n * (count / preLossTotal)));
@@ -208,6 +211,24 @@ function debitTags(state: GameState, n: number): void {
     if (next <= 0) delete tags[tag];
     else tags[tag] = next;
   }
+}
+
+/**
+ * Removes the demographic contribution of residents already seconded to an
+ * expedition. Their role counts left the post at dispatch, so only heritage
+ * and flavor-tag metadata needs debiting here.
+ */
+export function loseResidentEscort(
+  state: GameState,
+  escort: Partial<Record<ResidentRole, number>> | undefined,
+): number {
+  if (!escort) return 0;
+  const lost = RESIDENT_ROLES.reduce((sum, role) => sum + (escort[role] ?? 0), 0);
+  if (lost <= 0) return 0;
+  const preLossTotal = residentTotal(state);
+  debitHeritage(state, lost);
+  debitTags(state, lost, preLossTotal);
+  return lost;
 }
 
 /**

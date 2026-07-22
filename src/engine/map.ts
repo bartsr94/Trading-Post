@@ -201,7 +201,7 @@ export function surveyCells(
   return cellsForFootprint(
     from,
     to,
-    exploration.routeWidth[pace] * Math.max(0.45, tierMult),
+    exploration.routeWidth[pace] * Math.max(exploration.minRouteTierMultiplier, tierMult),
     exploration.targetRadius[pace] * tierMult,
   );
 }
@@ -311,7 +311,9 @@ export function rumorArea(
   const { rumorRadiusX: radiusX, rumorRadiusY: radiusY } = TUNING.map.exploration;
   const hash = hash32(`${seed}:${location.id}`);
   const angle = ((hash & 0xffff) / 0xffff) * Math.PI * 2;
-  const magnitude = 0.25 + (((hash >>> 16) & 0xffff) / 0xffff) * 0.3;
+  const magnitude =
+    TUNING.map.exploration.rumorOffsetMin +
+    (((hash >>> 16) & 0xffff) / 0xffff) * TUNING.map.exploration.rumorOffsetRange;
   const center = {
     // Keep the approximation's center on-map without pushing it farther from
     // edge locations. The SVG may clip part of an edge ellipse, but the true

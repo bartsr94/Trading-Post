@@ -56,7 +56,9 @@ export function driftMarket(state: GameState, rng: Rng): void {
         supplyDemandMax,
       );
       market.eventMod = 1 + (market.eventMod - 1) * eventModDecay;
-      if (Math.abs(market.eventMod - 1) < 0.05) market.eventMod = 1;
+      if (Math.abs(market.eventMod - 1) < TUNING.economy.eventModSnapThreshold) {
+        market.eventMod = 1;
+      }
     }
   }
 }
@@ -81,6 +83,7 @@ export function prosperity(state: GameState, goodDefs: ReadonlyMap<GoodId, GoodD
 
 /** Buy at the post market. Returns false if silver is short. */
 export function buyGood(state: GameState, def: GoodDef, qty: number): boolean {
+  if (!Number.isFinite(qty) || !Number.isInteger(qty) || qty <= 0) return false;
   const cost = priceOf(state, def) * qty;
   if (state.silver < cost) return false;
   state.silver -= cost;
@@ -90,6 +93,7 @@ export function buyGood(state: GameState, def: GoodDef, qty: number): boolean {
 
 /** Sell at the post market. Returns false if stock is short. */
 export function sellGood(state: GameState, def: GoodDef, qty: number): boolean {
+  if (!Number.isFinite(qty) || !Number.isInteger(qty) || qty <= 0) return false;
   if (state.goods[def.id] < qty) return false;
   state.goods[def.id] -= qty;
   state.silver += priceOf(state, def) * qty;

@@ -7,6 +7,8 @@ export const TUNING = {
   save: {
     version: 13,
     autosaveKey: 'trading-post-save',
+    /** Manual import guard; current saves are far smaller than five MiB. */
+    maxImportBytes: 5 * 1024 * 1024,
   },
 
   start: {
@@ -24,7 +26,6 @@ export const TUNING = {
   // Named, non-working family (CHARACTERS_SPEC.md §7). Food only, no wages.
   dependants: {
     grainPerDependantPerTurn: 1, // families eat; tune against grainPerHeroPerTurn.
-    maxPerCharacter: 4, // soft cap on one family; the post-wide count stays uncapped.
   },
 
   time: {
@@ -67,11 +68,15 @@ export const TUNING = {
     supplyDemandStep: 0.1,
     /** Event price modifiers decay toward 1 by this factor each turn. */
     eventModDecay: 0.5,
+    /** Snap a nearly-decayed event modifier back to exactly 1 inside this distance. */
+    eventModSnapThreshold: 0.05,
     /** Trade assignment: base silver income before prosperity and margin. */
     tradeBaseIncome: 12,
     tradeCheckDifficulty: 10,
     /** Silver per point of check margin on a trade turn. */
     tradeMarginSilver: 2,
+    /** Failed trade turns still earn this fraction of ordinary base income. */
+    tradeFailureIncomeMultiplier: 0.5,
     /** Prosperity = silver/prosperitySilverDiv + stockValue/prosperityStockDiv. */
     prosperitySilverDiv: 50,
     prosperityStockDiv: 40,
@@ -114,6 +119,9 @@ export const TUNING = {
     caravanStandingGain: 1,
     /** Explore progress check at the destination. */
     exploreCheckDifficulty: 9,
+    exploreFailureStress: 1,
+    exploreCritFailureStress: 2,
+    exploreCritFailureHealthLoss: 1,
     /** 4:3 fog grid matching the illustrated Ashmark map. */
     fogGrid: { width: 64, height: 48 },
     /** Scaled normalized map distance covered per one-way turn at normal pace. */
@@ -138,8 +146,11 @@ export const TUNING = {
       detectionBonus: { critSuccess: 0.04, success: 0.02, failure: 0, critFailure: 0 },
       rumorRadiusX: 0.055,
       rumorRadiusY: 0.04,
-      /** Free targets in the same cell are considered duplicate expeditions. */
-      duplicateTargetCellRange: 0,
+      /** Failed surveys narrow the target radius but retain this much route width. */
+      minRouteTierMultiplier: 0.45,
+      /** Deterministic rumor-center displacement within the displayed ellipse. */
+      rumorOffsetMin: 0.25,
+      rumorOffsetRange: 0.3,
     },
   },
 
@@ -349,6 +360,8 @@ export const TUNING = {
     // Axis drift (season end)
     /** Max culture step toward the tally-implied target each season. */
     axisDriftPerSeason: 1,
+    /** Minimum absolute culture drift worth calling out in the turn report. */
+    axisDriftReportThreshold: 0.5,
     /** culture ≥ this → native settlers drift in via applyAxisArrivals. */
     frontierThreshold: 4,
     /** culture ≤ this → homeland families settle via applyAxisArrivals. */

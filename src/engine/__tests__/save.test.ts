@@ -21,6 +21,24 @@ describe('saves', () => {
     expect(() => deserialize('not json')).toThrow();
   });
 
+  it('rejects malformed current-version saves before they enter the store', () => {
+    const missingHeroes = JSON.parse(serialize(testState())) as Record<string, unknown>;
+    delete missingHeroes.heroes;
+    expect(() => deserialize(JSON.stringify(missingHeroes))).toThrow(/heroes/);
+
+    const invalidPhase = JSON.parse(serialize(testState())) as Record<string, unknown>;
+    invalidPhase.phase = 'loading';
+    expect(() => deserialize(JSON.stringify(invalidPhase))).toThrow(/phase/);
+
+    const duplicateParty = testState();
+    duplicateParty.activePartyIds.push(duplicateParty.activePartyIds[0]);
+    expect(() => deserialize(serialize(duplicateParty))).toThrow(/activePartyIds/);
+
+    const badHeritage = testState();
+    badHeritage.residents.roles.guards = 1;
+    expect(() => deserialize(serialize(badHeritage))).toThrow(/heritage/);
+  });
+
   it('rejects saves from a newer game version', () => {
     const s = testState();
     s.saveVersion = 999;

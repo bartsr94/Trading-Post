@@ -3,6 +3,7 @@
 // 'gamble', 'ritual', 'natives', plus faction ids as tags for faction dealings.
 
 import type { TraitDef } from '../engine/types';
+import { uniqueIdMap } from './uniqueIdMap';
 
 export const TRAITS: TraitDef[] = [
   {
@@ -212,5 +213,7 @@ export const TRAITS: TraitDef[] = [
   },
 ];
 
-export const TRAIT_DEFS: ReadonlyMap<string, TraitDef> = new Map(TRAITS.map((t) => [t.id, t]));
-export const TRAIT_NAMES: ReadonlyMap<string, string> = new Map(TRAITS.map((t) => [t.id, t.name]));
+export const TRAIT_DEFS: ReadonlyMap<string, TraitDef> = uniqueIdMap('trait', TRAITS);
+export const TRAIT_NAMES: ReadonlyMap<string, string> = new Map(
+  [...TRAIT_DEFS].map(([id, trait]) => [id, trait.name]),
+);

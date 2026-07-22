@@ -219,6 +219,7 @@ export function applyOutcomes(
           const child = addChild(state, parentId, {
             nameFor,
             gender: outcome.gender,
+            partnerId: outcome.otherParentId,
             rand,
           });
           if (child) log.push(`A child, ${child.name}, is born to the post.`);
@@ -237,7 +238,9 @@ export function applyOutcomes(
         }
         // A plain kin/spouse with no union source (an aunt, a ward, a betrothed).
         const heritage = outcome.heritage ?? (subject ? dominantHeritage(subject) : 'imanian');
-        const gender = outcome.gender ?? (rand() < 0.5 ? 'male' : 'female');
+        const gender =
+          outcome.gender ??
+          (rand() < TUNING.family.pureFemaleChance ? 'female' : 'male');
         const dep = addDependant(state, {
           kind: outcome.kind,
           name: nameFor(gender, heritage),

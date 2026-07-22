@@ -143,10 +143,10 @@ export type Outcome =
     }
   | { type: 'removeDependant'; parentId?: string; kind?: DependantKind; dependantId?: string }
   /** Form a union for a subject (defaults to the bound hero): spouse + bloodline
-   *  + culture nudge + union trait (FAMILY_SPEC.md §9). */
+   *  + culture nudge (FAMILY_SPEC.md §9). */
   | { type: 'formUnion'; subjectId?: string; source: UnionSource; heritage?: Heritage }
-  /** A child comes of age (FAMILY_SPEC.md §7); grown kin by default. */
-  | { type: 'comeOfAge'; dependantId: string; promoteToRecruit?: boolean }
+  /** A child comes of age (FAMILY_SPEC.md §7) and remains named grown kin. */
+  | { type: 'comeOfAge'; dependantId: string }
   | { type: 'history'; text: string }
   /** Advance a location's discovery (default: the expedition's destination). */
   | { type: 'discover'; location?: LocationId; to?: DiscoveryState }

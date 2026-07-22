@@ -19,6 +19,7 @@ import { canWed, formUnion, unionError } from './family';
 import {
   addResidents,
   addTransientGroup,
+  loseResidentEscort,
   nudgeCulture,
   residentCap,
   residentsAvailable,
@@ -192,10 +193,14 @@ export function dispatchError(
   if (heroIds.length > TUNING.map.maxExpeditionHeroes) {
     return `At most ${TUNING.map.maxExpeditionHeroes} heroes per expedition.`;
   }
+  if (new Set(heroIds).size !== heroIds.length) return 'Choose each hero only once.';
   const away = awayHeroIds(state);
+  const activeParty = new Set(state.activePartyIds);
   for (const heroId of heroIds) {
     const hero = state.heroes.find((h) => h.id === heroId);
-    if (!hero || hero.status !== 'active') return 'That hero cannot travel.';
+    if (!hero || hero.status !== 'active' || !activeParty.has(heroId)) {
+      return 'That hero cannot travel.';
+    }
     if (away.has(heroId)) return `${hero.name} is already away.`;
   }
 
@@ -212,7 +217,9 @@ export function dispatchError(
     if (def.faction !== 'CHARTER_COMPANY') return 'Only the Company garrison hires out homeland hands.';
     if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to the garrison yet.';
     const count = params.laborCount ?? 0;
-    if (count < 1) return 'Send for at least one hand.';
+    if (!Number.isFinite(count) || !Number.isInteger(count) || count < 1) {
+      return 'Send for at least one whole hand.';
+    }
     if (state.silver < laborRunCost(count)) return "Not enough silver for the recruiters' fee.";
     if (residentTotal(state) + inFlightHomelandLabor(state) + count > residentCap(state)) {
       return 'No room to house them yet.';
@@ -232,9 +239,12 @@ export function dispatchError(
   }
 
   const escort = params.residents ?? {};
+  for (const role of Object.keys(escort)) {
+    if (!(RESIDENT_ROLES as readonly string[]).includes(role)) return 'Invalid escort.';
+  }
   for (const role of RESIDENT_ROLES) {
     const qty = escort[role] ?? 0;
-    if (qty < 0 || !Number.isInteger(qty)) return 'Invalid escort.';
+    if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) return 'Invalid escort.';
     if (qty > residentsAvailable(state, role)) return `Not enough ${role} to spare.`;
   }
 
@@ -243,11 +253,16 @@ export function dispatchError(
     return 'The party cannot carry that much.';
   }
   for (const [good, qty] of Object.entries(cargo) as [GoodId, number][]) {
-    if (qty < 0 || !Number.isInteger(qty)) return 'Invalid cargo.';
+    if (!(good in state.goods)) return 'Unknown cargo.';
+    if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) return 'Invalid cargo.';
     if ((state.goods[good] ?? 0) < qty) return 'Not enough stock for that cargo.';
   }
+  for (const [good, qty] of Object.entries(params.buyOrders ?? {}) as [GoodId, number][]) {
+    if (!(good in state.goods)) return 'Unknown buy order.';
+    if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) return 'Invalid buy order.';
+  }
   const silver = params.silver ?? 0;
-  if (silver < 0 || !Number.isInteger(silver)) return 'Invalid silver.';
+  if (!Number.isFinite(silver) || silver < 0 || !Number.isInteger(silver)) return 'Invalid silver.';
   if (state.silver < silver) return 'Not enough silver on hand.';
 
   return null;
@@ -340,6 +355,7 @@ export function advanceExpeditions(
     const home = ctx.locationDefs.get(TUNING.map.homeLocationId);
     const target = exp.target ?? def?.mapPoint;
     if (!home || !target || (!def && exp.kind !== 'explore')) {
+      returnResidentEscort(state, exp);
       finished.push(exp.id);
       continue;
     }
@@ -356,6 +372,7 @@ export function advanceExpeditions(
     });
     if (exp.heroIds.length === 0) {
       report('🕯️', `No one returns from ${destinationName}. The cargo is lost with them.`);
+      loseResidentEscort(state, exp.residentEscort);
       finished.push(exp.id);
       continue;
     }
@@ -495,12 +512,19 @@ function resolveExploreArrival(
 
   if (isSuccess(check.tier)) markSkill(hero, 'survival');
   else {
-    const stressGain = check.tier === 'critFailure' ? 2 : 1;
+    const stressGain =
+      check.tier === 'critFailure'
+        ? TUNING.map.exploreCritFailureStress
+        : TUNING.map.exploreFailureStress;
     for (const id of exp.heroIds) {
       const h = getHero(state, id);
       h.stress = clamp(h.stress + stressGain, 0, TUNING.condition.maxStress);
       if (check.tier === 'critFailure') {
-        h.health = clamp(h.health - 1, 0, TUNING.condition.maxHealth);
+        h.health = clamp(
+          h.health - TUNING.map.exploreCritFailureHealthLoss,
+          0,
+          TUNING.condition.maxHealth,
+        );
       }
     }
   }
@@ -687,12 +711,7 @@ function resolveHomecoming(
   }
 
   // Seconded residents rejoin the post pool.
-  if (exp.residentEscort) {
-    for (const role of RESIDENT_ROLES) {
-      const qty = exp.residentEscort[role] ?? 0;
-      if (qty > 0) state.residents.roles[role] += qty;
-    }
-  }
+  returnResidentEscort(state, exp);
 
   // Homeland hands fetched from Thornwatch settle in (HERITAGE_SPEC.md §5.2).
   let laborLine = '';
@@ -748,4 +767,14 @@ function resolveHomecoming(
     '🏠',
     `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${destinationName}${tail}${surveyLine}${laborLine}${matchLine}`,
   );
+}
+
+/** Return seconded residents exactly once when an expedition reaches home. */
+function returnResidentEscort(state: GameState, exp: ExpeditionState): void {
+  if (!exp.residentEscort) return;
+  for (const role of RESIDENT_ROLES) {
+    const qty = exp.residentEscort[role] ?? 0;
+    if (qty > 0) state.residents.roles[role] += qty;
+  }
+  exp.residentEscort = {};
 }

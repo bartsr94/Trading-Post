@@ -3,6 +3,7 @@
 // on assets/ui/ashmark_map.jpg.
 
 import type { LocationDef, LocationId } from '../engine/types';
+import { uniqueIdMap } from './uniqueIdMap';
 
 export const LOCATIONS: LocationDef[] = [
   {
@@ -201,9 +202,7 @@ export const LOCATIONS: LocationDef[] = [
   },
 ];
 
-export const LOCATION_DEFS: ReadonlyMap<LocationId, LocationDef> = new Map(
-  LOCATIONS.map((l) => [l.id, l]),
-);
+export const LOCATION_DEFS: ReadonlyMap<LocationId, LocationDef> = uniqueIdMap('location', LOCATIONS);
 export const LOCATION_NAMES: ReadonlyMap<LocationId, string> = new Map(
-  LOCATIONS.map((l) => [l.id, l.name]),
+  [...LOCATION_DEFS].map(([id, location]) => [id, location.name]),
 );

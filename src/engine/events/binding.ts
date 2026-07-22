@@ -16,7 +16,7 @@ export function bindHero(
   rng: Rng,
   poolOverride?: Hero[],
 ): Hero | null {
-  const pool = poolOverride ?? heroesAtPost(state);
+  const pool = bindingCandidates(state, event, poolOverride);
   if (pool.length === 0) return null;
   const binding: HeroBinding = event.binding ?? { type: 'random' };
 
@@ -41,6 +41,26 @@ export function bindHero(
       return best(pool, (h) => h.stress, rng);
     case 'specific':
       return pool.find((h) => h.id === binding.heroId) ?? null;
+  }
+}
+
+/** Candidate pool implied by the binding, without consuming RNG. */
+export function bindingCandidates(
+  state: GameState,
+  event: GameEvent,
+  poolOverride?: Hero[],
+): Hero[] {
+  const pool = poolOverride ?? heroesAtPost(state);
+  const binding: HeroBinding = event.binding ?? { type: 'random' };
+  switch (binding.type) {
+    case 'withTrait':
+      return pool.filter((h) => h.traits.includes(binding.trait));
+    case 'withoutTrait':
+      return pool.filter((h) => !h.traits.includes(binding.trait));
+    case 'specific':
+      return pool.filter((h) => h.id === binding.heroId);
+    default:
+      return pool;
   }
 }
 

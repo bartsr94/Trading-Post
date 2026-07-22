@@ -3,7 +3,10 @@ import { evalCondition } from '../events/conditions';
 import { applyOutcomes } from '../events/outcomes';
 import { isEligible, selectEvents } from '../events/selection';
 import { interpolate } from '../events/text';
+import type { GameEvent } from '../events/types';
+import { formUnion } from '../family';
 import { Rng } from '../rng';
+import { resolveChoice, resolveTurn } from '../turn';
 import { TEST_CONTENT, testState } from './helpers';
 
 const NAME_CTX = {
@@ -102,6 +105,100 @@ describe('event selection', () => {
       expect(selected.some((e) => e.eventId === 'post_amber_find')).toBe(false);
       expect(selected.some((e) => e.eventId === 'hero_breakdown')).toBe(false);
     }
+  });
+
+  it('binds hero-scoped conditions to the selected event hero', () => {
+    const s = testState();
+    const married = s.heroes.find((h) => h.id === 'p1')!;
+    const unmarried = s.heroes.find((h) => h.id === 'p2')!;
+    for (const hero of s.heroes) hero.stats.charm = 0;
+    married.stats.charm = 5;
+    unmarried.stats.charm = 4;
+    expect(
+      formUnion(s, married.id, {
+        source: 'homeland',
+        heritage: 'imanian',
+        name: 'Ada',
+      }),
+    ).not.toBeNull();
+
+    const event: GameEvent = {
+      id: 'test_unmarried_binding',
+      category: 'post',
+      illustration: 'test',
+      title: 'Test',
+      text: '{hero}',
+      conditions: [{ type: 'heroUnmarried' }],
+      weight: 1,
+      binding: { type: 'highestStat', stat: 'charm' },
+      choices: [{ label: 'Continue', outcomes: { success: { text: 'Done', outcomes: [] } } }],
+    };
+
+    const selected = selectEvents(
+      s,
+      new Map([[event.id, event]]),
+      TEST_CONTENT.locationDefs,
+      new Rng(1),
+    );
+    expect(selected).toEqual([{ eventId: event.id, heroId: unmarried.id }]);
+  });
+
+  it('leaves over-budget same-id queued events for a later turn', () => {
+    const s = testState();
+    s.queuedEvents = ['p1', 'p2', 'p3'].map((heroId) => ({
+      eventId: 'hero_breakdown',
+      fireOnTurn: s.turn,
+      heroId,
+    }));
+
+    resolveTurn(s, TEST_CONTENT);
+
+    expect(s.pendingEvents.map((event) => event.heroId)).toEqual(['p1', 'p2']);
+    expect(s.queuedEvents).toEqual([
+      { eventId: 'hero_breakdown', fireOnTurn: 1, heroId: 'p3' },
+    ]);
+  });
+
+  it('removes impossible dead-hero queues but keeps active reserve queues', () => {
+    const s = testState();
+    s.heroes.find((hero) => hero.id === 'p1')!.status = 'dead';
+    s.activePartyIds = s.activePartyIds.filter((id) => id !== 'p2');
+    s.queuedEvents = [
+      { eventId: 'hero_breakdown', fireOnTurn: 1, heroId: 'p1' },
+      { eventId: 'hero_breakdown', fireOnTurn: 1, heroId: 'p2' },
+    ];
+
+    resolveTurn(s, TEST_CONTENT);
+
+    expect(s.queuedEvents).toEqual([
+      { eventId: 'hero_breakdown', fireOnTurn: 1, heroId: 'p2' },
+    ]);
+  });
+
+  it('rejects a directly invoked locked choice without mutating state', () => {
+    const s = testState();
+    const event: GameEvent = {
+      id: 'test_locked_choice',
+      category: 'post',
+      illustration: 'test',
+      title: 'Test',
+      text: 'Test',
+      conditions: [],
+      weight: 1,
+      choices: [
+        {
+          label: 'Spend what is not there',
+          requires: [{ type: 'silverAtLeast', value: s.silver + 1 }],
+          outcomes: {
+            success: { text: 'Impossible', outcomes: [{ type: 'silver', delta: 100 }] },
+          },
+        },
+      ],
+    };
+    const before = structuredClone(s);
+
+    expect(() => resolveChoice(s, TEST_CONTENT, event, 0, 'p1')).toThrow(/not available/);
+    expect(s).toEqual(before);
   });
 });
 

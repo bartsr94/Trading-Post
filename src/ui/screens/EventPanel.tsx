@@ -48,7 +48,9 @@ export function EventPanel({ game }: { game: GameState }) {
               <div className="text">{interpolate(event.text, ctx)}</div>
               <div className="choice-list">
                 {event.choices.map((choice, i) => {
-                  const available = !choice.requires || evalConditions(game, choice.requires, travel);
+                  const available =
+                    !choice.requires ||
+                    evalConditions(game, choice.requires, { travel, heroId: active.heroId });
                   const hint = checkHint(game, choice);
                   return (
                     <button

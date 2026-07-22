@@ -2,6 +2,7 @@
 
 import type { GoodDef } from '../engine/economy';
 import type { GoodId } from '../engine/types';
+import { uniqueIdMap } from './uniqueIdMap';
 
 export const GOODS: GoodDef[] = [
   {
@@ -69,5 +70,7 @@ export const GOODS: GoodDef[] = [
   },
 ];
 
-export const GOOD_DEFS: ReadonlyMap<GoodId, GoodDef> = new Map(GOODS.map((g) => [g.id, g]));
-export const GOOD_NAMES: ReadonlyMap<GoodId, string> = new Map(GOODS.map((g) => [g.id, g.name]));
+export const GOOD_DEFS: ReadonlyMap<GoodId, GoodDef> = uniqueIdMap('good', GOODS);
+export const GOOD_NAMES: ReadonlyMap<GoodId, string> = new Map(
+  [...GOOD_DEFS].map(([id, good]) => [id, good.name]),
+);

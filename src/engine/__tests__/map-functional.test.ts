@@ -311,9 +311,9 @@ describe('rumors, discovery, dispatch, and reporting semantics', () => {
     const free = travelContextFor(state.expeditions[0], TEST_CONTENT)!;
     expect(free.destination.locationId).toBeUndefined();
     expect(free.paceCheckModifier).toBe(-1);
-    expect(evalCondition(state, { type: 'destinationIs', location: 'black_mere' }, free)).toBe(false);
-    expect(evalCondition(state, { type: 'destinationTag', tag: 'marsh' }, free)).toBe(true);
-    expect(evalCondition(state, { type: 'expeditionKind', kind: 'explore' }, free)).toBe(true);
+    expect(evalCondition(state, { type: 'destinationIs', location: 'black_mere' }, { travel: free })).toBe(false);
+    expect(evalCondition(state, { type: 'destinationTag', tag: 'marsh' }, { travel: free })).toBe(true);
+    expect(evalCondition(state, { type: 'expeditionKind', kind: 'explore' }, { travel: free })).toBe(true);
 
     const authored = travelContextFor({ ...state.expeditions[0], destination: 'black_mere' }, TEST_CONTENT)!;
     expect(authored.destination.locationId).toBe('black_mere');

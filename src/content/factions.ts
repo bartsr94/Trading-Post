@@ -1,6 +1,7 @@
 // Factions (spec §8). Ashmark grounding per docs/ASHMARK_LORE_SPEC.md.
 
 import type { FactionId } from '../engine/types';
+import { uniqueIdMap } from './uniqueIdMap';
 
 export interface FactionDef {
   id: FactionId;
@@ -54,12 +55,10 @@ export const FACTIONS: FactionDef[] = [
   },
 ];
 
-export const FACTION_DEFS: ReadonlyMap<FactionId, FactionDef> = new Map(
-  FACTIONS.map((f) => [f.id, f]),
-);
+export const FACTION_DEFS: ReadonlyMap<FactionId, FactionDef> = uniqueIdMap('faction', FACTIONS);
 export const FACTION_NAMES: ReadonlyMap<string, string> = new Map(
-  FACTIONS.map((f) => [f.id, f.name]),
+  [...FACTION_DEFS].map(([id, faction]) => [id, faction.name]),
 );
 export const STARTING_STANDINGS: Partial<Record<FactionId, number>> = Object.fromEntries(
-  FACTIONS.map((f) => [f.id, f.startingStanding]),
+  [...FACTION_DEFS].map(([id, faction]) => [id, faction.startingStanding]),
 );

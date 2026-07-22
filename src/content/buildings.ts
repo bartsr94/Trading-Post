@@ -3,6 +3,7 @@
 // same ids (BUILDINGS_SPEC.md §5). The engine never imports this file.
 
 import type { BuildingId } from '../engine/types';
+import { uniqueIdMap } from './uniqueIdMap';
 
 export interface BuildingInfo {
   id: BuildingId;
@@ -43,5 +44,10 @@ export const BUILDINGS: BuildingInfo[] = [
   },
 ];
 
-export const BUILDING_NAMES = new Map<BuildingId, string>(BUILDINGS.map((b) => [b.id, b.name]));
-export const BUILDING_INFO = new Map<BuildingId, BuildingInfo>(BUILDINGS.map((b) => [b.id, b]));
+export const BUILDING_INFO: ReadonlyMap<BuildingId, BuildingInfo> = uniqueIdMap(
+  'building',
+  BUILDINGS,
+);
+export const BUILDING_NAMES = new Map<BuildingId, string>(
+  [...BUILDING_INFO].map(([id, building]) => [id, building.name]),
+);

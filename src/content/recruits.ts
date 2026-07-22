@@ -5,6 +5,7 @@
 // docs/ASHMARK_LORE_SPEC.md. Includes the "renowned trader" the spec calls for.
 
 import type { RecruitDef } from '../engine/types';
+import { uniqueIdMap } from './uniqueIdMap';
 
 export const RECRUITS: RecruitDef[] = [
   {
@@ -99,6 +100,4 @@ export const RECRUITS: RecruitDef[] = [
 ];
 
 /** templateId → RecruitDef, injected into the engine via TurnContext. */
-export const RECRUIT_DEFS: ReadonlyMap<string, RecruitDef> = new Map(
-  RECRUITS.map((r) => [r.id, r]),
-);
+export const RECRUIT_DEFS: ReadonlyMap<string, RecruitDef> = uniqueIdMap('recruit', RECRUITS);

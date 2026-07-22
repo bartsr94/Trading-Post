@@ -20,6 +20,7 @@ import {
   isMarried,
   isMixed,
   nodePeoples,
+  removeDependant,
   spousesOf,
   unionError,
 } from '../family';
@@ -119,6 +120,58 @@ describe('children — dual-parentage heritage', () => {
     }
     // Mixed unions skew toward daughters more than pure ones.
     expect(mixedFemale).toBeGreaterThan(pureFemale);
+  });
+
+  it('can target a specific spouse as the other parent', () => {
+    const s = testState();
+    const homeland = formUnion(s, 'p1', {
+      source: 'homeland',
+      heritage: 'imanian',
+      name: 'Ada',
+    })!;
+    const native = formUnion(s, 'p1', {
+      source: 'alliance',
+      heritage: 'kiswani',
+      name: 'Nia',
+    })!;
+
+    applyOutcomes(
+      s,
+      [{ type: 'addDependant', kind: 'child', parentId: 'p1', otherParentId: native.id }],
+      outcomeCtx(s),
+    );
+    const child = s.dependants.find((d) => d.kind === 'child')!;
+    expect(child.parentIds).toEqual(['p1', native.id]);
+    expect(child.parentIds).not.toContain(homeland.id);
+    expect(new Set(child.ancestry?.peoples)).toEqual(new Set(['imanian', 'kiswani']));
+  });
+
+  it('rejects an explicit other parent who is not the subject spouse', () => {
+    const s = testState();
+    formUnion(s, 'p1', { source: 'homeland', heritage: 'imanian', name: 'Ada' });
+    const before = s.dependants.length;
+    const child = addChild(s, 'p1', {
+      nameFor: (g, h) => TEST_CONTENT.dependantName(h, g, s.nextDependantId),
+      partnerId: 'p2',
+      rand: () => 0.5,
+    });
+    expect(child).toBeNull();
+    expect(s.dependants).toHaveLength(before);
+  });
+});
+
+describe('dependant removal', () => {
+  it('recomputes the household bloodline after a spouse leaves', () => {
+    const s = testState();
+    const spouse = formUnion(s, 'p1', {
+      source: 'alliance',
+      heritage: 'kiswani',
+      name: 'Nia',
+    })!;
+    expect(getHero(s, 'p1').bloodline).toBe('mixed');
+
+    expect(removeDependant(s, spouse.id)).toBe(true);
+    expect(getHero(s, 'p1').bloodline).toBeUndefined();
   });
 });
 

@@ -8,6 +8,7 @@ import { POST_EVENTS } from './postEvents';
 import { RECRUIT_EVENTS } from './recruitEvents';
 import { SEASON_EVENTS } from './seasonEvents';
 import { TRAVEL_EVENTS } from './travelEvents';
+import { uniqueIdMap } from '../uniqueIdMap';
 
 export const ALL_EVENTS: GameEvent[] = [
   ...POST_EVENTS,
@@ -20,9 +21,7 @@ export const ALL_EVENTS: GameEvent[] = [
   ...BEASTFOLK_EVENTS,
 ];
 
-export const EVENT_MAP: ReadonlyMap<string, GameEvent> = new Map(
-  ALL_EVENTS.map((e) => [e.id, e]),
-);
+export const EVENT_MAP: ReadonlyMap<string, GameEvent> = uniqueIdMap('event', ALL_EVENTS);
 
 // Fail fast in dev if content references a missing chain event.
 for (const event of ALL_EVENTS) {

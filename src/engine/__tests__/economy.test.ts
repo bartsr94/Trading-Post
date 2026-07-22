@@ -61,6 +61,22 @@ describe('trading', () => {
     expect(s.silver).toBe(1);
   });
 
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    'rejects an invalid trade quantity (%s) without mutating state',
+    (qty) => {
+      const buying = testState();
+      const buyBefore = structuredClone(buying);
+      expect(buyGood(buying, furs, qty)).toBe(false);
+      expect(buying).toEqual(buyBefore);
+
+      const selling = testState();
+      selling.goods.furs = 10;
+      const sellBefore = structuredClone(selling);
+      expect(sellGood(selling, furs, qty)).toBe(false);
+      expect(selling).toEqual(sellBefore);
+    },
+  );
+
   it('stock value and prosperity derive from goods and silver', () => {
     const s = testState();
     const expectedStock =

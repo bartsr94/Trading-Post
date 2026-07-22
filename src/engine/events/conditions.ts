@@ -6,10 +6,16 @@ import { heritageCount, nativeShare, residentCount } from '../residents';
 import type { GameState } from '../types';
 import type { Condition, TravelContext } from './types';
 
+export interface ConditionContext {
+  /** The event's candidate/bound hero for implicit hero-scoped predicates. */
+  heroId?: string;
+  travel?: TravelContext;
+}
+
 export function evalCondition(
   state: GameState,
   cond: Condition,
-  travel?: TravelContext,
+  ctx: ConditionContext = {},
 ): boolean {
   switch (cond.type) {
     case 'minTurn':
@@ -27,7 +33,7 @@ export function evalCondition(
     case 'goodBelow':
       return state.goods[cond.good] < cond.qty;
     case 'heroInParty':
-      return livingHeroes(state).some((h) => h.id === cond.heroId);
+      return activeHeroes(state).some((h) => h.id === cond.heroId);
     case 'heroWithTrait':
       return livingHeroes(state).some((h) => h.traits.includes(cond.trait));
     case 'anyHeroStressAtLeast':
@@ -47,19 +53,19 @@ export function evalCondition(
     case 'notFlag':
       return state.flags[cond.flag] !== true;
     case 'partySizeAtLeast':
-      return livingHeroes(state).length >= cond.value;
+      return activeHeroes(state).length >= cond.value;
     case 'rosterAtLeast':
       return rosterCount(state, cond.scope) >= cond.value;
     case 'rosterBelow':
       return rosterCount(state, cond.scope) < cond.value;
     case 'heroHasSpouse':
-      return cond.heroId !== undefined
-        ? isMarried(state, cond.heroId)
-        : activeHeroes(state).some((h) => isMarried(state, h.id));
+      return (cond.heroId ?? ctx.heroId) !== undefined
+        ? isMarried(state, (cond.heroId ?? ctx.heroId)!)
+        : false;
     case 'heroUnmarried':
-      return cond.heroId !== undefined
-        ? !isMarried(state, cond.heroId)
-        : activeHeroes(state).some((h) => !isMarried(state, h.id));
+      return (cond.heroId ?? ctx.heroId) !== undefined
+        ? !isMarried(state, (cond.heroId ?? ctx.heroId)!)
+        : false;
     case 'residentsAtLeast':
       return residentCount(state, cond.role) >= cond.value;
     case 'residentsBelow':
@@ -93,15 +99,15 @@ export function evalCondition(
       return loc !== undefined && discoveryAtLeast(loc.discovery, cond.atLeast);
     }
     case 'expeditionKind':
-      return travel !== undefined && travel.expedition.kind === cond.kind;
+      return ctx.travel !== undefined && ctx.travel.expedition.kind === cond.kind;
     case 'expeditionLeg':
-      return travel !== undefined && travel.expedition.leg === cond.leg;
+      return ctx.travel !== undefined && ctx.travel.expedition.leg === cond.leg;
     case 'destinationIs':
-      return travel !== undefined && travel.destination.locationId === cond.location;
+      return ctx.travel !== undefined && ctx.travel.destination.locationId === cond.location;
     case 'destinationTag':
-      return travel !== undefined && travel.destination.tags.includes(cond.tag);
+      return ctx.travel !== undefined && ctx.travel.destination.tags.includes(cond.tag);
     case 'cargoUnitsAtLeast':
-      return travel !== undefined && cargoUnits(travel.expedition.cargo) >= cond.qty;
+      return ctx.travel !== undefined && cargoUnits(ctx.travel.expedition.cargo) >= cond.qty;
   }
 }
 
@@ -119,7 +125,7 @@ function rosterCount(state: GameState, scope: 'active' | 'reserve' | 'living'): 
 export function evalConditions(
   state: GameState,
   conds: readonly Condition[],
-  travel?: TravelContext,
+  ctx: ConditionContext = {},
 ): boolean {
-  return conds.every((c) => evalCondition(state, c, travel));
+  return conds.every((c) => evalCondition(state, c, ctx));
 }

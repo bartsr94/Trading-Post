@@ -183,13 +183,16 @@ export function addDependant(
 }
 
 export function removeDependant(state: GameState, dependantId: string): boolean {
+  const removed = state.dependants.find((d) => d.id === dependantId);
   const before = state.dependants.length;
   // Sever any spouse back-links to the removed node.
   for (const d of state.dependants) {
     if (d.spouseId === dependantId) delete d.spouseId;
   }
   state.dependants = state.dependants.filter((d) => d.id !== dependantId);
-  return state.dependants.length < before;
+  const didRemove = state.dependants.length < before;
+  if (didRemove && removed) recomputeBloodline(state, removed.parentId);
+  return didRemove;
 }
 
 /**
@@ -269,11 +272,19 @@ export function childGender(a: FamilyNode, b: FamilyNode, rand: () => number): G
 export function addChild(
   state: GameState,
   subjectId: string,
-  opts: { nameFor: (gender: Gender, heritage: Heritage) => string; gender?: Gender; rand: () => number },
+  opts: {
+    nameFor: (gender: Gender, heritage: Heritage) => string;
+    gender?: Gender;
+    partnerId?: string;
+    rand: () => number;
+  },
 ): Dependant | null {
   const subject = graphNode(state, subjectId);
   if (!subject) return null;
-  const partner = spousesOf(state, subjectId)[0];
+  const partners = spousesOf(state, subjectId);
+  const partner = opts.partnerId
+    ? partners.find((candidate) => candidate.id === opts.partnerId)
+    : partners[0];
   if (!partner) return null;
 
   const ancestry = childAncestry(subject, partner);

@@ -5,6 +5,7 @@ import { regionAt, validMapPoint } from '../map';
 import { priceAt, priceOf } from '../economy';
 import { advanceExpeditions, dispatchError, dispatchExpedition } from '../expeditions';
 import { selectEvents } from '../events/selection';
+import { residentTotal } from '../residents';
 import { Rng } from '../rng';
 import { resolveTurn } from '../turn';
 import { heroesAtPost } from '../types';
@@ -82,6 +83,27 @@ describe('dispatch validation', () => {
     expect(dispatchError(s, { kind: 'explore', destination: 'old_road', heroIds: ['p1'] }, DEFS)).toBeTruthy();
   });
 
+  it('rejects duplicate party members and reserve heroes', () => {
+    const duplicate = testState();
+    expect(
+      dispatchError(
+        duplicate,
+        { kind: 'caravan', destination: 'river_meet', heroIds: ['p1', 'p1'] },
+        DEFS,
+      ),
+    ).toBeTruthy();
+
+    const reserve = testState();
+    reserve.activePartyIds = reserve.activePartyIds.filter((id) => id !== 'p1');
+    expect(
+      dispatchError(
+        reserve,
+        { kind: 'caravan', destination: 'river_meet', heroIds: ['p1'] },
+        DEFS,
+      ),
+    ).toBeTruthy();
+  });
+
   it('moves cargo and silver out of the post stock on dispatch', () => {
     const s = testState();
     const toolsBefore = s.goods.tools;
@@ -135,6 +157,28 @@ describe('expedition lifecycle', () => {
     tick(s);
     expect(s.expeditions).toHaveLength(0);
     expect(s.goods.tools).toBe(toolsAfterDispatch); // cargo lost, not returned
+  });
+
+  it('debits resident demographics when an escorted party is lost', () => {
+    const s = testState();
+    s.residents.roles.guards = 2;
+    s.residents.heritage.homeland = 2;
+    s.residents.tags.settlers = 2;
+    expect(
+      dispatchCaravan(s, {
+        heroIds: ['p1'],
+        cargo: {},
+        residents: { guards: 2 },
+      }),
+    ).toBe(true);
+    s.heroes.find((h) => h.id === 'p1')!.status = 'dead';
+
+    advanceExpeditions(s, TEST_CONTENT, new Rng(1), () => undefined);
+
+    expect(s.expeditions).toHaveLength(0);
+    expect(residentTotal(s)).toBe(0);
+    expect(s.residents.heritage).toEqual({ homeland: 0, native: 0 });
+    expect(s.residents.tags).toEqual({});
   });
 });
 
