@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { TUNING } from '../../content/tuning';
 import {
   advanceTier,
+  buildingGateError,
   buildingEffect,
   canAdvanceTier,
   cancelConstruction,
@@ -76,6 +77,28 @@ describe('construction validation', () => {
     expect(constructionError(s, 'storehouse')).toMatch(/timber/i);
     s.buildings.push('storehouse');
     expect(constructionError(s, 'storehouse')).toMatch(/already/i);
+  });
+});
+
+describe('buildingGateError', () => {
+  it('ignores costs/goods and reports only structural eligibility', () => {
+    const s = testState();
+    // No money, no goods: startConstruction should fail, but the building is
+    // structurally eligible (no prerequisites or tier/resident gates).
+    s.silver = 0;
+    s.goods.timber = 0;
+    expect(buildingGateError(s, 'storehouse')).toBeNull();
+    expect(constructionError(s, 'storehouse')).toMatch(/silver/i);
+  });
+
+  it('does not treat minSilverHeld as a structural gate (it is distinct from eligibility)', () => {
+    const s = testState();
+    s.postTier = 2;
+    s.buildings.push('trade_hall');
+
+    s.silver = 200;
+    expect(buildingGateError(s, 'counting_house')).toBeNull();
+    expect(constructionError(s, 'counting_house')).toMatch(/400 silver/i);
   });
 });
 
