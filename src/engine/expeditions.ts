@@ -12,6 +12,11 @@ import {
   traitModifiers,
 } from './checks';
 import type { CheckModifier } from './checks';
+import {
+  applyDiplomacyShift,
+  ensureDiplomacySeat,
+  setDiplomacyPact,
+} from './diplomacy';
 import type { TravelContext } from './events/types';
 import { priceAt } from './economy';
 import type { GoodDef } from './economy';
@@ -52,6 +57,8 @@ import {
   RESIDENT_ROLES,
 } from './types';
 import type {
+  DiplomacyMissionType,
+  DiplomacyTributeMode,
   ExpeditionKind,
   ExpeditionPace,
   ExpeditionState,
@@ -105,6 +112,8 @@ export interface DispatchParams {
   raidManeuver?: RaidManeuver;
   raidRally?: boolean;
   raidAlly?: FactionId;
+  /** For `diplomacy` runs: the purpose of the envoy. */
+  diplomacyMission?: { type: DiplomacyMissionType; mode?: DiplomacyTributeMode };
 }
 
 export function cargoUnits(cargo: Partial<Record<GoodId, number>>): number {
@@ -221,6 +230,16 @@ export function dispatchError(
     if (!def) return 'Choose a known destination.';
     if (!def.faction) return 'There is no one there to treat with.';
     if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way there yet.';
+    const mission = params.diplomacyMission?.type ?? 'talks';
+    const giftValue = cargoUnits(params.cargo ?? {}) + (params.silver ?? 0);
+    if ((mission === 'gift' || mission === 'peace') && giftValue <= 0) {
+      return mission === 'gift'
+        ? 'Bring silver or goods worth presenting.'
+        : 'Peace talks need terms to offer.';
+    }
+    if (mission === 'tribute') {
+      return 'Tribute negotiations are not ready yet.';
+    }
   } else if (params.kind === 'labor') {
     if (!def) return 'Choose a known destination.';
     if (def.faction !== 'CHARTER_COMPANY') return 'Only the Company garrison hires out homeland hands.';
@@ -357,6 +376,9 @@ export function dispatchExpedition(
     residentEscort: escort,
     ...(homelandLabor !== undefined ? { homelandLabor } : {}),
     ...(courtshipFor !== undefined ? { courtshipFor } : {}),
+    ...(params.kind === 'diplomacy'
+      ? { diplomacyMission: { ...(params.diplomacyMission ?? { type: 'talks' as const }) } }
+      : {}),
     ...(params.kind === 'raid'
       ? {
           raidGoal: params.raidGoal ?? 'plunder',
@@ -633,9 +655,12 @@ function resolveDiplomacyArrival(
   rng: Rng,
   report: (icon: string, text: string) => void,
 ): void {
+  return resolveDiplomacyMissionArrival(state, ctx, exp, def, rng, report);
   const dip = TUNING.diplomacy;
   const hero = leadHero(state, exp, 'diplomacy');
-  const tags = ['diplomacy', ...def.tags, ...(def.faction ? [def.faction] : [])];
+  const legacyFactionTags: string[] = [];
+  if (def.faction) legacyFactionTags.push(def.faction as FactionId);
+  const tags = ['diplomacy', ...def.tags, ...legacyFactionTags];
   const mods = [
     ...traitModifiers(hero, ctx.traitDefs, 'diplomacy', tags),
     ...escortMods(exp),
@@ -651,8 +676,9 @@ function resolveDiplomacyArrival(
   else if (check.tier === 'failure') delta = -dip.expeditionStandingLossFailure;
   else delta = -dip.expeditionStandingLossCritFailure;
 
-  if (def.faction) {
-    const faction = state.factions[def.faction];
+  const legacyFactionId = def.faction;
+  if (legacyFactionId) {
+    const faction = state.factions[legacyFactionId as FactionId];
     faction.standing = clamp(faction.standing + delta, -100, 100);
   }
 
@@ -680,6 +706,149 @@ function resolveDiplomacyArrival(
 
 /** A labor run reaches Thornwatch: the Company notes your investment in homeland
  *  hands (HERITAGE_SPEC.md §5.2). The hands themselves are added on homecoming. */
+function resolveDiplomacyMissionArrival(
+  state: GameState,
+  ctx: ExpeditionContext,
+  exp: ExpeditionState,
+  def: LocationDef,
+  rng: Rng,
+  report: (icon: string, text: string) => void,
+): void {
+  const dip = TUNING.diplomacy;
+  const mission = exp.diplomacyMission?.type ?? 'talks';
+  const seat = ensureDiplomacySeat(state, def);
+  const hero = leadHero(state, exp, 'diplomacy');
+  const factionTags: string[] = def.faction ? [def.faction] : [];
+  const tags = ['diplomacy', ...def.tags, ...factionTags];
+  const relationshipMods: CheckModifier[] = [];
+  const standingMod = Math.trunc(seat.standing / 20);
+  if (standingMod !== 0) relationshipMods.push({ label: 'standing', value: standingMod });
+  if (def.faction) {
+    const factionMod = Math.trunc(state.factions[def.faction].standing / 25);
+    if (factionMod !== 0) relationshipMods.push({ label: 'faction mood', value: factionMod });
+  }
+  if (mission === 'alliance' && seat.standing < dip.allianceStandingThreshold) {
+    relationshipMods.push({
+      label: 'not yet trusted',
+      value: -Math.max(1, Math.ceil((dip.allianceStandingThreshold - seat.standing) / 15)),
+    });
+  }
+  if (mission === 'peace' && seat.grievances > 0) {
+    relationshipMods.push({ label: 'old grievances', value: -Math.ceil(seat.grievances / 2) });
+  }
+  const mods = [
+    ...traitModifiers(hero, ctx.traitDefs, 'diplomacy', tags),
+    ...relationshipMods,
+    ...escortMods(exp),
+    ...paceMods(exp),
+  ];
+  const stat = bestGoverningStat(hero, 'diplomacy');
+  const check = resolveCheck(rng, hero, 'diplomacy', stat, dip.expeditionCheckDifficulty, mods);
+  if (isSuccess(check.tier)) markSkill(hero, 'diplomacy');
+
+  let giftValue = exp.silver;
+  for (const [good, qty] of Object.entries(exp.cargo) as [GoodId, number][]) {
+    const goodDef = ctx.goodDefs.get(good);
+    if (!goodDef || qty <= 0) continue;
+    giftValue += goodDef.basePrice * qty;
+  }
+  const giftSteps = Math.floor(giftValue / dip.giftValuePerStep);
+
+  let delta = 0;
+  let grievanceDelta = 0;
+  let missionLine = '';
+  let pactLine = '';
+  switch (mission) {
+    case 'gift':
+      if (check.tier === 'critSuccess') delta = dip.expeditionStandingGainCrit + giftSteps;
+      else if (check.tier === 'success') delta = dip.expeditionStandingGainSuccess + Math.max(1, giftSteps);
+      else if (check.tier === 'failure') delta = Math.max(1, giftSteps);
+      else delta = Math.max(0, giftSteps - 1);
+      exp.cargo = {};
+      exp.silver = 0;
+      missionLine =
+        giftValue > 0 ? ` Gifts worth about ${giftValue} silver change hands.` : ' Gifts are presented.';
+      break;
+    case 'alliance':
+      if (check.tier === 'critSuccess') {
+        delta = dip.expeditionStandingGainSuccess + 2;
+        setDiplomacyPact(state, def, 'alliance');
+        pactLine = ` ${def.name} agrees to an alliance.`;
+      } else if (check.tier === 'success') {
+        delta = dip.expeditionStandingGainSuccess;
+        setDiplomacyPact(state, def, 'alliance');
+        pactLine = ` ${def.name} agrees to an alliance.`;
+      } else if (check.tier === 'failure') {
+        delta = -dip.expeditionStandingLossFailure;
+        grievanceDelta = dip.grievanceOnFailure;
+      } else {
+        delta = -dip.expeditionStandingLossCritFailure;
+        grievanceDelta = dip.grievanceOnCritFailure;
+      }
+      break;
+    case 'peace':
+      if (check.tier === 'critSuccess') {
+        delta = dip.expeditionStandingGainSuccess;
+        grievanceDelta = -dip.peaceGrievanceReliefCrit;
+        setDiplomacyPact(state, def, 'truce');
+        pactLine = ` A truce is sworn with ${def.name}.`;
+      } else if (check.tier === 'success') {
+        delta = dip.expeditionStandingGainSuccess - 1;
+        grievanceDelta = -dip.peaceGrievanceReliefSuccess;
+        setDiplomacyPact(state, def, 'truce');
+        pactLine = ` A truce is sworn with ${def.name}.`;
+      } else if (check.tier === 'failure') {
+        delta = -dip.expeditionStandingLossFailure;
+        grievanceDelta = dip.grievanceOnFailure;
+      } else {
+        delta = -dip.expeditionStandingLossCritFailure;
+        grievanceDelta = dip.grievanceOnCritFailure;
+      }
+      exp.cargo = {};
+      exp.silver = 0;
+      missionLine = giftValue > 0 ? ` Terms worth about ${giftValue} silver are offered.` : '';
+      break;
+    default:
+      if (check.tier === 'critSuccess') delta = dip.expeditionStandingGainCrit;
+      else if (check.tier === 'success') delta = dip.expeditionStandingGainSuccess;
+      else if (check.tier === 'failure') delta = -dip.expeditionStandingLossFailure;
+      else delta = -dip.expeditionStandingLossCritFailure;
+      break;
+  }
+
+  applyDiplomacyShift(state, ctx.locationDefs, def.id, delta, grievanceDelta);
+
+  let escortLine = '';
+  if (isSuccess(check.tier)) {
+    if (mission === 'talks' || mission === 'alliance') {
+      const tr = TUNING.residents.transients;
+      addTransientGroup(state, 'visitorGuards', tr.visitorGuardCount, tr.visitorGuardTurns);
+      escortLine = ` A ${def.name} honour-guard rides back with the party.`;
+    }
+  } else {
+    const stressGain =
+      check.tier === 'critFailure' ? dip.expeditionCritFailureStress : dip.expeditionFailureStress;
+    for (const id of exp.heroIds) {
+      const h = getHero(state, id);
+      h.stress = clamp(h.stress + stressGain, 0, TUNING.condition.maxStress);
+    }
+  }
+
+  const verb =
+    mission === 'gift'
+      ? 'bears gifts to'
+      : mission === 'alliance'
+        ? 'seeks alliance with'
+        : mission === 'peace'
+          ? 'seeks peace with'
+          : 'treats with';
+  report(
+    'ðŸ¤',
+    `${hero.name} ${verb} ${def.name}: ${checkBreakdown(check)}. ` +
+      `Standing ${delta >= 0 ? '+' : ''}${delta}.${missionLine}${pactLine}${escortLine}`,
+  );
+}
+
 function resolveLaborArrival(
   state: GameState,
   exp: ExpeditionState,
@@ -687,8 +856,9 @@ function resolveLaborArrival(
   report: (icon: string, text: string) => void,
 ): void {
   const count = exp.homelandLabor ?? 0;
-  if (def.faction) {
-    const faction = state.factions[def.faction];
+  const factionId = def.faction;
+  if (factionId) {
+    const faction = state.factions[factionId];
     faction.standing = clamp(faction.standing + TUNING.heritage.homelandArrivalStanding, -100, 100);
   }
   report(

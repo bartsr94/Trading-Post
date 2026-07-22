@@ -17,6 +17,7 @@ import {
   buildingEffect,
   completeConstructionIfDone,
 } from './buildings';
+import { applyDiplomacyShift } from './diplomacy';
 import { driftMarket, priceOf, prosperity } from './economy';
 import type { GoodDef } from './economy';
 import { advanceExpeditions, travelContextFor } from './expeditions';
@@ -99,6 +100,7 @@ export function outcomeCtx(
     factionNames: ctx.factionNames,
     traitNames: ctx.traitNames,
     locationNames: ctx.locationNames,
+    locationDefs: ctx.locationDefs,
     buildingNames: ctx.buildingNames,
     recruitDefs: ctx.recruitDefs,
     dependantName: ctx.dependantName,
@@ -593,14 +595,18 @@ function resolveActivity(
       const stat = bestGoverningStat(hero, 'diplomacy');
       const mods = traitModifiers(hero, ctx.traitDefs, 'diplomacy', ['diplomacy', 'CHARTER_COMPANY']);
       const check = resolveCheck(rng, hero, 'diplomacy', stat, dip.atPostCheckDifficulty, mods);
-      const faction = state.factions.CHARTER_COMPANY;
       let delta = 0;
       if (check.tier === 'critSuccess') delta = dip.atPostStandingGainCrit;
       else if (check.tier === 'success') delta = dip.atPostStandingGainSuccess;
       else if (check.tier === 'failure') delta = -dip.atPostStandingLossFailure;
       else delta = -dip.atPostStandingLossCritFailure;
       if (isSuccess(check.tier)) markSkill(hero, 'diplomacy');
-      faction.standing = clamp(faction.standing + delta, -100, 100);
+      const charterSeat = ctx.locationDefs.get('charter_landing');
+      if (charterSeat) applyDiplomacyShift(state, ctx.locationDefs, charterSeat.id, delta);
+      else {
+        const faction = state.factions.CHARTER_COMPANY;
+        faction.standing = clamp(faction.standing + delta, -100, 100);
+      }
       report(
         '🤝',
         `${hero.name} hosts the Company's factor: ${checkBreakdown(check)}. ` +

@@ -2,6 +2,7 @@ import { activeHeroes, discoveryAtLeast, livingHeroes, reserveHeroes, seasonOfTu
 import { canAdvanceTier, hasBuilding } from '../buildings';
 import { cargoUnits } from '../expeditions';
 import { isMarried } from '../family';
+import { diplomacySeatStateById } from '../diplomacy';
 import { heritageCount, nativeShare, postDefense, residentCount } from '../residents';
 import { raidThreatActive } from '../raids';
 import type { GameState } from '../types';
@@ -45,6 +46,16 @@ export function evalCondition(
       return state.factions[cond.faction].standing >= cond.value;
     case 'standingAtMost':
       return state.factions[cond.faction].standing <= cond.value;
+    case 'communityStandingAtLeast':
+      return (diplomacySeatStateById(state, cond.location)?.standing ?? 0) >= cond.value;
+    case 'communityStandingAtMost':
+      return (diplomacySeatStateById(state, cond.location)?.standing ?? 0) <= cond.value;
+    case 'communityGrievanceAtLeast':
+      return (diplomacySeatStateById(state, cond.location)?.grievances ?? 0) >= cond.value;
+    case 'communityGrievanceAtMost':
+      return (diplomacySeatStateById(state, cond.location)?.grievances ?? 0) <= cond.value;
+    case 'communityPactIs':
+      return (diplomacySeatStateById(state, cond.location)?.pact ?? 'none') === cond.pact;
     case 'axisAtLeast':
       return state.axes[cond.axis] >= cond.value;
     case 'axisAtMost':

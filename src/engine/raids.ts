@@ -7,6 +7,13 @@
 import { TUNING } from '../content/tuning';
 import { bestGoverningStat, checkBreakdown, isSuccess, resolveCheck } from './checks';
 import { buildingEffect } from './buildings';
+import {
+  applyDiplomacyShiftById,
+  diplomacySeatStateById,
+  diplomacySeatsForFaction,
+  effectiveDiplomacyStanding,
+  setDiplomacyPactById,
+} from './diplomacy';
 import { stockValue } from './economy';
 import type { GoodDef } from './economy';
 import {
@@ -21,6 +28,7 @@ import type { Rng } from './rng';
 import { clamp, FACTION_IDS, heroesAtPost, RAID_MANEUVERS } from './types';
 import type {
   BuildingId,
+  DiplomacySeatState,
   ExpeditionState,
   FactionId,
   GameState,
@@ -123,10 +131,17 @@ export function canCallRaidAlly(
   faction: FactionId,
   targetFaction?: FactionId | null,
 ): boolean {
-  return (
-    faction !== targetFaction &&
-    state.factions[faction].standing >= TUNING.raid.allyStandingRequired
-  );
+  if (faction === targetFaction) return false;
+  const seats = diplomacySeatsForFaction(state, faction);
+  if (seats.some(([, seat]) => seat.pact === 'alliance')) return true;
+  const bestStanding =
+    seats.length > 0
+      ? seats.reduce(
+          (best, [, seat]) => Math.max(best, effectiveDiplomacyStanding(state, seat)),
+          -100,
+        )
+      : state.factions[faction].standing;
+  return bestStanding >= TUNING.raid.allyStandingRequired;
 }
 
 // ------------------------------------------------------------- force selectors
@@ -169,17 +184,56 @@ export function defenderForce(state: GameState): number {
 
 /** How hostile a faction is toward the post (negative standing → positive threat). */
 function hostilityOf(state: GameState, faction: FactionId): number {
-  return Math.max(0, -state.factions[faction].standing);
+  const seats = diplomacySeatsForFaction(state, faction);
+  if (seats.length === 0) return Math.max(0, -state.factions[faction].standing);
+  return seats.reduce((maxThreat, [, seat]) => Math.max(maxThreat, communityRaidThreat(state, seat)), 0);
 }
 
 /** Factions that may raid the post right now (RAIDING_SPEC.md §6). */
+function communityRaidThreat(state: GameState, seat: DiplomacySeatState): number {
+  let threat =
+    Math.max(0, -effectiveDiplomacyStanding(state, seat)) +
+    seat.grievances * TUNING.diplomacy.raidThreatPerGrievance;
+  if (seat.pact === 'truce') {
+    threat = Math.max(0, threat - TUNING.diplomacy.truceRaidThreatReduction);
+  } else if (seat.pact === 'alliance') {
+    threat = Math.max(0, threat - TUNING.diplomacy.allianceRaidThreatReduction);
+  }
+  return threat;
+}
+
+function primaryAggressorSeatId(
+  state: GameState,
+  faction: FactionId,
+): LocationDef['id'] | undefined {
+  const seats = diplomacySeatsForFaction(state, faction);
+  if (seats.length === 0) return undefined;
+  return seats.reduce((best, candidate) =>
+    communityRaidThreat(state, candidate[1]) > communityRaidThreat(state, best[1]) ? candidate : best,
+  )[0];
+}
+
+function applyAggressorStandingShift(
+  state: GameState,
+  faction: FactionId,
+  delta: number,
+): void {
+  const seatId = primaryAggressorSeatId(state, faction);
+  if (seatId) {
+    applyDiplomacyShiftById(state, seatId, delta);
+    return;
+  }
+  state.factions[faction].standing = clamp(state.factions[faction].standing + delta, -100, 100);
+}
+
 export function eligibleAggressors(state: GameState): FactionId[] {
   const r = TUNING.raid;
+  const threatThreshold = Math.max(0, -r.hostileStandingThreshold);
   return FACTION_IDS.filter((f) => {
     if (f === 'CHARTER_COMPANY') return false; // your own charter never raids you
     if (tributeFor(state, f)) return false; // tribute is an oath of peace in either direction
+    if (hostilityOf(state, f) >= threatThreshold) return true;
     const standing = state.factions[f].standing;
-    if (standing <= r.hostileStandingThreshold) return true;
     // The Beastfolk are wild raiders: a laxer band than the seated factions.
     return f === 'BEASTFOLK' && r.beastfolkAlwaysEligible && standing < 0;
   });
@@ -525,14 +579,23 @@ export function resolveOutgoingRaid(
     log.push('Allied warriors ride with the party, adding weight but little quiet.');
   }
 
-  const faction = state.factions[targetFaction];
-  faction.standing = clamp(
-    faction.standing -
-      goal.factionStandingLoss -
-      (tributeBroken ? TUNING.raid.tributeBrokenStandingLoss : 0),
-    -100,
-    100,
-  );
+  const targetSeatId =
+    expedition.destination &&
+    diplomacySeatStateById(state, expedition.destination)?.faction === targetFaction
+      ? expedition.destination
+      : undefined;
+  const diplomaticLoss =
+    goal.factionStandingLoss + (tributeBroken ? TUNING.raid.tributeBrokenStandingLoss : 0);
+  if (targetSeatId) {
+    applyDiplomacyShiftById(state, targetSeatId, -diplomaticLoss);
+    setDiplomacyPactById(state, targetSeatId, 'none');
+  } else {
+    state.factions[targetFaction].standing = clamp(
+      state.factions[targetFaction].standing - diplomaticLoss,
+      -100,
+      100,
+    );
+  }
   if (tributeBroken) {
     log.push(`The old tribute oath with ${raid.targetName} is broken by blood.`);
   }
@@ -695,14 +758,12 @@ export function resolveIncomingRaid(
   else if (margin <= r.outcome.sackMargin) outcome = 'sacked';
   else outcome = 'held';
 
-  const faction = state.factions[raid.faction];
-
   if (outcome === 'repelled') {
     if (goal.bloody) {
-      faction.standing = clamp(faction.standing - r.bloodyStandingLoss, -100, 100);
+      applyAggressorStandingShift(state, raid.faction, -r.bloodyStandingLoss);
       log.push(`${cap(raid.band)} is thrown back with heavy losses. ${spotNote} They will not forget it.`);
     } else {
-      faction.standing = clamp(faction.standing + r.repelStandingGain, -100, 100);
+      applyAggressorStandingShift(state, raid.faction, r.repelStandingGain);
       log.push(`${cap(raid.band)} is driven off. ${spotNote} They melt back into the country empty-handed.`);
     }
     // A sally recovers a little from the field even on a clean win.
@@ -782,7 +843,7 @@ export function resolveIncomingRaid(
   }
 
   // Standing: a sack emboldens the raiders (they hold the post in contempt).
-  if (sacked) faction.standing = clamp(faction.standing - r.sackStandingLoss, -100, 100);
+  if (sacked) applyAggressorStandingShift(state, raid.faction, -r.sackStandingLoss);
 
   log.unshift(
     sacked

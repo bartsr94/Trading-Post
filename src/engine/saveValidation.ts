@@ -4,6 +4,9 @@ import {
   ACTIVITY_IDS,
   DEPENDANT_KINDS,
   DISCOVERY_STATES,
+  DIPLOMACY_MISSION_TYPES,
+  DIPLOMACY_PACTS,
+  DIPLOMACY_TRIBUTE_MODES,
   FACTION_IDS,
   GOOD_IDS,
   HERITAGES,
@@ -237,6 +240,15 @@ function validateExpedition(
   if (exp.raidManeuver !== undefined) enumValue(exp.raidManeuver, RAID_MANEUVERS, `${path}.raidManeuver`);
   if (exp.raidRally !== undefined) boolean(exp.raidRally, `${path}.raidRally`);
   if (exp.raidAlly !== undefined) enumValue(exp.raidAlly, FACTION_IDS, `${path}.raidAlly`);
+  if (exp.diplomacyMission !== undefined) {
+    const mission = record(exp.diplomacyMission, `${path}.diplomacyMission`);
+    const type = enumValue(mission.type, DIPLOMACY_MISSION_TYPES, `${path}.diplomacyMission.type`);
+    if (type === 'tribute') {
+      enumValue(mission.mode, DIPLOMACY_TRIBUTE_MODES, `${path}.diplomacyMission.mode`);
+    } else if (mission.mode !== undefined) {
+      enumValue(mission.mode, DIPLOMACY_TRIBUTE_MODES, `${path}.diplomacyMission.mode`);
+    }
+  }
   if (exp.surveyResult !== undefined) validateSurvey(exp.surveyResult, `${path}.surveyResult`, maxCell);
   return { id, heroIds: party };
 }
@@ -293,6 +305,16 @@ export function validateGameState(value: unknown): GameState {
   for (const faction of FACTION_IDS) {
     const entry = record(factions[faction], `save.factions.${faction}`);
     finite(entry.standing, `save.factions.${faction}.standing`);
+  }
+
+  const diplomacySeats = record(state.diplomacySeats, 'save.diplomacySeats');
+  for (const [seatId, seatValue] of Object.entries(diplomacySeats)) {
+    const seat = record(seatValue, `save.diplomacySeats.${seatId}`);
+    enumValue(seat.faction, FACTION_IDS, `save.diplomacySeats.${seatId}.faction`);
+    finite(seat.standing, `save.diplomacySeats.${seatId}.standing`);
+    nonNegativeInteger(seat.grievances, `save.diplomacySeats.${seatId}.grievances`);
+    enumValue(seat.pact, DIPLOMACY_PACTS, `save.diplomacySeats.${seatId}.pact`);
+    nonNegativeInteger(seat.lastContactTurn, `save.diplomacySeats.${seatId}.lastContactTurn`);
   }
 
   const dependantIds = array(state.dependants, 'save.dependants').map((dep, index) =>

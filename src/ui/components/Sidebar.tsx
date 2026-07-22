@@ -11,6 +11,7 @@ import { SettingsMenu } from './SettingsMenu';
 const NAV_ITEMS: { screen: Screen; icon: IconName; label: string }[] = [
   { screen: 'post', icon: 'post', label: 'Outpost' },
   { screen: 'assignments', icon: 'assignments', label: 'Assignments' },
+  { screen: 'diplomacy', icon: 'diplomacy', label: 'Diplomacy' },
   { screen: 'characters', icon: 'characters', label: 'Characters' },
   { screen: 'buildings', icon: 'build', label: 'Buildings' },
   { screen: 'people', icon: 'people', label: 'People' },

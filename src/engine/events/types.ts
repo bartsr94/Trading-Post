@@ -5,6 +5,7 @@ import type {
   AxisId,
   BuildingId,
   DependantKind,
+  DiplomacyPact,
   DiscoveryState,
   ExpeditionKind,
   ExpeditionState,
@@ -57,6 +58,11 @@ export type Condition =
   | { type: 'anyHeroSkillAtLeast'; skill: SkillId; value: number }
   | { type: 'standingAtLeast'; faction: FactionId; value: number }
   | { type: 'standingAtMost'; faction: FactionId; value: number }
+  | { type: 'communityStandingAtLeast'; location: LocationId; value: number }
+  | { type: 'communityStandingAtMost'; location: LocationId; value: number }
+  | { type: 'communityGrievanceAtLeast'; location: LocationId; value: number }
+  | { type: 'communityGrievanceAtMost'; location: LocationId; value: number }
+  | { type: 'communityPactIs'; location: LocationId; pact: DiplomacyPact }
   | { type: 'axisAtLeast'; axis: AxisId; value: number }
   | { type: 'axisAtMost'; axis: AxisId; value: number }
   | { type: 'flag'; flag: string }
@@ -112,6 +118,9 @@ export type Outcome =
   | { type: 'silver'; delta: number }
   | { type: 'good'; good: GoodId; delta: number }
   | { type: 'standing'; faction: FactionId; delta: number }
+  | { type: 'communityStanding'; location: LocationId; delta: number }
+  | { type: 'communityGrievance'; location: LocationId; delta: number }
+  | { type: 'communityPact'; location: LocationId; pact: DiplomacyPact }
   | { type: 'axis'; axis: AxisId; delta: number }
   | { type: 'addTrait'; trait: TraitId }
   | { type: 'removeTrait'; trait: TraitId }

@@ -1,0 +1,18 @@
+# Claude Code context ignore file (gitignore-style patterns).
+# Keep generated artifacts and large deps out of LLM context by default.
+
+# Dependencies / builds
+node_modules/
+dist/
+*.tsbuildinfo
+*.local
+
+# Test artifacts
+test-results/
+playwright-report/
+playwright/.cache/
+coverage/
+
+# Tool caches / OS noise
+.npm-cache/
+.DS_Store

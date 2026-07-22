@@ -14,6 +14,7 @@ const NAME_CTX = {
   factionNames: TEST_CONTENT.factionNames,
   traitNames: TEST_CONTENT.traitNames,
   locationNames: TEST_CONTENT.locationNames,
+  locationDefs: TEST_CONTENT.locationDefs,
   buildingNames: TEST_CONTENT.buildingNames,
   recruitDefs: TEST_CONTENT.recruitDefs,
   dependantName: TEST_CONTENT.dependantName,

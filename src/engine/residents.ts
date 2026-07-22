@@ -4,6 +4,7 @@
 
 import { TUNING } from '../content/tuning';
 import { addBuildProgress, buildingEffect } from './buildings';
+import { diplomacySeatStateById, effectiveDiplomacyStanding } from './diplomacy';
 import { clamp, discoveryAtLeast, RESIDENT_ROLES, stanceOf } from './types';
 import type {
   GameState,
@@ -322,9 +323,22 @@ export function hireError(
   if (!loc || !discoveryAtLeast(loc.discovery, 'visited')) {
     return 'You have not reached their people yet.';
   }
-  const standing = state.factions[src.faction].standing;
-  if (stanceOf(standing) === 'Hostile') return 'They will not send their people to you.';
-  if (standing < TUNING.heritage.localHireStanding) return 'They do not trust you enough yet.';
+  const seat = diplomacySeatStateById(state, src.seat);
+  const baseStanding = state.factions[src.faction].standing;
+  const standing = seat ? effectiveDiplomacyStanding(state, seat) : baseStanding;
+  const allianceBonus = seat?.pact === 'alliance' ? TUNING.diplomacy.allianceHiringBonus : 0;
+  const grievancePenalty =
+    (seat?.grievances ?? 0) * TUNING.diplomacy.grievanceHiringPenaltyPerPoint;
+  const effectiveTrust = standing + allianceBonus - grievancePenalty;
+  if (seat?.pact !== 'alliance' && stanceOf(baseStanding) === 'Hostile') {
+    return 'They will not send their people to you.';
+  }
+  if (stanceOf(effectiveTrust) === 'Hostile') return 'They will not send their people to you.';
+  if (effectiveTrust < TUNING.heritage.localHireStanding) {
+    return seat && seat.grievances >= TUNING.diplomacy.grievanceWarningThreshold
+      ? 'They remember old slights too clearly to send their people.'
+      : 'They do not trust you enough yet.';
+  }
   if (state.silver < localHireCost(role, count)) return 'Not enough silver.';
   if (residentTotal(state) + count > residentCap(state)) return 'No room for them yet.';
   return null;

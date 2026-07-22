@@ -4,6 +4,11 @@
 import { TUNING } from '../../content/tuning';
 import { addBuildProgress, advanceTier, grantBuilding } from '../buildings';
 import {
+  applyDiplomacyShift,
+  diplomacySeatStateById,
+  setDiplomacyPactById,
+} from '../diplomacy';
+import {
   addChild,
   addDependant,
   comeOfAge,
@@ -25,6 +30,7 @@ import type {
   Gender,
   GoodId,
   Heritage,
+  LocationDef,
   LocationId,
   RecruitDef,
 } from '../types';
@@ -39,6 +45,7 @@ export interface OutcomeContext {
   factionNames: ReadonlyMap<string, string>;
   traitNames: ReadonlyMap<string, string>;
   locationNames: ReadonlyMap<LocationId, string>;
+  locationDefs: ReadonlyMap<LocationId, LocationDef>;
   buildingNames: ReadonlyMap<BuildingId, string>;
   /** Recruit templates by id, so `recruitCharacter` stays content-free. */
   recruitDefs: ReadonlyMap<string, RecruitDef>;
@@ -73,6 +80,36 @@ export function applyOutcomes(
         faction.standing = clamp(faction.standing + outcome.delta, -100, 100);
         log.push(
           `${ctx.factionNames.get(outcome.faction) ?? outcome.faction} standing ${signed(outcome.delta)}`,
+        );
+        break;
+      }
+      case 'communityStanding': {
+        const def = ctx.locationDefs.get(outcome.location);
+        if (!def?.faction) break;
+        applyDiplomacyShift(state, ctx.locationDefs, outcome.location, outcome.delta);
+        log.push(
+          `${ctx.locationNames.get(outcome.location) ?? outcome.location} standing ${signed(outcome.delta)}`,
+        );
+        break;
+      }
+      case 'communityGrievance': {
+        const seat = diplomacySeatStateById(state, outcome.location);
+        if (!seat) break;
+        seat.grievances = Math.max(0, seat.grievances + outcome.delta);
+        seat.lastContactTurn = state.turn;
+        log.push(
+          `${ctx.locationNames.get(outcome.location) ?? outcome.location} ${outcome.delta >= 0 ? 'remembers the slight' : 'lets an old slight rest'}`,
+        );
+        break;
+      }
+      case 'communityPact': {
+        const seat = diplomacySeatStateById(state, outcome.location);
+        if (!seat) break;
+        setDiplomacyPactById(state, outcome.location, outcome.pact);
+        log.push(
+          outcome.pact === 'none'
+            ? `${ctx.locationNames.get(outcome.location) ?? outcome.location} pact lapses`
+            : `${ctx.locationNames.get(outcome.location) ?? outcome.location} pact: ${outcome.pact}`,
         );
         break;
       }

@@ -5,7 +5,7 @@ import type { BuildingDefData, FactionId, Heritage, TierRequirement } from '../e
 
 export const TUNING = {
   save: {
-    version: 18,
+    version: 20,
     autosaveKey: 'trading-post-save',
     /** Manual import guard; current saves are far smaller than five MiB. */
     maxImportBytes: 5 * 1024 * 1024,
@@ -176,6 +176,31 @@ export const TUNING = {
     expeditionStandingLossCritFailure: 4,
     expeditionFailureStress: 1,
     expeditionCritFailureStress: 2,
+    /** Share of a seat-level diplomatic shift that becomes wider faction sentiment. */
+    factionSentimentShare: 0.5,
+    /** Share of a seat-level diplomatic shift that spills into sibling communities. */
+    siblingSpilloverShare: 0.25,
+    /** How much gift value roughly maps to one standing step. */
+    giftValuePerStep: 30,
+    /** Standing normally needed before an alliance proposal is realistic. */
+    allianceStandingThreshold: 35,
+    /** Peace talks trim accumulated grievances by this much on success / crit. */
+    peaceGrievanceReliefSuccess: 2,
+    peaceGrievanceReliefCrit: 4,
+    /** Failed peace / alliance missions may add grievance. */
+    grievanceOnFailure: 1,
+    grievanceOnCritFailure: 2,
+    /** When grievances reach this, UI begins warning that slights are remembered. */
+    grievanceWarningThreshold: 3,
+    /** Alliances make a community more willing to send local hands. */
+    allianceHiringBonus: 10,
+    /** Old grudges erode practical trust even after standing recovers. */
+    grievanceHiringPenaltyPerPoint: 3,
+    /** Each remembered slight adds weight to that community's raid appetite. */
+    raidThreatPerGrievance: 4,
+    /** Truces and alliances sharply suppress a community's local raid threat. */
+    truceRaidThreatReduction: 25,
+    allianceRaidThreatReduction: 45,
   },
 
   residents: {

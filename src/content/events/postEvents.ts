@@ -76,7 +76,7 @@ export const POST_EVENTS: GameEvent[] = [
             text: "{hero} lays it out plainly — the trade, the works, the people who now call this place home — and the factor barely finishes reading before reaching for the seal. The Post is a Settlement now, chartered and named, and word of the charter travels faster than the ink dries.",
             outcomes: [
               { type: 'advanceTier' },
-              { type: 'standing', faction: 'CHARTER_COMPANY', delta: 2 },
+              { type: 'communityStanding', location: 'charter_landing', delta: 2 },
               { type: 'history', text: 'Petitioned the Company and founded the Settlement.' },
             ],
           },
@@ -95,7 +95,7 @@ export const POST_EVENTS: GameEvent[] = [
             text: "A clumsy answer to a pointed question leaves the factor doubting the whole account. The petition is refused outright, and the Company makes a note of the doubt for later.",
             outcomes: [
               { type: 'stress', delta: 2, allHeroes: true },
-              { type: 'standing', faction: 'CHARTER_COMPANY', delta: -2 },
+              { type: 'communityStanding', location: 'charter_landing', delta: -2 },
             ],
           },
         },
@@ -174,7 +174,7 @@ export const POST_EVENTS: GameEvent[] = [
     illustration: 'river_canoes',
     title: 'Canoes at Dawn',
     text: 'Four canoes ground on the mud below the post, low in the water with bales of winter furs. Njaro-Matu has decided you are worth a look. Their trade-speaker waits at the fire, studying your tents, your goods, your faces — pricing all of it.',
-    conditions: [{ type: 'standingAtMost', faction: 'RIVER_CLANS', value: 80 }],
+    conditions: [{ type: 'communityStandingAtMost', location: 'river_meet', value: 80 }],
     weight: 12,
     cooldownTurns: 5,
     binding: { type: 'highestSkill', skill: 'bargain' },
@@ -188,7 +188,7 @@ export const POST_EVENTS: GameEvent[] = [
             outcomes: [
               { type: 'good', good: 'furs', delta: 6 },
               { type: 'silver', delta: -20 },
-              { type: 'standing', faction: 'RIVER_CLANS', delta: 5 },
+              { type: 'communityStanding', location: 'river_meet', delta: 5 },
             ],
           },
           success: {
@@ -196,7 +196,7 @@ export const POST_EVENTS: GameEvent[] = [
             outcomes: [
               { type: 'good', good: 'furs', delta: 4 },
               { type: 'silver', delta: -25 },
-              { type: 'standing', faction: 'RIVER_CLANS', delta: 3 },
+              { type: 'communityStanding', location: 'river_meet', delta: 3 },
             ],
           },
           failure: {
@@ -204,7 +204,7 @@ export const POST_EVENTS: GameEvent[] = [
             outcomes: [
               { type: 'good', good: 'furs', delta: 1 },
               { type: 'silver', delta: -12 },
-              { type: 'standing', faction: 'RIVER_CLANS', delta: -2 },
+              { type: 'communityStanding', location: 'river_meet', delta: -2 },
             ],
           },
         },
@@ -218,7 +218,7 @@ export const POST_EVENTS: GameEvent[] = [
               { type: 'good', good: 'grain', delta: -3 },
               { type: 'good', good: 'tools', delta: -1 },
               { type: 'good', good: 'furs', delta: 2 },
-              { type: 'standing', faction: 'RIVER_CLANS', delta: 8 },
+              { type: 'communityStanding', location: 'river_meet', delta: 8 },
               { type: 'axis', axis: 'integration', delta: 1 },
             ],
           },
@@ -232,7 +232,7 @@ export const POST_EVENTS: GameEvent[] = [
             outcomes: [
               { type: 'good', good: 'furs', delta: 2 },
               { type: 'silver', delta: -14 },
-              { type: 'standing', faction: 'RIVER_CLANS', delta: -3 },
+              { type: 'communityStanding', location: 'river_meet', delta: -3 },
               { type: 'axis', axis: 'integration', delta: -1 },
             ],
           },
@@ -315,7 +315,7 @@ export const POST_EVENTS: GameEvent[] = [
             text: 'Forty pieces, counted and sealed, with a letter of confident projections. Money speaks the Directors’ own tongue; the reply, months from now, will be warmer.',
             outcomes: [
               { type: 'silver', delta: -40 },
-              { type: 'standing', faction: 'CHARTER_COMPANY', delta: 10 },
+              { type: 'communityStanding', location: 'charter_landing', delta: 10 },
             ],
           },
         },
@@ -326,15 +326,15 @@ export const POST_EVENTS: GameEvent[] = [
         outcomes: {
           critSuccess: {
             text: '{hero} writes of fur routes secured and native partnerships ripening — every word true, arranged like a shop window. A Director quotes it at the quarterly meeting.',
-            outcomes: [{ type: 'standing', faction: 'CHARTER_COMPANY', delta: 8 }],
+            outcomes: [{ type: 'communityStanding', location: 'charter_landing', delta: 8 }],
           },
           success: {
             text: 'Honest difficulties, honest progress, and a request for patience phrased as opportunity. It will hold them. For now.',
-            outcomes: [{ type: 'standing', faction: 'CHARTER_COMPANY', delta: 3 }],
+            outcomes: [{ type: 'communityStanding', location: 'charter_landing', delta: 3 }],
           },
           failure: {
             text: 'The report reads as excuses because, in fairness, it is excuses. You can almost hear the Directors’ pens scratching notes in the margin.',
-            outcomes: [{ type: 'standing', faction: 'CHARTER_COMPANY', delta: -6 }],
+            outcomes: [{ type: 'communityStanding', location: 'charter_landing', delta: -6 }],
           },
         },
       },
@@ -343,7 +343,7 @@ export const POST_EVENTS: GameEvent[] = [
         outcomes: {
           success: {
             text: 'The packet-boat leaves empty-handed. Silence is an answer too, and the Company keeps a file of answers.',
-            outcomes: [{ type: 'standing', faction: 'CHARTER_COMPANY', delta: -8 }],
+            outcomes: [{ type: 'communityStanding', location: 'charter_landing', delta: -8 }],
           },
         },
       },
@@ -463,7 +463,7 @@ export const POST_EVENTS: GameEvent[] = [
             text: 'The knots are a grave-warning — and a boundary. {hero} works only the gravel outside the marked line, taking what the water already carried out. Amber in hand, taboo unbroken, and knowledge of the Bejasi Hills folk’s marks that few strangers hold.',
             outcomes: [
               { type: 'good', good: 'amber', delta: 4 },
-              { type: 'standing', faction: 'OLD_PEOPLE', delta: 3 },
+              { type: 'communityStanding', location: 'elder_grove', delta: 3 },
               { type: 'history', text: 'Read the boundary-cords at the amber stream.' },
             ],
           },
@@ -478,7 +478,7 @@ export const POST_EVENTS: GameEvent[] = [
             text: 'The cords keep their meaning. You dig, fill a pouch — and find, on leaving, that every cord along your path has been freshly cut. Someone watched the whole time.',
             outcomes: [
               { type: 'good', good: 'amber', delta: 2 },
-              { type: 'standing', faction: 'OLD_PEOPLE', delta: -8 },
+              { type: 'communityStanding', location: 'elder_grove', delta: -8 },
               { type: 'stress', delta: 2 },
             ],
           },
@@ -492,7 +492,7 @@ export const POST_EVENTS: GameEvent[] = [
             text: 'No reading, no offerings — shovels. The company strips the gravel bed by dusk and marches out with full pouches and the small conviction of being watched all the way home.',
             outcomes: [
               { type: 'good', good: 'amber', delta: 3 },
-              { type: 'standing', faction: 'OLD_PEOPLE', delta: -5 },
+              { type: 'communityStanding', location: 'elder_grove', delta: -5 },
             ],
           },
           failure: {
@@ -500,7 +500,7 @@ export const POST_EVENTS: GameEvent[] = [
             outcomes: [
               { type: 'good', good: 'amber', delta: 1 },
               { type: 'health', delta: -2 },
-              { type: 'standing', faction: 'OLD_PEOPLE', delta: -5 },
+              { type: 'communityStanding', location: 'elder_grove', delta: -5 },
             ],
           },
         },
@@ -557,7 +557,7 @@ export const POST_EVENTS: GameEvent[] = [
             text: 'She arrives in her own canoe, charges like a duchess, and cures the post in four days of smoke and scalding tea. She leaves with your silver and, oddly, a higher opinion of you for asking.',
             outcomes: [
               { type: 'silver', delta: -25 },
-              { type: 'standing', faction: 'RIVER_CLANS', delta: 4 },
+              { type: 'communityStanding', location: 'river_meet', delta: 4 },
               { type: 'axis', axis: 'integration', delta: 1 },
             ],
           },

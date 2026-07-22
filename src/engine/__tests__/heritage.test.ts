@@ -46,6 +46,7 @@ function outcomeCtx(state: GameState): OutcomeContext {
     factionNames: new Map(),
     traitNames: new Map(),
     locationNames: new Map(),
+    locationDefs: TEST_CONTENT.locationDefs,
     buildingNames: new Map(),
     recruitDefs: new Map(),
     dependantName: () => 'Test',
@@ -147,8 +148,9 @@ describe('local (native) hiring', () => {
     s.factions.HILL_TRIBES.standing = -60;
     expect(hireError(s, 'farmers', 1, 'dustwalker')).toMatch(/will not send/);
 
-    // Reached and warm.
+    // Reached and warm, both in the wider faction and at this specific seat.
     s.factions.HILL_TRIBES.standing = 10;
+    s.diplomacySeats.hill_fort.standing = 10;
     expect(hireError(s, 'farmers', 1, 'dustwalker')).toBeNull();
   });
 

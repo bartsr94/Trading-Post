@@ -2,6 +2,7 @@
 // caller so the engine never imports content beyond tuning numbers.
 
 import { TUNING } from '../content/tuning';
+import { createDiplomacySeatStates } from './diplomacy';
 import { freshResidents } from './residents';
 import { mapKnowledgeFromDiscovery } from './map';
 import { GOOD_IDS, FACTION_IDS } from './types';
@@ -81,6 +82,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     expeditions: [],
     nextExpeditionId: 1,
     factions,
+    diplomacySeats: createDiplomacySeatStates(options.locationDefs ?? [], options.startingStandings),
     dependants: [],
     nextDependantId: 1,
     nextCharacterId: 1,

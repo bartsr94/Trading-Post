@@ -53,6 +53,23 @@ export const FACTION_IDS = [
 ] as const;
 export type FactionId = (typeof FACTION_IDS)[number];
 
+export const DIPLOMACY_PACTS = ['none', 'alliance', 'truce'] as const;
+export type DiplomacyPact = (typeof DIPLOMACY_PACTS)[number];
+
+export const DIPLOMACY_MISSION_TYPES = ['talks', 'gift', 'alliance', 'peace', 'tribute'] as const;
+export type DiplomacyMissionType = (typeof DIPLOMACY_MISSION_TYPES)[number];
+
+export const DIPLOMACY_TRIBUTE_MODES = ['offer', 'demand_end', 'demand_continue'] as const;
+export type DiplomacyTributeMode = (typeof DIPLOMACY_TRIBUTE_MODES)[number];
+
+export interface DiplomacySeatState {
+  faction: FactionId;
+  standing: number; // -100..+100
+  grievances: number;
+  pact: DiplomacyPact;
+  lastContactTurn: number;
+}
+
 export const SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const;
 export type Season = (typeof SEASONS)[number];
 
@@ -263,6 +280,8 @@ export interface ExpeditionState {
   raidRally?: boolean;
   /** Friendly faction asked to lend warriors to the raid, if any. */
   raidAlly?: FactionId;
+  /** Diplomacy mission payload; absent on older saves / generic envoys. */
+  diplomacyMission?: { type: DiplomacyMissionType; mode?: DiplomacyTributeMode };
   /** Survey knowledge carried home by an exploration party. */
   surveyResult?: SurveyResult;
 }
@@ -612,6 +631,8 @@ export interface GameState {
   /** Monotonic counter for expedition ids. */
   nextExpeditionId: number;
   factions: Record<FactionId, FactionState>;
+  /** Per-community diplomacy state for authored seats with a faction. */
+  diplomacySeats: Record<LocationId, DiplomacySeatState>;
   /** Named family attached to characters (CHARACTERS_SPEC.md §3). */
   dependants: Dependant[];
   /** Monotonic counter for dependant ids. */

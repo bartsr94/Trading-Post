@@ -14,7 +14,7 @@ export const FAMILY_EVENTS: GameEvent[] = [
     title: 'An Offer of Marriage',
     text: 'A canoe brings a clan-mother of the Tributary Towns and, behind her, a son or daughter dressed for a first meeting. The river towns would bind your post to theirs the old way — a marriage, and with it a standing claim on each other’s loyalty. {hero} is the one they have watched and settled upon. The clan-mother waits, unhurried, for an answer that both peoples will remember.',
     conditions: [
-      { type: 'standingAtLeast', faction: 'RIVER_CLANS', value: 30 },
+      { type: 'communityStandingAtLeast', location: 'river_meet', value: 30 },
       { type: 'locationDiscovery', location: 'river_meet', atLeast: 'visited' },
       { type: 'heroUnmarried' },
     ],
@@ -30,7 +30,7 @@ export const FAMILY_EVENTS: GameEvent[] = [
             text: 'The vows are spoken by the water at dawn, in two tongues. {hero} takes a partner of the river towns into the household, and the clan-mother names your post kin. The Company’s factor, when he hears, will purse his lips — a foothold gone a little native — but the river will run friendlier now.',
             outcomes: [
               { type: 'formUnion', source: 'alliance', heritage: 'kiswani' },
-              { type: 'standing', faction: 'RIVER_CLANS', delta: 10 },
+              { type: 'communityStanding', location: 'river_meet', delta: 10 },
               { type: 'addTrait', trait: 'wed_river' },
               { type: 'history', text: 'Wed into the Tributary Towns, sealing the river alliance.' },
             ],
@@ -42,7 +42,7 @@ export const FAMILY_EVENTS: GameEvent[] = [
         outcomes: {
           success: {
             text: 'You refuse as gently as the thing can be refused, with gifts and long words. The clan-mother hears you out, then leaves without them. A door has not slammed — but it has closed, and both of you know it.',
-            outcomes: [{ type: 'standing', faction: 'RIVER_CLANS', delta: -4 }],
+            outcomes: [{ type: 'communityStanding', location: 'river_meet', delta: -4 }],
           },
         },
       },
@@ -56,7 +56,7 @@ export const FAMILY_EVENTS: GameEvent[] = [
     text: 'It has been coming for a season: {hero} and one of the river folk who trades at the gate have grown easy in each other’s company. There is no clan-mother here, no ceremony to arrange — only the frontier custom of a hearth-companion, a household kept by contract and quiet consent. It asks nothing of the towns and offers nothing to the Company. It is simply a life, chosen.',
     conditions: [
       { type: 'locationDiscovery', location: 'river_meet', atLeast: 'visited' },
-      { type: 'standingAtLeast', faction: 'RIVER_CLANS', value: -14 },
+      { type: 'communityStandingAtLeast', location: 'river_meet', value: -14 },
       { type: 'heroUnmarried' },
     ],
     weight: 8,

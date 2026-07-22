@@ -4,6 +4,7 @@ import { CheatConsole } from './ui/components/CheatConsole';
 import { AssignmentBoard } from './ui/screens/AssignmentBoard';
 import { BuildingsScreen } from './ui/screens/BuildingsScreen';
 import { CharactersScreen } from './ui/screens/CharactersScreen';
+import { DiplomacyScreen } from './ui/screens/DiplomacyScreen';
 import { EventPanel } from './ui/screens/EventPanel';
 import { GameOver } from './ui/screens/GameOver';
 import { HeroSheet } from './ui/screens/HeroSheet';
@@ -68,6 +69,7 @@ export function App() {
         <div className={screen === 'map' ? 'content-inner content-inner--wide' : 'content-inner'}>
           {screen === 'post' && <PostOverview game={game} />}
           {screen === 'assignments' && <AssignmentBoard game={game} />}
+          {screen === 'diplomacy' && <DiplomacyScreen game={game} />}
           {screen === 'characters' && <CharactersScreen game={game} />}
           {screen === 'buildings' && <BuildingsScreen game={game} />}
           {screen === 'people' && <PeopleScreen game={game} />}

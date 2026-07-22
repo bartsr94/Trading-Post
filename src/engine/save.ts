@@ -2,6 +2,7 @@
 // stub from day one. localStorage autosave each turn + manual export/import.
 
 import { TUNING } from '../content/tuning';
+import { createDiplomacySeatStates } from './diplomacy';
 import { freshResidents, residentTotal } from './residents';
 import { journeyTurns, mapKnowledgeFromDiscovery, mergeSurveyCells } from './map';
 import { createLocationStates } from './state';
@@ -13,6 +14,7 @@ import type {
   GameState,
   Heritage,
   LocationDef,
+  LocationId,
   MapFeatureDef,
   MapRegionDef,
   RaidManeuver,
@@ -122,6 +124,12 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
         break;
       case 17:
         current = migrateV17toV18(current, ctx);
+        break;
+      case 18:
+        current = migrateV18toV19(current, ctx);
+        break;
+      case 19:
+        current = migrateV19toV20(current, ctx);
         break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
@@ -478,6 +486,51 @@ function migrateV17toV18(save: GameState, ctx?: MigrationContext): GameState {
             baselineKnowledge.surveyedCells,
           ),
         },
+  };
+}
+
+/** v19 adds community-level diplomacy state on top of faction sentiment. */
+function migrateV18toV19(save: GameState, ctx?: MigrationContext): GameState {
+  const locations = ctx?.locationDefs ?? [];
+  return {
+    ...save,
+    saveVersion: 19,
+    diplomacySeats: createDiplomacySeatStates(
+      locations,
+      Object.fromEntries(
+        Object.entries(save.factions).map(([id, faction]) => [id, faction.standing]),
+      ) as Partial<Record<FactionId, number>>,
+    ),
+    expeditions: save.expeditions.map((expedition) =>
+      expedition.kind === 'diplomacy' && !expedition.diplomacyMission
+        ? { ...expedition, diplomacyMission: { type: 'talks' } }
+        : expedition,
+    ),
+  };
+}
+
+/** v20 records each diplomacy seat's parent faction for downstream systems. */
+function migrateV19toV20(save: GameState, ctx?: MigrationContext): GameState {
+  const locations = ctx?.locationDefs ?? [];
+  const seeded = createDiplomacySeatStates(
+    locations,
+    Object.fromEntries(
+      Object.entries(save.factions).map(([id, faction]) => [id, faction.standing]),
+    ) as Partial<Record<FactionId, number>>,
+  );
+  for (const [seatId, seat] of Object.entries(save.diplomacySeats ?? {})) {
+    const seededSeat = seeded[seatId as LocationId];
+    if (!seededSeat) continue;
+    seeded[seatId as LocationId] = {
+      ...seededSeat,
+      ...(seat as Partial<typeof seededSeat>),
+      faction: seededSeat.faction,
+    };
+  }
+  return {
+    ...save,
+    saveVersion: 20,
+    diplomacySeats: seeded,
   };
 }
 

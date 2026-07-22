@@ -49,6 +49,7 @@ const CHEAT_MODE_KEY = 'tp_cheat_mode';
 export type Screen =
   | 'post'
   | 'assignments'
+  | 'diplomacy'
   | 'characters'
   | 'buildings'
   | 'people'

@@ -4,6 +4,7 @@ import { FACTION_DEFS } from '../../content/factions';
 import { LOCATIONS, LOCATION_DEFS } from '../../content/locations';
 import { MAP_REGIONS } from '../../content/map';
 import { TUNING } from '../../content/tuning';
+import { diplomacySeatState } from '../../engine/diplomacy';
 import { cargoCapacity, dispatchError, laborRunCost } from '../../engine/expeditions';
 import {
   journeyTurns,
@@ -39,6 +40,7 @@ const DISCOVERY_LABELS = {
 
 type PlaceAction = 'explore' | 'diplomacy' | 'labor' | 'courtship' | 'raid';
 type PanelMode = 'explore' | 'place' | 'road';
+type FogCell = { index: number; points: string };
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -46,6 +48,19 @@ function clamp(value: number, min: number, max: number): number {
 
 function svgPoint(point: MapPoint): { x: number; y: number } {
   return { x: point.x * MAP_W, y: point.y * MAP_H };
+}
+
+function hexPolygonPoints(centerX: number, centerY: number, radiusX: number, radiusY: number): string {
+  return [
+    [centerX - radiusX, centerY],
+    [centerX - radiusX * 0.5, centerY - radiusY],
+    [centerX + radiusX * 0.5, centerY - radiusY],
+    [centerX + radiusX, centerY],
+    [centerX + radiusX * 0.5, centerY + radiusY],
+    [centerX - radiusX * 0.5, centerY + radiusY],
+  ]
+    .map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`)
+    .join(' ');
 }
 
 function expeditionName(game: GameState, heroIds: string[]): string {
@@ -76,6 +91,7 @@ export function MapScreen({ game }: { game: GameState }) {
   const available = heroesAtPost(game);
   const selected = selectedId ? LOCATION_DEFS.get(selectedId) ?? null : null;
   const selectedLoc = selected ? game.locations[selected.id] : undefined;
+  const selectedSeat = selected && selected.faction ? diplomacySeatState(game, selected) : null;
   const home = LOCATION_DEFS.get(TUNING.map.homeLocationId)!;
   const activeTarget = selected?.mapPoint ?? target;
   const activeRegion = activeTarget ? regionAt(activeTarget, MAP_REGIONS) : undefined;
@@ -92,21 +108,31 @@ export function MapScreen({ game }: { game: GameState }) {
     () => new Set(game.mapKnowledge?.surveyedCells ?? []),
     [game.mapKnowledge?.surveyedCells],
   );
-  const fogCells = useMemo(() => {
+  const fogLayers = useMemo(() => {
     const { width, height } = TUNING.map.fogGrid;
-    return Array.from({ length: width * height }, (_, index) => {
-      if (surveyed.has(index)) return null;
+    const cellWidth = MAP_W / width;
+    const cellHeight = MAP_H / height;
+    const radiusX = cellWidth * 0.72;
+    const radiusY = cellHeight * 0.62;
+    const reachable: FogCell[] = [];
+    const locked: FogCell[] = [];
+
+    for (let index = 0; index < width * height; index += 1) {
+      if (surveyed.has(index)) continue;
       const point = mapCellCenter(index);
       const coords = mapCellCoordinates(index);
-      return {
+      const rowOffset = (coords.y % 2 === 0 ? -1 : 1) * cellWidth * 0.16;
+      const centerX = ((coords.x + 0.5) / width) * MAP_W + rowOffset;
+      const centerY = ((coords.y + 0.5) / height) * MAP_H;
+      const cell = {
         index,
-        x: (coords.x / width) * MAP_W,
-        y: (coords.y / height) * MAP_H,
-        width: MAP_W / width + 0.5,
-        height: MAP_H / height + 0.5,
-        reachable: pointReachable(game, point, MAP_REGIONS),
+        points: hexPolygonPoints(centerX, centerY, radiusX, radiusY),
       };
-    });
+      if (pointReachable(game, point, MAP_REGIONS)) reachable.push(cell);
+      else locked.push(cell);
+    }
+
+    return { reachable, locked };
   }, [game, surveyed]);
 
   const viewWidth = MAP_W / zoom;
@@ -198,7 +224,13 @@ export function MapScreen({ game }: { game: GameState }) {
             pace,
           }
         : action === 'diplomacy' && selected
-          ? { kind: 'diplomacy' as const, destination: selected.id, heroIds: party, pace }
+          ? {
+              kind: 'diplomacy' as const,
+              destination: selected.id,
+              heroIds: party,
+              pace,
+              diplomacyMission: { type: 'talks' as const },
+            }
         : action === 'labor' && selected
             ? {
                 kind: 'labor' as const,
@@ -320,19 +352,15 @@ export function MapScreen({ game }: { game: GameState }) {
         >
           <image href={ashmarkMap} x="0" y="0" width={MAP_W} height={MAP_H} preserveAspectRatio="none" />
 
-          <g className="map-fog-layer" pointerEvents="none">
-            {fogCells.map((cell) =>
-              cell ? (
-                <rect
-                  key={cell.index}
-                  x={cell.x}
-                  y={cell.y}
-                  width={cell.width}
-                  height={cell.height}
-                  className={cell.reachable ? 'map-fog' : 'map-fog locked'}
-                />
-              ) : null,
-            )}
+          <g className="map-fog-layer map-fog-layer--reachable" pointerEvents="none">
+            {fogLayers.reachable.map((cell) => (
+              <polygon key={cell.index} points={cell.points} className="map-fog" />
+            ))}
+          </g>
+          <g className="map-fog-layer map-fog-layer--locked" pointerEvents="none">
+            {fogLayers.locked.map((cell) => (
+              <polygon key={cell.index} points={cell.points} className="map-fog locked" />
+            ))}
           </g>
 
           <g className="map-expeditions" pointerEvents="none">
@@ -485,10 +513,18 @@ export function MapScreen({ game }: { game: GameState }) {
                 <p className="dim map-description">{selected.blurb}</p>
                 <div className="faction-row"><span>Discovery</span><span className="dim">{DISCOVERY_LABELS[selectedLoc.discovery]}</span></div>
                 {selected.faction && (
-                  <div className="faction-row">
-                    <span>{FACTION_DEFS.get(selected.faction)?.name}</span>
-                    <span className="dim">{stanceOf(game.factions[selected.faction].standing)}</span>
-                  </div>
+                  <>
+                    <div className="faction-row">
+                      <span>Community</span>
+                      <span className="dim">
+                        {selectedSeat ? stanceOf(selectedSeat.standing) : stanceOf(game.factions[selected.faction].standing)}
+                      </span>
+                    </div>
+                    <div className="faction-row">
+                      <span>{FACTION_DEFS.get(selected.faction)?.name}</span>
+                      <span className="dim">{stanceOf(game.factions[selected.faction].standing)} faction mood</span>
+                    </div>
+                  </>
                 )}
                 {selected.hasMarket && <div className="faction-row"><span>Market</span><span className="dim">Caravans leave from Market</span></div>}
                 <label className="compact-field">

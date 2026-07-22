@@ -79,7 +79,7 @@ export const RECRUIT_EVENTS: GameEvent[] = [
     title: 'A Daughter of the Towns',
     text: 'She comes to the gate with a clan-mother’s letter and a ledger of her own. Naru of the Tributary Towns learned Ansberrian accounts to keep her people from being cheated, and has decided she can do more good inside your counting house than shouting at it from the wharf. Her kin approve; the arrangement, she makes clear, is a favour to both sides.',
     conditions: [
-      { type: 'standingAtLeast', faction: 'RIVER_CLANS', value: 30 },
+      { type: 'communityStandingAtLeast', location: 'river_meet', value: 30 },
       { type: 'locationDiscovery', location: 'river_meet', atLeast: 'visited' },
       { type: 'rosterBelow', scope: 'living', value: 9 },
     ],
@@ -95,7 +95,7 @@ export const RECRUIT_EVENTS: GameEvent[] = [
             text: 'She takes a corner of the trade hall and makes it hers. The river towns deal more easily with a post that keeps one of their daughters at its books, and more than one bad bargain is quietly averted before it is struck.',
             outcomes: [
               { type: 'recruitCharacter', templateId: 'river_daughter' },
-              { type: 'standing', faction: 'RIVER_CLANS', delta: 4 },
+              { type: 'communityStanding', location: 'river_meet', delta: 4 },
               { type: 'history', text: 'Took Naru of the Tributary Towns into the company.' },
             ],
           },
@@ -106,7 +106,7 @@ export const RECRUIT_EVENTS: GameEvent[] = [
         outcomes: {
           success: {
             text: 'You explain the strongbox with more honesty than pride. She nods, unsurprised, and folds her letter away. "When you can," she says. The offer, you sense, will not stand forever.',
-            outcomes: [{ type: 'standing', faction: 'RIVER_CLANS', delta: -1 }],
+            outcomes: [{ type: 'communityStanding', location: 'river_meet', delta: -1 }],
           },
         },
       },
