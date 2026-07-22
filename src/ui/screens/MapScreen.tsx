@@ -234,7 +234,7 @@ export function MapScreen({ game }: { game: GameState }) {
           <button className="small" onClick={resetView}>Reset</button>
           <output className="map-coordinate-readout" aria-live="polite" title="Normalized map coordinates">
             {activeTarget
-              ? `x ${activeTarget.x.toFixed(3)} · y ${activeTarget.y.toFixed(3)}`
+              ? `x ${activeTarget.x.toFixed(4)} · y ${activeTarget.y.toFixed(4)}`
               : 'x — · y —'}
           </output>
           <button className={mode === 'road' ? 'small active' : 'small'} onClick={() => setMode('road')}>

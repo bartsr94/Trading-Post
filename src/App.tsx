@@ -63,7 +63,7 @@ export function App() {
       </header>
 
       <main className="content">
-        <div className="content-inner">
+        <div className={screen === 'map' ? 'content-inner content-inner--wide' : 'content-inner'}>
           {screen === 'post' && <PostOverview game={game} />}
           {screen === 'assignments' && <AssignmentBoard game={game} />}
           {screen === 'characters' && <CharactersScreen game={game} />}

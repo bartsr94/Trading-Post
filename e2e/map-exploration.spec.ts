@@ -36,7 +36,7 @@ test('illustrated map exposes exact places, approximate rumors, and free targets
 
   // Western interior is still checkpoint-locked on a fresh game.
   await clickMap(page, 0.25, 0.4);
-  await expect(page.locator('.map-coordinate-readout')).toHaveText(/^x 0\.\d{3} · y 0\.\d{3}$/);
+  await expect(page.locator('.map-coordinate-readout')).toHaveText(/^x 0\.\d{4} · y 0\.\d{4}$/);
   await expect(page.getByText('This country lies beyond your known routes.')).toBeVisible();
 
   // Reachable eastern/charter country accepts an arbitrary point.
