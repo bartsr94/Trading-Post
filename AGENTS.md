@@ -16,6 +16,12 @@ This repo is **The Trading Post**: a KoDP-inspired narrative frontier-trading ga
 4. RNG is seeded in the engine; don’t use `Math.random()` in engine code.
 5. Ask before adding new tracked systems not in the spec.
 
+## Guardrails (keep these in sync)
+
+- `src/engine/saveValidation.ts` is the runtime invariant checker for `GameState` and saves; if you change state shape, migrations, or turn resolution invariants, update this and its tests.
+- Content registries expect unique `id`s for authored content; add new content via `src/content/` and keep the unique-id checks passing.
+- Event selection/choice resolution is strict about candidate context (bound heroes) and locked choice validation; avoid relying on implicit/global hero context in conditions/outcomes.
+
 ## Repo map (high-signal)
 
 - `src/engine/`: pure game logic + save/migrations + turn resolution

@@ -122,6 +122,12 @@ src/
 
 The engine never hardcodes content: new events, heroes, traits, or locations are data entries in `src/content/`, and every balance number lives in [`src/content/tuning.ts`](src/content/tuning.ts).
 
+## Engine guardrails
+
+- `src/engine/saveValidation.ts` validates runtime invariants for `GameState` and saves; keep it in sync with state shape, migrations, and turn-resolution invariants.
+- Authored content `id`s are expected to be unique (see `src/content/uniqueIdMap.ts`); if you add content and tests fail, fix collisions rather than working around them.
+- Event selection/choice resolution is strict about candidate context (bound heroes) and locked choice validation; avoid relying on implicit/global hero context in conditions/outcomes.
+
 ## Roadmap
 
 - **MVP 1 — the loop works** *(complete)*: core turn loop, heroes, visible checks, event engine, post market, saves.
