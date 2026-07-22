@@ -168,7 +168,7 @@ export const HERO_POOL: HeroTemplate[] = [
     name: 'Wren',
     epithet: 'the Chaplain',
     portraitKey: 'imanian_female_02',
-    bio: 'Tends the company’s souls and its wounds with the same steady hands, in the name of the Brotherhood of the Sacred Word. Believes the frontier is a test set for her personally.',
+    bio: 'Tends the company’s souls and its wounds with the same steady hands, the Solar Imani Church. Believes the frontier is a test set for her personally.',
     hookHint: 'The Bejasi Hills folk’s rites trouble her sleep — and call to her.',
     stats: { might: 1, agility: 2, wits: 3, charm: 3, resolve: 4 },
     skills: { lore: 3, diplomacy: 2, leadership: 1 },
