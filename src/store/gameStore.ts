@@ -41,6 +41,7 @@ import type {
   BuildingId,
   GameState,
   GoodId,
+  LocationId,
   ResidentRole,
 } from '../engine/types';
 
@@ -70,6 +71,10 @@ interface GameStore {
   screen: Screen;
   /** Hero sheet modal target. */
   selectedHeroId: string | null;
+  /** Seat the Diplomacy screen should pre-select the next time it mounts/reads this. */
+  diplomacySeatFocus: LocationId | null;
+  /** Destination the Market screen should pre-select as the caravan target. */
+  marketDestinationFocus: LocationId | null;
   /** Result of the current event choice, shown until Continue. */
   lastResolution: ChoiceResolution | null;
   /** Result of the last resolved raid, shown in the raid modal until Continue. */
@@ -90,6 +95,14 @@ interface GameStore {
 
   setScreen: (screen: Screen) => void;
   selectHero: (heroId: string | null) => void;
+  /** Switch to the Diplomacy screen with a specific seat pre-selected. */
+  openDiplomacy: (seatId: LocationId) => void;
+  /** Consume the pending seat focus (called once the Diplomacy screen applies it). */
+  clearDiplomacyFocus: () => void;
+  /** Switch to the Market screen with a specific caravan destination pre-selected. */
+  openMarket: (destinationId: LocationId) => void;
+  /** Consume the pending destination focus (called once the Market screen applies it). */
+  clearMarketFocus: () => void;
 
   setAssignment: (heroId: string, activity: ActivityId) => void;
   confirmTurn: () => void;
@@ -140,6 +153,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   game: null,
   screen: 'post',
   selectedHeroId: null,
+  diplomacySeatFocus: null,
+  marketDestinationFocus: null,
   lastResolution: null,
   lastRaidResolution: null,
   growthLines: [],
@@ -195,6 +210,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setScreen: (screen) => set({ screen }),
   selectHero: (selectedHeroId) => set({ selectedHeroId }),
+  openDiplomacy: (seatId) => set({ screen: 'diplomacy', diplomacySeatFocus: seatId }),
+  clearDiplomacyFocus: () => set({ diplomacySeatFocus: null }),
+  openMarket: (destinationId) => set({ screen: 'market', marketDestinationFocus: destinationId }),
+  clearMarketFocus: () => set({ marketDestinationFocus: null }),
 
   setAssignment: (heroId, activity) => {
     const { game } = get();

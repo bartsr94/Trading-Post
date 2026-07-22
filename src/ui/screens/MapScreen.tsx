@@ -38,7 +38,7 @@ const DISCOVERY_LABELS = {
   known: 'Well known',
 } as const;
 
-type PlaceAction = 'explore' | 'diplomacy' | 'labor' | 'courtship' | 'raid';
+type PlaceAction = 'explore' | 'labor' | 'courtship' | 'raid';
 type PanelMode = 'explore' | 'place' | 'road';
 type FogCell = { index: number; points: string };
 
@@ -69,6 +69,8 @@ function expeditionName(game: GameState, heroIds: string[]): string {
 
 export function MapScreen({ game }: { game: GameState }) {
   const dispatch = useGameStore((state) => state.dispatch);
+  const openDiplomacy = useGameStore((state) => state.openDiplomacy);
+  const openMarket = useGameStore((state) => state.openMarket);
   const [mode, setMode] = useState<PanelMode>('explore');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [target, setTarget] = useState<MapPoint | null>(null);
@@ -223,14 +225,6 @@ export function MapScreen({ game }: { game: GameState }) {
             heroIds: party,
             pace,
           }
-        : action === 'diplomacy' && selected
-          ? {
-              kind: 'diplomacy' as const,
-              destination: selected.id,
-              heroIds: party,
-              pace,
-              diplomacyMission: { type: 'talks' as const },
-            }
         : action === 'labor' && selected
             ? {
                 kind: 'labor' as const,
@@ -277,9 +271,6 @@ export function MapScreen({ game }: { game: GameState }) {
   const actionOptions: { value: PlaceAction; label: string }[] = selected
     ? [
         { value: 'explore', label: 'Explore nearby' },
-        ...(selected.faction && selectedLoc && discoveryAtLeast(selectedLoc.discovery, 'visited')
-          ? [{ value: 'diplomacy' as const, label: 'Send envoy' }]
-          : []),
         ...(selected.faction === 'CHARTER_COMPANY' && selectedLoc && discoveryAtLeast(selectedLoc.discovery, 'visited')
           ? [
               { value: 'labor' as const, label: 'Call for hands' },
@@ -524,9 +515,25 @@ export function MapScreen({ game }: { game: GameState }) {
                       <span>{FACTION_DEFS.get(selected.faction)?.name}</span>
                       <span className="dim">{stanceOf(game.factions[selected.faction].standing)} faction mood</span>
                     </div>
+                    {selectedLoc && discoveryAtLeast(selectedLoc.discovery, 'visited') && (
+                      <button className="manage-link" onClick={() => openDiplomacy(selected.id)}>
+                        Manage relations →
+                      </button>
+                    )}
                   </>
                 )}
-                {selected.hasMarket && <div className="faction-row"><span>Market</span><span className="dim">Caravans leave from Market</span></div>}
+                {selected.hasMarket && (
+                  <>
+                    <div className="faction-row"><span>Market</span><span className="dim">Caravans leave from Market</span></div>
+                    {selected.id !== TUNING.map.homeLocationId &&
+                      selectedLoc &&
+                      discoveryAtLeast(selectedLoc.discovery, 'visited') && (
+                        <button className="manage-link" onClick={() => openMarket(selected.id)}>
+                          Send caravan →
+                        </button>
+                      )}
+                  </>
+                )}
                 <label className="compact-field">
                   <span>Purpose</span>
                   <select value={placeAction} onChange={(event) => setPlaceAction(event.target.value as PlaceAction)}>
@@ -648,11 +655,9 @@ export function MapScreen({ game }: { game: GameState }) {
                       />{' '}
                       {hero.name}{' '}
                       <span className="dim">
-                        {placeAction === 'diplomacy'
-                          ? `(Diplomacy ${hero.skills.diplomacy})`
-                          : placeAction === 'raid'
-                            ? `(Combat ${hero.skills.combat} · Stealth ${hero.skills.stealth})`
-                            : `(Survival ${hero.skills.survival})`}
+                        {placeAction === 'raid'
+                          ? `(Combat ${hero.skills.combat} · Stealth ${hero.skills.stealth})`
+                          : `(Survival ${hero.skills.survival})`}
                       </span>
                     </label>
                   ))}

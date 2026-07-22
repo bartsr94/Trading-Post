@@ -1,7 +1,7 @@
 // Market (spec §11): post market buy/sell plus the caravan planner —
 // choose goods, destination, and 1–2 heroes; profit happens on the road.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { GOODS } from '../../content/goods';
 import { LOCATIONS, LOCATION_DEFS } from '../../content/locations';
 import { MAP_REGIONS } from '../../content/map';
@@ -18,6 +18,8 @@ export function MarketScreen({ game }: { game: GameState }) {
   const buy = useGameStore((s) => s.buy);
   const sell = useGameStore((s) => s.sell);
   const dispatch = useGameStore((s) => s.dispatch);
+  const marketDestinationFocus = useGameStore((s) => s.marketDestinationFocus);
+  const clearMarketFocus = useGameStore((s) => s.clearMarketFocus);
   const canAct = game.phase === 'assignment';
 
   const [destinationId, setDestinationId] = useState<string>('');
@@ -28,6 +30,13 @@ export function MarketScreen({ game }: { game: GameState }) {
   const [escort, setEscort] = useState<Partial<Record<ResidentRole, number>>>({});
   const [error, setError] = useState<string | null>(null);
   const [pace, setPace] = useState<ExpeditionPace>('normal');
+
+  useEffect(() => {
+    if (marketDestinationFocus) {
+      setDestinationId(marketDestinationFocus);
+      clearMarketFocus();
+    }
+  }, [marketDestinationFocus, clearMarketFocus]);
 
   const destinations = LOCATIONS.filter((def) => {
     if (!def.hasMarket || def.id === TUNING.map.homeLocationId) return false;

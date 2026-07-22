@@ -36,11 +36,10 @@ test('hero bar shows the company, tooltip on hover, hero sheet on click', async 
 test('dispatched heroes are dimmed as away, and the bar keeps all tiles', async ({ page }) => {
   await foundPost(page);
 
-  // Send a one-hero envoy from the Map screen (same flow as diplomacy.spec).
+  // Send a one-hero explore party from the Map screen.
   await page.getByRole('button', { name: 'Map', exact: true }).click();
   await page.getByRole('button', { name: 'Njaro-Matu', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Njaro-Matu' })).toBeVisible();
-  await page.getByLabel('Purpose').selectOption('diplomacy');
   await page.locator('label.pick-row').last().locator('input[type="checkbox"]').check();
   await page.getByRole('button', { name: 'Send the Party ▸' }).click();
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FACTIONS, FACTION_DEFS } from '../../content/factions';
 import { GOODS } from '../../content/goods';
 import { LOCATION_DEFS } from '../../content/locations';
@@ -25,6 +25,8 @@ function positiveGoods(goods: Partial<Record<GoodId, number>>): Partial<Record<G
 
 export function DiplomacyScreen({ game }: { game: GameState }) {
   const dispatch = useGameStore((state) => state.dispatch);
+  const diplomacySeatFocus = useGameStore((state) => state.diplomacySeatFocus);
+  const clearDiplomacyFocus = useGameStore((state) => state.clearDiplomacyFocus);
   const allSeatDefs = useMemo(() => diplomacySeatDefs(LOCATION_DEFS.values()), []);
   const seatDefs = useMemo(
     () =>
@@ -42,6 +44,13 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
   const [giftSilver, setGiftSilver] = useState(0);
   const [giftGoods, setGiftGoods] = useState<Partial<Record<GoodId, number>>>({});
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (diplomacySeatFocus) {
+      setSelectedId(diplomacySeatFocus);
+      clearDiplomacyFocus();
+    }
+  }, [diplomacySeatFocus, clearDiplomacyFocus]);
 
   const selected = selectedId ? LOCATION_DEFS.get(selectedId) ?? null : null;
   const selectedLoc = selected ? game.locations[selected.id] : undefined;
