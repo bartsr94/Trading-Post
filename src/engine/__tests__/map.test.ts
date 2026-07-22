@@ -27,8 +27,9 @@ describe('spatial Ashmark map', () => {
     expect(LOCATION_DEFS.get('shackle_station')!.mapPoint).toEqual({ x: 0.91, y: 0.322 });
     expect(state.locations.shackle_station.discovery).toBe('known');
     expect(state.mapKnowledge.surveyedCells).toContain(mapCellIndex({ x: 0.9, y: 0.4 }));
-    expect(state.mapKnowledge.surveyedCells).not.toContain(mapCellIndex({ x: 0.9, y: 0.8 }));
-    expect(state.mapKnowledge.surveyedCells).not.toContain(mapCellIndex({ x: 0.7, y: 0.4 }));
+    expect(state.mapKnowledge.surveyedCells).toContain(mapCellIndex({ x: 0.72, y: 0.16 }));
+    expect(state.mapKnowledge.surveyedCells).not.toContain(mapCellIndex({ x: 0.7, y: 0.5 }));
+    expect(state.mapKnowledge.surveyedCells).not.toContain(mapCellIndex({ x: 0.25, y: 0.4 }));
   });
 
   it('corrects normalized distance for the 4:3 image', () => {
@@ -62,7 +63,7 @@ describe('spatial Ashmark map', () => {
     expect(tagsAt(point, MAP_REGIONS, MAP_FEATURES)).toEqual(
       expect.arrayContaining(['frontier', 'marsh', 'ritual']),
     );
-    expect(pointInPolygon({ x: 0, y: 0 }, MAP_REGIONS[0].polygon)).toBe(true);
+    expect(pointInPolygon({ x: 0, y: 0.3 }, MAP_REGIONS[0].polygon)).toBe(true);
   });
 
   it('places a stable rumor area which contains the true point', () => {
@@ -100,7 +101,7 @@ describe('spatial Ashmark map', () => {
     expect(
       dispatchError(
         state,
-        { kind: 'explore', target: { x: 0.58, y: 0.5 }, heroIds: ['p1'] },
+        { kind: 'explore', target: { x: 0.58, y: 0.39 }, heroIds: ['p1'] },
         LOCATION_DEFS,
         MAP_REGIONS,
       ),
@@ -113,7 +114,7 @@ describe('spatial Ashmark map', () => {
     expect(
       dispatchExpedition(
         state,
-        { kind: 'explore', target: { x: 0.58, y: 0.5 }, heroIds: ['p1'], pace: 'fast' },
+        { kind: 'explore', target: { x: 0.58, y: 0.39 }, heroIds: ['p1'], pace: 'fast' },
         LOCATION_DEFS,
         MAP_REGIONS,
       ),

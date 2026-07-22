@@ -40,7 +40,7 @@ test('illustrated map exposes exact places, approximate rumors, and free targets
   await expect(page.getByText('This country lies beyond your known routes.')).toBeVisible();
 
   // Reachable eastern/charter country accepts an arbitrary point.
-  await clickMap(page, 0.58, 0.5);
+  await clickMap(page, 0.58, 0.39);
   await expect(page.getByText(/Target: the charter corridor/)).toBeVisible();
   await page.getByLabel('Pace').selectOption('fast');
   await page.locator('.map-party-picks input[type="checkbox"]').first().check();

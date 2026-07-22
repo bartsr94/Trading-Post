@@ -437,7 +437,7 @@ export function MapScreen({ game }: { game: GameState }) {
             </g>
           )}
         </svg>
-        <p className="dim map-help">Clear country has been surveyed. Pale fog is reachable; dark country needs a route checkpoint.</p>
+        <p className="dim map-help">Clear country is already charted. Pale fog is reachable now; dark country stays shut until you open a route.</p>
       </div>
 
       <div className="panel map-detail-panel">

@@ -45,7 +45,7 @@ function maybeDispatch(state: GameState, rng: Rng): void {
     return d.id !== 'post' && loc && (loc.discovery === 'rumored' || loc.discovery === 'visited');
   });
   const freeExploreTargets = [
-    { x: 0.58, y: 0.5 }, // reachable interior fog on a new game
+    { x: 0.58, y: 0.39 }, // reachable interior fog on a new game
     { x: 0.9, y: 0.4 }, // initially familiar river country
     { x: 0.7, y: 0.5 },
   ].filter((point) => pointReachable(state, point, TEST_CONTENT.mapRegionDefs));

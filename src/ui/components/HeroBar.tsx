@@ -76,11 +76,26 @@ function HeroTile({ game, hero }: { game: GameState; hero: Hero }) {
 }
 
 export function HeroBar({ game }: { game: GameState }) {
+  const confirmTurn = useGameStore((s) => s.confirmTurn);
+  const canConfirm = game.phase === 'assignment';
+
   return (
     <footer className="hero-bar">
-      {activeHeroes(game).map((hero) => (
-        <HeroTile key={hero.id} game={game} hero={hero} />
-      ))}
+      <div className="hero-bar-action">
+        <button className="primary" disabled={!canConfirm} onClick={confirmTurn}>
+          Confirm Orders ▸
+        </button>
+        <div className="hero-bar-action-note">
+          {canConfirm
+            ? 'Advance the turn from anywhere once orders are set.'
+            : 'Available again when the post returns to assignments.'}
+        </div>
+      </div>
+      <div className="hero-bar-roster">
+        {activeHeroes(game).map((hero) => (
+          <HeroTile key={hero.id} game={game} hero={hero} />
+        ))}
+      </div>
     </footer>
   );
 }

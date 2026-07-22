@@ -265,14 +265,6 @@ export function mapKnowledgeFromDiscovery(
       regions,
     ),
   );
-  for (const location of locations) {
-    const discovery = state.locations[location.id]?.discovery ?? location.initialDiscovery;
-    if (!discoveryAtLeast(discovery, 'visited')) continue;
-    cells = mergeSurveyCells(
-      cells,
-      filterCellsToUnlocked(state, initialSurveyCells(home.mapPoint, location.mapPoint), regions),
-    );
-  }
   return { surveyedCells: cells };
 }
 

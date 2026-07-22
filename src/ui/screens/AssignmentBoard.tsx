@@ -1,10 +1,10 @@
 // Assignment Board (spec §11): standing orders persist between turns; the
 // player tweaks what the situation demands and confirms.
 
-import { useGameStore } from '../../store/gameStore';
-import type { GameState, ActivityId } from '../../engine/types';
-import { awayHeroIds, heroesAtPost, livingHeroes } from '../../engine/types';
 import { LOCATION_NAMES } from '../../content/locations';
+import { awayHeroIds, heroesAtPost, livingHeroes } from '../../engine/types';
+import type { ActivityId, GameState } from '../../engine/types';
+import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from '../components/ConditionBars';
 
 const ACTIVITIES: { id: ActivityId; label: string; hint: string; enabled: boolean }[] = [
@@ -22,7 +22,6 @@ const ACTIVITIES: { id: ActivityId; label: string; hint: string; enabled: boolea
 
 export function AssignmentBoard({ game }: { game: GameState }) {
   const setAssignment = useGameStore((s) => s.setAssignment);
-  const confirmTurn = useGameStore((s) => s.confirmTurn);
   const selectHero = useGameStore((s) => s.selectHero);
   const growthLines = useGameStore((s) => s.growthLines);
   const heroes = heroesAtPost(game);
@@ -109,11 +108,6 @@ export function AssignmentBoard({ game }: { game: GameState }) {
           })}
         </>
       )}
-      <div style={{ marginTop: 16 }}>
-        <button className="primary" disabled={game.phase !== 'assignment'} onClick={confirmTurn}>
-          Confirm Orders — Let Two Weeks Pass ▸
-        </button>
-      </div>
     </div>
   );
 }

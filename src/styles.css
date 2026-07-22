@@ -185,12 +185,36 @@ h4 {
 /* ---------- hero bar ---------- */
 .hero-bar {
   grid-area: herobar;
-  display: flex;
-  justify-content: center;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
   padding: 8px 18px;
   background: var(--panel);
   border-top: 1px solid var(--border);
+}
+.hero-bar-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  padding-top: 2px;
+}
+.hero-bar-action button {
+  white-space: nowrap;
+}
+.hero-bar-action-note {
+  max-width: 220px;
+  font-size: 0.74rem;
+  line-height: 1.25;
+  color: var(--text-dim);
+}
+.hero-bar-roster {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  min-width: 0;
 }
 .hero-tile { position: relative; }
 .hero-portrait {
@@ -267,7 +291,13 @@ h4 {
   .sidebar nav button { justify-content: center; padding: 9px 6px; }
   .sidebar nav button .label,
   .sidebar-actions { display: none; }
-  .hero-bar { justify-content: flex-start; overflow-x: auto; }
+  .hero-bar {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    overflow-x: auto;
+  }
+  .hero-bar-roster { justify-content: flex-start; }
 }
 
 /* ---------- party select ---------- */

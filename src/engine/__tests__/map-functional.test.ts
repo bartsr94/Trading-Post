@@ -178,7 +178,7 @@ describe('distance, pace, fog grid, and survey footprints', () => {
 
   it('filters locked cells and keeps survey merges sorted, unique, and idempotent', () => {
     const state = testState();
-    const unlocked = mapCellIndex({ x: 0.5, y: 0.5 });
+    const unlocked = mapCellIndex({ x: 0.58, y: 0.39 });
     const locked = mapCellIndex({ x: 0.25, y: 0.4 });
     expect(filterCellsToUnlocked(state, [locked, unlocked], MAP_REGIONS)).toEqual([unlocked]);
     const merged = mergeSurveyCells([9, 2, 2], [5, 9]);
@@ -186,7 +186,7 @@ describe('distance, pace, fog grid, and survey footprints', () => {
     expect(mergeSurveyCells(merged, merged)).toEqual(merged);
   });
 
-  it('seeds familiar terrain and routes to visited/known places, never rumored places', () => {
+  it('seeds only explicit familiar terrain plus the home footprint', () => {
     const state = testState();
     const defs = [
       place('post', { x: 0.1, y: 0.1 }, 'known'),
@@ -205,7 +205,8 @@ describe('distance, pace, fog grid, and survey footprints', () => {
       initiallySurveyed: true,
     };
     const cells = mapKnowledgeFromDiscovery(state, defs, [OPEN_REGION], [feature]).surveyedCells;
-    expect(cells).toContain(mapCellIndex({ x: 0.5, y: 0.1 }));
+    expect(cells).toContain(mapCellIndex({ x: 0.1, y: 0.1 }));
+    expect(cells).not.toContain(mapCellIndex({ x: 0.5, y: 0.1 }));
     expect(cells).not.toContain(mapCellIndex({ x: 0.1, y: 0.7 }));
     expect(cells).toContain(mapCellIndex({ x: 0.8, y: 0.8 }));
     expect(mapKnowledgeFromDiscovery(state, defs.slice(1), [OPEN_REGION])).toEqual({ surveyedCells: [] });
@@ -247,8 +248,8 @@ describe('rumors, discovery, dispatch, and reporting semantics', () => {
     const state = testState();
     expect(dispatchError(state, { kind: 'explore', target: { x: -1, y: 0 }, heroIds: ['p1'] }, LOCATION_DEFS, MAP_REGIONS)).toMatch(/beyond/);
     expect(dispatchError(state, { kind: 'caravan', target: { x: 0.6, y: 0.4 }, heroIds: ['p1'] }, LOCATION_DEFS, MAP_REGIONS)).toMatch(/known destination/);
-    expect(dispatchExpedition(state, { kind: 'explore', target: { x: 0.58, y: 0.5 }, heroIds: ['p1'] }, LOCATION_DEFS, MAP_REGIONS)).toBe(true);
-    expect(dispatchError(state, { kind: 'explore', target: { x: 0.581, y: 0.501 }, heroIds: ['p2'] }, LOCATION_DEFS, MAP_REGIONS)).toMatch(/already searching/);
+    expect(dispatchExpedition(state, { kind: 'explore', target: { x: 0.58, y: 0.39 }, heroIds: ['p1'] }, LOCATION_DEFS, MAP_REGIONS)).toBe(true);
+    expect(dispatchError(state, { kind: 'explore', target: { x: 0.581, y: 0.391 }, heroIds: ['p2'] }, LOCATION_DEFS, MAP_REGIONS)).toMatch(/already searching/);
   });
 
   it('persists target, pace, and equal leg duration and permits repeat exploration of known places', () => {
@@ -269,7 +270,7 @@ describe('rumors, discovery, dispatch, and reporting semantics', () => {
   it('commits an explicit survey result on homecoming, including both discovery levels', () => {
     const state = testState();
     state.locations.old_road.discovery = 'visited';
-    expect(dispatchExpedition(state, { kind: 'explore', target: { x: 0.58, y: 0.5 }, heroIds: ['p1'] }, LOCATION_DEFS, MAP_REGIONS)).toBe(true);
+    expect(dispatchExpedition(state, { kind: 'explore', target: { x: 0.58, y: 0.39 }, heroIds: ['p1'] }, LOCATION_DEFS, MAP_REGIONS)).toBe(true);
     const expedition = state.expeditions[0];
     const newCell = mapCellIndex({ x: 0.6, y: 0.5 });
     expedition.leg = 'returning';
@@ -291,7 +292,7 @@ describe('rumors, discovery, dispatch, and reporting semantics', () => {
   it('discards pending survey knowledge when the whole party is lost', () => {
     const state = testState();
     const before = [...state.mapKnowledge.surveyedCells];
-    expect(dispatchExpedition(state, { kind: 'explore', target: { x: 0.58, y: 0.5 }, heroIds: ['p1'] }, LOCATION_DEFS, MAP_REGIONS)).toBe(true);
+    expect(dispatchExpedition(state, { kind: 'explore', target: { x: 0.58, y: 0.39 }, heroIds: ['p1'] }, LOCATION_DEFS, MAP_REGIONS)).toBe(true);
     state.expeditions[0].surveyResult = {
       tier: 'critSuccess',
       surveyedCells: [mapCellIndex({ x: 0.6, y: 0.5 })],

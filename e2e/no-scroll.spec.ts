@@ -49,7 +49,7 @@ test('no in-shell screen scrolls at the 1280x720 floor', async ({ page }) => {
   await page.getByRole('button', { name: /Search near/ }).first().click();
   expect(await overflow(page), 'Map (rumor selected) scrolls').toBeLessThanOrEqual(TOLERANCE);
 
-  await clickMap(page, 0.58, 0.5);
+  await clickMap(page, 0.58, 0.39);
   expect(await overflow(page), 'Map (free target selected) scrolls').toBeLessThanOrEqual(TOLERANCE);
   await page.locator('.map-party-picks input[type="checkbox"]').first().check();
   await page.getByRole('button', { name: /Send the Party/ }).click();

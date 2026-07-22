@@ -117,6 +117,12 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
       case 15:
         current = migrateV15toV16(current);
         break;
+      case 16:
+        current = migrateV16toV17(current, ctx);
+        break;
+      case 17:
+        current = migrateV17toV18(current, ctx);
+        break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
     }
@@ -422,7 +428,56 @@ function migrateV15toV16(save: GameState): GameState {
             attackerManeuver: pendingRaid.attackerManeuver,
             spotted: pendingRaid.spotted,
             band: pendingRaid.band,
-          },
+      },
+  };
+}
+
+/** v17 refreshes the authored route zones and the baseline surveyed coastline. */
+function migrateV16toV17(save: GameState, ctx?: MigrationContext): GameState {
+  const locations = ctx?.locationDefs ?? [];
+  const baselineKnowledge = mapKnowledgeFromDiscovery(
+    save,
+    locations,
+    ctx?.mapRegionDefs ?? [],
+    ctx?.mapFeatureDefs ?? [],
+  );
+  return {
+    ...save,
+    saveVersion: 17,
+    mapKnowledge: {
+      surveyedCells: mergeSurveyCells(
+        save.mapKnowledge?.surveyedCells ?? [],
+        baselineKnowledge.surveyedCells,
+      ),
+    },
+  };
+}
+
+/** v18 removes the old auto-charted starter routes from fresh, unplayed campaigns. */
+function migrateV17toV18(save: GameState, ctx?: MigrationContext): GameState {
+  const locations = ctx?.locationDefs ?? [];
+  const baselineKnowledge = mapKnowledgeFromDiscovery(
+    save,
+    locations,
+    ctx?.mapRegionDefs ?? [],
+    ctx?.mapFeatureDefs ?? [],
+  );
+  const shouldRefreshFreshStart =
+    save.turn === 1 &&
+    save.phase === 'assignment' &&
+    save.expeditions.length === 0 &&
+    save.pendingEvents.length === 0;
+  return {
+    ...save,
+    saveVersion: 18,
+    mapKnowledge: shouldRefreshFreshStart
+      ? baselineKnowledge
+      : {
+          surveyedCells: mergeSurveyCells(
+            save.mapKnowledge?.surveyedCells ?? [],
+            baselineKnowledge.surveyedCells,
+          ),
+        },
   };
 }
 

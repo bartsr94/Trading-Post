@@ -12,6 +12,9 @@ async function foundPost(page: Page): Promise<void> {
 test('hero bar shows the company, tooltip on hover, hero sheet on click', async ({ page }) => {
   await foundPost(page);
 
+  await page.getByRole('button', { name: 'Outpost', exact: true }).click();
+  await expect(page.locator('.hero-bar').getByRole('button', { name: /Confirm Orders/ })).toBeVisible();
+
   const tiles = page.locator('.hero-tile');
   await expect(tiles).toHaveCount(6);
 
