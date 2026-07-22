@@ -15,6 +15,9 @@ import {
 import { buyGood, sellGood } from '../engine/economy';
 import { dispatchExpedition, travelContextFor } from '../engine/expeditions';
 import type { DispatchParams } from '../engine/expeditions';
+import { resolveIncomingRaid, resolveOutgoingRaid } from '../engine/raids';
+import type { RaidAttackParams, RaidDefenseParams, RaidResolution } from '../engine/raids';
+import { Rng } from '../engine/rng';
 import { hireResidents, reallocate } from '../engine/residents';
 import { activateHero, benchHero } from '../engine/roster';
 import { evalConditions } from '../engine/events/conditions';
@@ -68,6 +71,8 @@ interface GameStore {
   selectedHeroId: string | null;
   /** Result of the current event choice, shown until Continue. */
   lastResolution: ChoiceResolution | null;
+  /** Result of the last resolved raid, shown in the raid modal until Continue. */
+  lastRaidResolution: RaidResolution | null;
   /** Season-end skill growth lines, shown once on the next assignment phase. */
   growthLines: string[];
   /** Whether the cheat console is unlocked (persisted; off by default). */
@@ -90,6 +95,10 @@ interface GameStore {
   chooseOption: (choiceIndex: number) => void;
   continueEvent: () => void;
   finishReport: () => void;
+  /** Resolve the pending raid encounter with the player's chosen battle plan. */
+  resolveRaid: (params: RaidDefenseParams | RaidAttackParams) => void;
+  /** Dismiss the resolved-raid result and let the turn proceed. */
+  continueRaid: () => void;
 
   buy: (good: GoodId, qty: number) => void;
   sell: (good: GoodId, qty: number) => void;
@@ -131,6 +140,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   screen: 'post',
   selectedHeroId: null,
   lastResolution: null,
+  lastRaidResolution: null,
   growthLines: [],
   cheatModeEnabled: typeof localStorage !== 'undefined' && localStorage.getItem(CHEAT_MODE_KEY) === 'true',
   cheatConsoleOpen: false,
@@ -237,6 +247,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
     autosave(next);
     set({ game: next, growthLines, screen: 'assignments' });
   },
+
+  resolveRaid: (params) => {
+    const { game } = get();
+    if (!game || !game.pendingRaid) return;
+    const next = draft(game);
+    const pendingRaid = next.pendingRaid;
+    if (!pendingRaid) return;
+    const rng = new Rng(next.rngState);
+    const resolution =
+      pendingRaid.kind === 'incoming'
+        ? resolveIncomingRaid(next, params as RaidDefenseParams, rng, {
+            goodDefs: CONTENT.goodDefs,
+            goodNames: CONTENT.goodNames,
+            buildingNames: CONTENT.buildingNames,
+          })
+        : resolveOutgoingRaid(next, pendingRaid, params as RaidAttackParams, rng, {
+            goodDefs: CONTENT.goodDefs,
+            goodNames: CONTENT.goodNames,
+            buildingNames: CONTENT.buildingNames,
+          });
+    next.rngState = rng.getState();
+    // Fold the battle narrative into the turn report.
+    for (const line of resolution.log) next.report.lines.push({ icon: '⚔️', text: line });
+    // If the post survived and this raid arose mid-turn (event/report phase), let
+    // the turn continue; a cheat-triggered raid during assignment stays put.
+    if (!next.gameOver && (next.phase === 'event' || next.phase === 'report')) {
+      next.phase = next.pendingEvents.length > 0 ? 'event' : 'report';
+    }
+    autosave(next);
+    set({ game: next, lastRaidResolution: resolution });
+  },
+
+  continueRaid: () => set({ lastRaidResolution: null }),
 
   buy: (good, qty) => {
     const { game } = get();

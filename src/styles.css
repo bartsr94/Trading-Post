@@ -460,6 +460,169 @@ h4 {
 .outcome-log { font-size: 0.88rem; color: var(--text-dim); margin-bottom: 14px; }
 .outcome-log div { padding: 1px 0; }
 
+/* ---------- raid modal ---------- */
+.raid-modal {
+  width: min(1180px, 96vw);
+  max-height: min(88vh, 760px);
+  display: grid;
+  grid-template-columns: minmax(280px, 34%) 1fr;
+  overflow: hidden;
+}
+.raid-modal--result {
+  grid-template-columns: minmax(240px, 30%) 1fr;
+}
+.raid-modal-art {
+  min-width: 0;
+  border-right: 1px solid var(--border);
+}
+.raid-modal .event-illustration {
+  height: 100%;
+  min-height: 100%;
+  aspect-ratio: auto;
+}
+.raid-modal-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px 20px;
+}
+.raid-modal-content--result {
+  justify-content: center;
+}
+.raid-heading .text {
+  margin-bottom: 0;
+}
+.raid-forces {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.raid-choice-label {
+  font-size: 0.78rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 8px;
+}
+.raid-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+.raid-breakdown-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 0;
+}
+.raid-breakdown-label {
+  font-size: 0.74rem;
+  color: var(--accent-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.raid-breakdown-value {
+  font-size: 1.1rem;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.raid-breakdown-note {
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  line-height: 1.3;
+}
+.raid-plan-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.raid-plan-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.raid-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.raid-option-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.raid-option {
+  min-height: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 10px 12px;
+  line-height: 1.3;
+}
+.raid-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.raid-rally {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin: 12px 0 14px;
+}
+.raid-submit {
+  align-self: flex-start;
+}
+.raid-result-log {
+  margin-bottom: 0;
+}
+.raid-escort-planner {
+  margin: 10px 0 2px;
+}
+.raid-escort-note {
+  font-size: 0.78rem;
+  margin: 0 0 6px;
+}
+@media (max-width: 1100px) {
+  .raid-breakdown-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .raid-modal,
+  .raid-modal--result {
+    grid-template-columns: 1fr;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  .raid-modal-art {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .raid-modal .event-illustration {
+    min-height: 180px;
+    max-height: 26vh;
+  }
+  .raid-plan-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 720px) {
+  .raid-breakdown-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .raid-option-grid,
+  .raid-option-grid--three {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---------- post overview ---------- */
 .overview-grid {
   display: grid;
@@ -772,6 +935,12 @@ table.market td.num { text-align: right; font-variant-numeric: tabular-nums; fon
 }
 .compact-field select { max-width: 68%; }
 .compact-field input[type='number'] { width: 72px; }
+.compact-check {
+  display: block;
+  margin: 4px 0 6px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
 .map-party-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; margin-bottom: 6px; }
 .map-party-picks .pick-row { font-size: 0.8rem; padding: 2px 0; white-space: nowrap; }
 .map-error { font-size: 0.82rem; margin: 4px 0; }

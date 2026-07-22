@@ -4,7 +4,7 @@
 
 import outpostBg from '../../assets/ui/outpost_background.jpg';
 import { BUILDING_NAMES } from '../../content/buildings';
-import { FACTIONS } from '../../content/factions';
+import { FACTION_DEFS, FACTIONS } from '../../content/factions';
 import { GOODS } from '../../content/goods';
 import { LOCATION_NAMES } from '../../content/locations';
 import { CONTENT } from '../../content/registry';
@@ -26,6 +26,7 @@ const EXPEDITION_KIND_ICONS: Record<ExpeditionState['kind'], IconName> = {
   diplomacy: 'diplomacy',
   labor: 'people',
   courtship: 'heart',
+  raid: 'raid',
 };
 
 const BAND_LABEL = {
@@ -100,6 +101,14 @@ export function PostOverview({ game }: { game: GameState }) {
           {game.bankruptcyClock === 0 && game.charterMissedStreak === 0 && (
             <div className="dim" style={{ fontSize: '0.82rem', marginTop: 8 }}>
               The books balance and the Company is quiet — for now.
+            </div>
+          )}
+          {game.tributes.length > 0 && (
+            <div className="dim" style={{ fontSize: '0.8rem', marginTop: 8 }}>
+              Tribute:{' '}
+              {game.tributes
+                .map((tribute) => `${tribute.direction === 'pay' ? 'to' : 'from'} ${FACTION_DEFS.get(tribute.faction)?.name ?? tribute.faction}`)
+                .join('; ')}
             </div>
           )}
         </div>

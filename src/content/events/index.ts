@@ -5,6 +5,7 @@ import { BEASTFOLK_EVENTS } from './beastfolkEvents';
 import { FAMILY_EVENTS } from './familyEvents';
 import { GENERIC_HERO_EVENTS, HERO_EVENTS } from './heroEvents';
 import { POST_EVENTS } from './postEvents';
+import { RAID_EVENTS } from './raidEvents';
 import { RECRUIT_EVENTS } from './recruitEvents';
 import { SEASON_EVENTS } from './seasonEvents';
 import { TRAVEL_EVENTS } from './travelEvents';
@@ -19,6 +20,7 @@ export const ALL_EVENTS: GameEvent[] = [
   ...SEASON_EVENTS,
   ...TRAVEL_EVENTS,
   ...BEASTFOLK_EVENTS,
+  ...RAID_EVENTS,
 ];
 
 export const EVENT_MAP: ReadonlyMap<string, GameEvent> = uniqueIdMap('event', ALL_EVENTS);

@@ -206,7 +206,7 @@ export interface LocationState {
   market?: Record<GoodId, MarketGoodState>;
 }
 
-export type ExpeditionKind = 'caravan' | 'explore' | 'diplomacy' | 'labor' | 'courtship';
+export type ExpeditionKind = 'caravan' | 'explore' | 'diplomacy' | 'labor' | 'courtship' | 'raid';
 export type ExpeditionPace = 'fast' | 'normal' | 'slow';
 
 export interface SurveyResult {
@@ -255,6 +255,14 @@ export interface ExpeditionState {
    * deserialize cleanly.
    */
   courtshipFor?: string;
+  /** Outgoing raid battle goal chosen at dispatch (RAIDING_SPEC.md Phase B). */
+  raidGoal?: RaidAttackGoal;
+  /** Outgoing raid maneuver chosen at dispatch (RAIDING_SPEC.md Phase B). */
+  raidManeuver?: RaidManeuver;
+  /** Whether the party means to rally itself before striking. */
+  raidRally?: boolean;
+  /** Friendly faction asked to lend warriors to the raid, if any. */
+  raidAlly?: FactionId;
   /** Survey knowledge carried home by an exploration party. */
   surveyResult?: SurveyResult;
 }
@@ -508,10 +516,77 @@ export interface TurnReport {
 export type GamePhase = 'assignment' | 'event' | 'report' | 'gameover';
 
 export interface GameOverInfo {
-  kind: 'bankrupt' | 'brokenCompany' | 'charterRevoked';
+  kind: 'bankrupt' | 'brokenCompany' | 'charterRevoked' | 'destroyed';
   title: string;
   text: string;
 }
+
+// ---------------------------------------------------------------- raiding
+// Two-way warfare (RAIDING_SPEC.md). Phase A wires the incoming side.
+
+export const RAID_SEVERITIES = ['probe', 'raid', 'warband'] as const;
+export type RaidSeverity = (typeof RAID_SEVERITIES)[number];
+
+export const RAID_MANEUVERS = ['skirmish', 'charge', 'evade'] as const;
+export type RaidManeuver = (typeof RAID_MANEUVERS)[number];
+
+/** Defender battle goals (incoming raids). */
+export const RAID_DEFEND_GOALS = ['driveoff', 'stand', 'sally', 'hold'] as const;
+export type RaidDefendGoal = (typeof RAID_DEFEND_GOALS)[number];
+
+/** Attacker battle goals (outgoing raids, Phase B). */
+export const RAID_ATTACK_GOALS = ['plunder', 'burn', 'bloody', 'cow'] as const;
+export type RaidAttackGoal = (typeof RAID_ATTACK_GOALS)[number];
+
+export type RaidGoal = RaidDefendGoal | RaidAttackGoal;
+
+export const TRIBUTE_DIRECTIONS = ['pay', 'receive'] as const;
+export type TributeDirection = (typeof TRIBUTE_DIRECTIONS)[number];
+
+/** A standing tribute oath between the post and a faction, settled each season. */
+export interface TributeRelationship {
+  faction: FactionId;
+  direction: TributeDirection;
+  silver: number;
+  goods: Partial<Record<GoodId, number>>;
+}
+
+/** An incoming raid awaiting the player's defence (RAIDING_SPEC.md §3). */
+export interface PendingIncomingRaid {
+  kind: 'incoming';
+  /** The aggressor faction (BEASTFOLK, or any faction ground to Hostile). */
+  faction: FactionId;
+  severity: RaidSeverity;
+  /** Pre-rolled attacker force, so resolution is deterministic given the roll. */
+  attackerForce: number;
+  /** The band's committed maneuver (temperament-driven), for the RPS layer. */
+  attackerManeuver: RaidManeuver;
+  /** False when the raiders slipped past the patrols (surprise on the attacker). */
+  spotted: boolean;
+  /** Short descriptive label, e.g. "an orc war-band". */
+  band: string;
+}
+
+/** An outgoing raid that has reached its target and awaits the player's orders. */
+export interface PendingOutgoingRaid {
+  kind: 'outgoing';
+  expeditionId: string;
+  faction: FactionId;
+  targetName: string;
+  /** Pre-rolled target strength, so the encounter is deterministic once reached. */
+  defenderForce: number;
+  /** The target's committed maneuver for the RPS layer. */
+  defenderManeuver: RaidManeuver;
+  /** True when the target spotted the raiders on the approach. */
+  spotted: boolean;
+  /** Dispatch defaults the player may revise on the encounter screen. */
+  goal: RaidAttackGoal;
+  maneuver: RaidManeuver;
+  rally: boolean;
+  ally?: FactionId;
+}
+
+export type PendingRaid = PendingIncomingRaid | PendingOutgoingRaid;
 
 export interface GameState {
   saveVersion: number;
@@ -575,6 +650,14 @@ export interface GameState {
    * seeded here so Phase A's v7 migration is the only one needed.
    */
   charterCompromisedStreak: number;
+  /** An incoming raid awaiting the player's defence, or null (RAIDING_SPEC.md). */
+  pendingRaid: PendingRaid | null;
+  /** Turn the last incoming raid fired (0 = never); drives the raid cooldown. */
+  lastRaidTurn: number;
+  /** Turn the post was last sacked (0 = never); the `destroyed` cascade window. */
+  lastSackedTurn: number;
+  /** Ongoing tribute oaths with neighbouring factions (RAIDING_SPEC.md Phase B). */
+  tributes: TributeRelationship[];
   report: TurnReport;
   gameOver: GameOverInfo | null;
 }

@@ -4,7 +4,7 @@ import { FACTION_DEFS } from '../../content/factions';
 import { LOCATIONS, LOCATION_DEFS } from '../../content/locations';
 import { MAP_REGIONS } from '../../content/map';
 import { TUNING } from '../../content/tuning';
-import { dispatchError, laborRunCost } from '../../engine/expeditions';
+import { cargoCapacity, dispatchError, laborRunCost } from '../../engine/expeditions';
 import {
   journeyTurns,
   mapCellCenter,
@@ -13,12 +13,18 @@ import {
   regionAt,
   rumorArea,
 } from '../../engine/map';
+import { canCallRaidAlly, raidTargetFaction } from '../../engine/raids';
+import { residentsAvailable } from '../../engine/residents';
 import { discoveryAtLeast, heroesAtPost, stanceOf } from '../../engine/types';
 import type {
+  FactionId,
   ExpeditionPace,
   GameState,
   LocationDef,
   MapPoint,
+  RaidAttackGoal,
+  RaidManeuver,
+  ResidentRole,
 } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 
@@ -31,7 +37,7 @@ const DISCOVERY_LABELS = {
   known: 'Well known',
 } as const;
 
-type PlaceAction = 'explore' | 'diplomacy' | 'labor' | 'courtship';
+type PlaceAction = 'explore' | 'diplomacy' | 'labor' | 'courtship' | 'raid';
 type PanelMode = 'explore' | 'place' | 'road';
 
 function clamp(value: number, min: number, max: number): number {
@@ -55,6 +61,11 @@ export function MapScreen({ game }: { game: GameState }) {
   const [party, setParty] = useState<string[]>([]);
   const [placeAction, setPlaceAction] = useState<PlaceAction>('explore');
   const [laborCount, setLaborCount] = useState(1);
+  const [raidGoal, setRaidGoal] = useState<RaidAttackGoal>('plunder');
+  const [raidManeuver, setRaidManeuver] = useState<RaidManeuver>('skirmish');
+  const [raidRally, setRaidRally] = useState(false);
+  const [raidAlly, setRaidAlly] = useState<FactionId | ''>('');
+  const [raidEscort, setRaidEscort] = useState<Partial<Record<ResidentRole, number>>>({});
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [center, setCenter] = useState({ x: 0.5, y: 0.5 });
@@ -69,6 +80,13 @@ export function MapScreen({ game }: { game: GameState }) {
   const activeTarget = selected?.mapPoint ?? target;
   const activeRegion = activeTarget ? regionAt(activeTarget, MAP_REGIONS) : undefined;
   const oneWay = activeTarget ? journeyTurns(home.mapPoint, activeTarget, pace) : null;
+  const raidFaction = selected ? raidTargetFaction(selected) : null;
+  const allyOptions = [...FACTION_DEFS.values()].filter((faction) =>
+    canCallRaidAlly(game, faction.id, raidFaction),
+  );
+  const portersFree = residentsAvailable(game, 'porters');
+  const guardsFree = residentsAvailable(game, 'guards');
+  const raidCapacity = cargoCapacity(Math.max(1, party.length), raidEscort);
 
   const surveyed = useMemo(
     () => new Set(game.mapKnowledge?.surveyedCells ?? []),
@@ -162,6 +180,12 @@ export function MapScreen({ game }: { game: GameState }) {
     );
   };
 
+  const setEscortQty = (role: ResidentRole, raw: string, max: number) => {
+    setError(null);
+    const qty = Math.max(0, Math.min(max, Math.floor(Number(raw) || 0)));
+    setRaidEscort((current) => ({ ...current, [role]: qty }));
+  };
+
   const send = () => {
     if (!activeTarget) return;
     const action: PlaceAction = mode === 'place' ? placeAction : 'explore';
@@ -175,7 +199,7 @@ export function MapScreen({ game }: { game: GameState }) {
           }
         : action === 'diplomacy' && selected
           ? { kind: 'diplomacy' as const, destination: selected.id, heroIds: party, pace }
-          : action === 'labor' && selected
+        : action === 'labor' && selected
             ? {
                 kind: 'labor' as const,
                 destination: selected.id,
@@ -183,6 +207,18 @@ export function MapScreen({ game }: { game: GameState }) {
                 pace,
                 laborCount,
               }
+            : action === 'raid' && selected
+              ? {
+                  kind: 'raid' as const,
+                  destination: selected.id,
+                  heroIds: party,
+                  pace,
+                  residents: raidEscort,
+                  raidGoal,
+                  raidManeuver,
+                  raidRally,
+                  ...(raidAlly ? { raidAlly } : {}),
+                }
             : selected
               ? {
                   kind: 'courtship' as const,
@@ -200,6 +236,7 @@ export function MapScreen({ game }: { game: GameState }) {
     }
     if (dispatch(params)) {
       setParty([]);
+      setRaidEscort({});
       setError(null);
       setMode('road');
     }
@@ -216,6 +253,9 @@ export function MapScreen({ game }: { game: GameState }) {
               { value: 'labor' as const, label: 'Call for hands' },
               { value: 'courtship' as const, label: 'Seek a match' },
             ]
+          : []),
+        ...(raidTargetFaction(selected) && selectedLoc && discoveryAtLeast(selectedLoc.discovery, 'rumored')
+          ? [{ value: 'raid' as const, label: 'Send raiders' }]
           : []),
       ]
     : [];
@@ -483,6 +523,79 @@ export function MapScreen({ game }: { game: GameState }) {
                     <input type="number" min={1} value={laborCount} onChange={(event) => setLaborCount(Math.max(1, Number(event.target.value) || 1))} />
                   </label>
                 )}
+                {placeAction === 'raid' && mode === 'place' && (
+                  <>
+                    <label className="compact-field">
+                      <span>Raid goal</span>
+                      <select value={raidGoal} onChange={(event) => setRaidGoal(event.target.value as RaidAttackGoal)}>
+                        <option value="plunder">Plunder</option>
+                        <option value="burn">Burn</option>
+                        <option value="bloody">Bloody them</option>
+                        <option value="cow">Cow them</option>
+                      </select>
+                    </label>
+                    <label className="compact-field">
+                      <span>Maneuver</span>
+                      <select value={raidManeuver} onChange={(event) => setRaidManeuver(event.target.value as RaidManeuver)}>
+                        <option value="skirmish">Skirmish</option>
+                        <option value="charge">Charge</option>
+                        <option value="evade">Evade</option>
+                      </select>
+                    </label>
+                    <label className="compact-check">
+                      <input type="checkbox" checked={raidRally} onChange={(event) => setRaidRally(event.target.checked)} />{' '}
+                      Rally the party before the strike
+                    </label>
+                    <label className="compact-field">
+                      <span>Call ally</span>
+                      <select value={raidAlly} onChange={(event) => setRaidAlly((event.target.value || '') as FactionId | '')}>
+                        <option value="">None</option>
+                        {allyOptions.map((faction) => (
+                          <option key={faction.id} value={faction.id}>
+                            {faction.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {(portersFree > 0 || guardsFree > 0) && (
+                      <div className="raid-escort-planner">
+                        <div className="raid-choice-label">Residents</div>
+                        <p className="dim raid-escort-note">
+                          Guards add striking force. Porters carry the haul home.
+                        </p>
+                        <div className="cargo-grid">
+                          {guardsFree > 0 && (
+                            <label className="dim">
+                              Guards <span style={{ fontSize: '0.75rem' }}>(of {guardsFree})</span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={guardsFree}
+                                value={raidEscort.guards ?? 0}
+                                onChange={(event) => setEscortQty('guards', event.target.value, guardsFree)}
+                              />
+                            </label>
+                          )}
+                          {portersFree > 0 && (
+                            <label className="dim">
+                              Porters <span style={{ fontSize: '0.75rem' }}>(of {portersFree})</span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={portersFree}
+                                value={raidEscort.porters ?? 0}
+                                onChange={(event) => setEscortQty('porters', event.target.value, portersFree)}
+                              />
+                            </label>
+                          )}
+                        </div>
+                        <div className="dim raid-escort-note">
+                          Loot capacity on this raid: {raidCapacity}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
 
                 <h4>Party</h4>
                 <div className="map-party-picks">
@@ -499,14 +612,18 @@ export function MapScreen({ game }: { game: GameState }) {
                       />{' '}
                       {hero.name}{' '}
                       <span className="dim">
-                        ({placeAction === 'diplomacy' ? `Diplomacy ${hero.skills.diplomacy}` : `Survival ${hero.skills.survival}`})
+                        {placeAction === 'diplomacy'
+                          ? `(Diplomacy ${hero.skills.diplomacy})`
+                          : placeAction === 'raid'
+                            ? `(Combat ${hero.skills.combat} · Stealth ${hero.skills.stealth})`
+                            : `(Survival ${hero.skills.survival})`}
                       </span>
                     </label>
                   ))}
                 </div>
                 {error && <div className="bad map-error">{error}</div>}
                 <button className="primary" disabled={game.phase !== 'assignment' || party.length === 0 || !pointReachable(game, activeTarget, MAP_REGIONS)} onClick={send}>
-                  Send the Party ▸
+                  {placeAction === 'raid' ? 'Send Raiders ▸' : 'Send the Party ▸'}
                 </button>
               </>
             )}

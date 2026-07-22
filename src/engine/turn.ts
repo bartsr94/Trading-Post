@@ -20,6 +20,7 @@ import {
 import { driftMarket, priceOf, prosperity } from './economy';
 import type { GoodDef } from './economy';
 import { advanceExpeditions, travelContextFor } from './expeditions';
+import { createIncomingRaid, raidChance, raidEligible } from './raids';
 import {
   addTransientGroup,
   applyAxisArrivals,
@@ -121,6 +122,7 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   // 1. Economy tick: price drift, then food + upkeep + the Charter quota.
   driftMarket(state, rng);
   const missedFood = payUpkeep(state, ctx, report);
+  settleTributes(state, ctx, report);
 
   if (state.bankruptcyClock >= TUNING.economy.bankruptcyTurns) {
     declareGameOver(state, 'bankrupt');
@@ -155,6 +157,10 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
 
   // 3c. The resident society settles: mood, desertion, growth, arrivals.
   resolveResidentSociety(state, ctx, rng, report, { missedFood, missedWages });
+
+  // 3d. The frontier tests the post: an incoming raid may be sighted (the player
+  //     defends it via the raid modal before the event phase; RAIDING_SPEC.md §6).
+  resolveIncomingRaids(state, ctx, rng, report);
 
   // 4. Stress breakdowns queue their event for immediate selection
   //    (heroes away break down once they are home to do it).
@@ -210,8 +216,29 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
     if (delta !== 0) state.report.goodsDelta[good] = delta;
   }
 
-  state.phase = state.pendingEvents.length > 0 ? 'event' : 'report';
+  // A pending raid holds the turn in the event phase until the player resolves it.
+  state.phase = state.pendingRaid || state.pendingEvents.length > 0 ? 'event' : 'report';
   state.rngState = rng.getState();
+}
+
+/**
+ * Rolls the frontier's aggression: an eligible post may be raided this turn.
+ * Sets `state.pendingRaid` for the player to defend; resolution (and any
+ * `destroyed` cascade) happens when they answer it (RAIDING_SPEC.md §6).
+ */
+function resolveIncomingRaids(
+  state: GameState,
+  ctx: TurnContext,
+  rng: Rng,
+  report: (icon: string, text: string) => void,
+): void {
+  if (!raidEligible(state)) return;
+  if (rng.next() >= raidChance(state, prosperity(state, ctx.goodDefs))) return;
+  const raid = createIncomingRaid(state, rng);
+  if (!raid) return;
+  state.pendingRaid = raid;
+  state.lastRaidTurn = state.turn;
+  report('⚔️', `Raiders on the frontier: ${raid.band} is moving on the post.`);
 }
 
 /** Food + post upkeep for heroes and residents. Returns whether food ran short. */
@@ -291,6 +318,70 @@ function payUpkeep(
   }
 
   return missedFood;
+}
+
+function settleTributes(
+  state: GameState,
+  ctx: Pick<TurnContext, 'goodNames' | 'factionNames'>,
+  report: (icon: string, text: string) => void,
+): void {
+  if (!isSeasonEnd(state.turn) || state.tributes.length === 0) return;
+  const broken: string[] = [];
+
+  for (const tribute of state.tributes) {
+    const goods = Object.entries(tribute.goods) as [GoodId, number][];
+    if (tribute.direction === 'pay') {
+      const shortGoods = goods.some(([good, qty]) => (state.goods[good] ?? 0) < qty);
+      const shortSilver = state.silver < tribute.silver;
+      if (shortGoods || shortSilver) {
+        broken.push(tribute.faction);
+        state.factions[tribute.faction].standing = clamp(
+        state.factions[tribute.faction].standing - TUNING.raid.tributeBrokenStandingLoss,
+          -100,
+          100,
+        );
+        report(
+          '⚠️',
+          `The tribute owed this season cannot be met. Peace with ${
+            ctx.factionNames.get(tribute.faction) ?? tribute.faction
+          } is broken.`,
+        );
+        continue;
+      }
+      state.silver -= tribute.silver;
+      for (const [good, qty] of goods) state.goods[good] -= qty;
+      const goodsLine = goods
+        .map(([good, qty]) => `${qty} ${ctx.goodNames.get(good) ?? good}`)
+        .join(', ');
+      report(
+        '📦',
+        `Tribute goes out to ${ctx.factionNames.get(tribute.faction) ?? tribute.faction}: ${
+          tribute.silver > 0 ? `${tribute.silver} silver` : ''
+        }${
+          tribute.silver > 0 && goodsLine ? ' and ' : ''
+        }${goodsLine}.`,
+      );
+      continue;
+    }
+
+    state.silver += tribute.silver;
+    for (const [good, qty] of goods) state.goods[good] = (state.goods[good] ?? 0) + qty;
+    const goodsLine = goods
+      .map(([good, qty]) => `${qty} ${ctx.goodNames.get(good) ?? good}`)
+      .join(', ');
+    report(
+      '🪙',
+      `Tribute comes in from ${ctx.factionNames.get(tribute.faction) ?? tribute.faction}: ${
+        tribute.silver > 0 ? `${tribute.silver} silver` : ''
+      }${
+        tribute.silver > 0 && goodsLine ? ' and ' : ''
+      }${goodsLine}.`,
+    );
+  }
+
+  if (broken.length > 0) {
+    state.tributes = state.tributes.filter((tribute) => !broken.includes(tribute.faction));
+  }
 }
 
 /** Quarterly (season-end) wages for the resident pool. Returns whether they went short. */

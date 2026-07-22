@@ -14,6 +14,7 @@ import { PeopleScreen } from './ui/screens/PeopleScreen';
 import { PostOverview } from './ui/screens/PostOverview';
 import { TurnReport } from './ui/screens/TurnReport';
 import { HeroBar } from './ui/components/HeroBar';
+import { RaidModal } from './ui/components/RaidModal';
 import { Sidebar } from './ui/components/Sidebar';
 
 const SEASON_ICONS: Record<string, string> = {
@@ -30,6 +31,7 @@ export function App() {
   const cheatModeEnabled = useGameStore((s) => s.cheatModeEnabled);
   const cheatConsoleOpen = useGameStore((s) => s.cheatConsoleOpen);
   const setCheatConsoleOpen = useGameStore((s) => s.setCheatConsoleOpen);
+  const lastRaidResolution = useGameStore((s) => s.lastRaidResolution);
 
   if (!game) {
     return (
@@ -76,8 +78,11 @@ export function App() {
 
       <HeroBar game={game} />
 
-      {game.phase === 'event' && <EventPanel game={game} />}
-      {game.phase === 'report' && <TurnReport game={game} />}
+      {(game.pendingRaid || lastRaidResolution) && <RaidModal game={game} />}
+      {game.phase === 'event' && !game.pendingRaid && !lastRaidResolution && (
+        <EventPanel game={game} />
+      )}
+      {game.phase === 'report' && !lastRaidResolution && <TurnReport game={game} />}
       {selectedHero && <HeroSheet hero={selectedHero} />}
       {cheatModeEnabled && cheatConsoleOpen && (
         <CheatConsole game={game} onClose={() => setCheatConsoleOpen(false)} />

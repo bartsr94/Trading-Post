@@ -90,7 +90,17 @@ export function AssignmentBoard({ game }: { game: GameState }) {
                   <ConditionBars hero={hero} />
                 </div>
                 <span className="dim" style={{ fontSize: '0.85rem' }}>
-                  {exp?.kind === 'caravan' ? '🐴 Caravan' : exp?.kind === 'explore' ? '🗺️ Scouting' : '🤝 Envoy'}{' '}
+                  {exp?.kind === 'caravan'
+                    ? '🐴 Caravan'
+                    : exp?.kind === 'explore'
+                      ? '🗺️ Scouting'
+                      : exp?.kind === 'diplomacy'
+                        ? '🤝 Envoy'
+                        : exp?.kind === 'labor'
+                          ? '📜 Recruiters'
+                          : exp?.kind === 'courtship'
+                            ? '💍 Courtship'
+                            : '⚔️ Raid'}{' '}
                   — {exp?.leg === 'outbound' ? `bound for ${dest}` : `returning from ${dest}`},{' '}
                   {exp?.turnsLeft} turn{exp?.turnsLeft === 1 ? '' : 's'} out
                 </span>

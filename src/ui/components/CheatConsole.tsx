@@ -19,6 +19,7 @@ import {
   FACTION_IDS,
   GOOD_IDS,
   HERITAGES,
+  RAID_SEVERITIES,
   RESIDENT_ROLES,
   TRANSIENT_KINDS,
   livingHeroes,
@@ -31,6 +32,7 @@ import type {
   GoodId,
   Heritage,
   HeritageGroup,
+  RaidSeverity,
   ResidentRole,
   TransientKind,
   UnionSource,
@@ -123,6 +125,7 @@ export function CheatConsole({ game, onClose }: { game: GameState; onClose: () =
             <RosterSection apply={apply} heroes={heroes} />
             <FamilySection apply={apply} game={game} />
             <WorldSection apply={apply} game={game} />
+            <RaidSection apply={apply} onTriggered={() => setCheatConsoleOpen(false)} />
             <ForceEventSection
               heroes={heroes}
               onForce={(eventId, heroId) => {
@@ -538,6 +541,46 @@ function WorldSection({ apply, game }: { apply: (o: Outcome[]) => void; game: Ga
           Set
         </button>
       </div>
+    </div>
+  );
+}
+
+function RaidSection({
+  apply,
+  onTriggered,
+}: {
+  apply: (o: Outcome[]) => void;
+  onTriggered: () => void;
+}) {
+  const [faction, setFaction] = useState<FactionId>('BEASTFOLK');
+  const [severity, setSeverity] = useState<RaidSeverity>('raid');
+  return (
+    <div className="panel">
+      <h4 style={{ marginTop: 0 }}>Raid</h4>
+      <div className="cc-row">
+        <select value={faction} onChange={(e) => setFaction(e.target.value as FactionId)}>
+          {FACTION_IDS.filter((f) => f !== 'CHARTER_COMPANY').map((f) => (
+            <option key={f} value={f}>{FACTION_NAMES.get(f) ?? f}</option>
+          ))}
+        </select>
+        <select value={severity} onChange={(e) => setSeverity(e.target.value as RaidSeverity)}>
+          {RAID_SEVERITIES.map((s) => (
+            <option key={s} value={s}>{cap(s)}</option>
+          ))}
+        </select>
+        <button
+          className="small"
+          onClick={() => {
+            apply([{ type: 'startRaid', faction, severity }]);
+            onTriggered();
+          }}
+        >
+          Send Raiders
+        </button>
+      </div>
+      <p className="dim" style={{ fontSize: '0.72rem' }}>
+        Queues an incoming raid and closes the console so the defence modal shows.
+      </p>
     </div>
   );
 }

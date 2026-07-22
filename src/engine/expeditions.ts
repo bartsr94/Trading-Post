@@ -16,6 +16,7 @@ import type { TravelContext } from './events/types';
 import { priceAt } from './economy';
 import type { GoodDef } from './economy';
 import { canWed, formUnion, unionError } from './family';
+import { canCallRaidAlly, createOutgoingRaid, raidTargetFaction } from './raids';
 import {
   addResidents,
   addTransientGroup,
@@ -54,6 +55,7 @@ import type {
   ExpeditionKind,
   ExpeditionPace,
   ExpeditionState,
+  FactionId,
   GameState,
   Gender,
   GoodId,
@@ -64,6 +66,8 @@ import type {
   MapFeatureDef,
   MapPoint,
   MapRegionDef,
+  RaidAttackGoal,
+  RaidManeuver,
   ResidentRole,
   SkillId,
   TraitDef,
@@ -96,6 +100,11 @@ export interface DispatchParams {
   laborCount?: number;
   /** For `courtship` runs: the graph-node id to wed (defaults to heroIds[0]). */
   courtshipFor?: string;
+  /** For `raid` runs: how the party means to fight once it reaches the target. */
+  raidGoal?: RaidAttackGoal;
+  raidManeuver?: RaidManeuver;
+  raidRally?: boolean;
+  raidAlly?: FactionId;
 }
 
 export function cargoUnits(cargo: Partial<Record<GoodId, number>>): number {
@@ -232,6 +241,19 @@ export function dispatchError(
     const err = unionError(state, subjectId);
     if (err) return err;
     if (state.silver < TUNING.family.homelandBridePrice) return 'Not enough silver for the bride-price.';
+  } else if (params.kind === 'raid') {
+    if (!def) return 'Choose a known destination.';
+    if (!discoveryAtLeast(discovery, 'rumored')) return 'You have no lead worth raiding yet.';
+    const targetFaction = raidTargetFaction(def);
+    if (!targetFaction) return 'There is no camp or rival there worth raiding.';
+    if (params.silver && params.silver > 0) return 'A raid does not march out carrying silver.';
+    if (cargoUnits(params.cargo ?? {}) > 0) return 'A raid leaves with empty packs and hopes to fill them later.';
+    if (Object.values(params.buyOrders ?? {}).some((qty) => (qty ?? 0) > 0)) {
+      return 'A raid cannot leave standing buy orders behind it.';
+    }
+    if (params.raidAlly && !canCallRaidAlly(state, params.raidAlly, targetFaction)) {
+      return 'That ally will not ride on this raid.';
+    }
   } else {
     if (!def) return 'Choose a known destination.';
     if (!def.hasMarket) return 'There is no market there.';
@@ -305,6 +327,10 @@ export function dispatchExpedition(
     state.silver -= TUNING.family.homelandBridePrice;
     courtshipFor = params.courtshipFor ?? params.heroIds[0];
   }
+  if (params.kind === 'raid' && params.raidAlly) {
+    const ally = state.factions[params.raidAlly];
+    ally.standing = clamp(ally.standing - TUNING.raid.allyStandingCost, -100, 100);
+  }
 
   // Second residents onto the party: they leave the post pool until homecoming.
   const escort: Partial<Record<ResidentRole, number>> = {};
@@ -331,6 +357,14 @@ export function dispatchExpedition(
     residentEscort: escort,
     ...(homelandLabor !== undefined ? { homelandLabor } : {}),
     ...(courtshipFor !== undefined ? { courtshipFor } : {}),
+    ...(params.kind === 'raid'
+      ? {
+          raidGoal: params.raidGoal ?? 'plunder',
+          raidManeuver: params.raidManeuver ?? 'skirmish',
+          raidRally: params.raidRally ?? false,
+          ...(params.raidAlly ? { raidAlly: params.raidAlly } : {}),
+        }
+      : {}),
   });
   state.nextExpeditionId += 1;
   return true;
@@ -395,7 +429,12 @@ export function advanceExpeditions(
       else if (exp.kind === 'explore') resolveExploreArrival(state, ctx, exp, def, rng, report);
       else if (exp.kind === 'diplomacy' && def) resolveDiplomacyArrival(state, ctx, exp, def, rng, report);
       else if (exp.kind === 'labor' && def) resolveLaborArrival(state, exp, def, report);
-      else if (def) resolveCourtshipArrival(state, exp, def, report);
+      else if (exp.kind === 'raid' && def) {
+        if (queueRaidArrival(state, exp, def, rng, report)) continue;
+        exp.leg = 'returning';
+        exp.turnsLeft = Math.max(1, exp.legTurns);
+        continue;
+      } else if (def) resolveCourtshipArrival(state, exp, def, report);
       exp.leg = 'returning';
       exp.turnsLeft = Math.max(1, exp.legTurns);
     } else {
@@ -405,6 +444,23 @@ export function advanceExpeditions(
   }
 
   state.expeditions = state.expeditions.filter((e) => !finished.includes(e.id));
+}
+
+function queueRaidArrival(
+  state: GameState,
+  exp: ExpeditionState,
+  def: LocationDef,
+  rng: Rng,
+  report: (icon: string, text: string) => void,
+): boolean {
+  const raid = createOutgoingRaid(state, exp, def, rng);
+  if (!raid) {
+    report('⚔️', `${partyNames(state, exp)} reach ${def.name}, but the chance to strike slips away.`);
+    return false;
+  }
+  state.pendingRaid = raid;
+  report('⚔️', `${partyNames(state, exp)} reach ${def.name} and wait on your word.`);
+  return true;
 }
 
 function partyNames(state: GameState, exp: ExpeditionState): string {

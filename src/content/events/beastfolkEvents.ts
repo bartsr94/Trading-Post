@@ -23,10 +23,11 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
         label: 'Pay what he asks — buy this season\'s quiet.',
         outcomes: {
           success: {
-            text: 'You count it out yourself, in the open, so there is no mistaking it for weakness — a price paid, not a tribute owed. He takes it without thanks and without trouble, and the camp is gone by morning.',
+            text: 'You count it out yourself, in the open, and make the bargain plain: this season’s due in exchange for a season’s peace. He takes it without thanks, but with understanding. So long as the due keeps coming, his band will leave the post alone.',
             outcomes: [
               { type: 'silver', delta: -25 },
               { type: 'good', good: 'grain', delta: -5 },
+              { type: 'tribute', faction: 'BEASTFOLK', direction: 'pay', silver: 12, goods: { grain: 3 } },
               { type: 'standing', faction: 'BEASTFOLK', delta: 2 },
               { type: 'history', text: 'Paid an orc war-band to leave the post in peace.' },
             ],
@@ -85,10 +86,11 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
         label: 'Fill the wagon — it is cheaper than a grudge.',
         outcomes: {
           success: {
-            text: '{hero} loads the wagon without ceremony. The clan-mother counts the goods with a practiced eye, nods once, and leads her sisters off satisfied. It costs, but it costs less than finding out what "further trouble" means.',
+            text: '{hero} loads the wagon without ceremony, and makes the understanding explicit: the wagon now, and a smaller due each season after, so long as the clan keeps its word. The clan-mother counts the goods with a practiced eye and agrees.',
             outcomes: [
               { type: 'good', good: 'cloth', delta: -6 },
               { type: 'good', good: 'tools', delta: -3 },
+              { type: 'tribute', faction: 'BEASTFOLK', direction: 'pay', goods: { cloth: 2, tools: 1 } },
               { type: 'standing', faction: 'BEASTFOLK', delta: 2 },
               { type: 'history', text: 'Paid a goblin clan to keep the peace.' },
             ],

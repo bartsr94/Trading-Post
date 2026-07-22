@@ -12,9 +12,10 @@ import {
   graphNode,
   removeDependant,
 } from '../family';
+import { createIncomingRaid, setTribute } from '../raids';
 import { addResidents, addTransientGroup, adjustContentment, loseResidents } from '../residents';
 import { departCharacter, recruitCharacter } from '../roster';
-import type { Rng } from '../rng';
+import { Rng } from '../rng';
 import { clamp, getHero, livingHeroes, nextDiscovery, oppositeGender } from '../types';
 import type {
   BuildingId,
@@ -181,6 +182,46 @@ export function applyOutcomes(
       }
       case 'addBuildProgress': {
         addBuildProgress(state, outcome.delta);
+        break;
+      }
+      case 'damageBuilding': {
+        if (outcome.building) {
+          const idx = state.buildings.indexOf(outcome.building);
+          if (idx >= 0) {
+            state.buildings.splice(idx, 1);
+            log.push(`${ctx.buildingNames.get(outcome.building) ?? outcome.building} is damaged beyond use`);
+          }
+        }
+        if (outcome.construction && state.construction) {
+          const before = state.construction.progress;
+          state.construction.progress = Math.max(0, before - outcome.construction);
+          if (state.construction.progress !== before) log.push('Construction is set back');
+        }
+        break;
+      }
+      case 'startRaid': {
+        if (!state.pendingRaid && !state.gameOver) {
+          const rng = ctx.rng ?? new Rng(state.rngState);
+          const raid = createIncomingRaid(state, rng, {
+            faction: outcome.faction,
+            severity: outcome.severity,
+          });
+          if (raid) {
+            state.pendingRaid = raid;
+            state.lastRaidTurn = state.turn;
+            log.push(`${raid.band} descends on the post`);
+          }
+          if (!ctx.rng) state.rngState = rng.getState();
+        }
+        break;
+      }
+      case 'tribute': {
+        setTribute(state, {
+          faction: outcome.faction,
+          direction: outcome.direction,
+          silver: outcome.silver ?? 0,
+          goods: { ...(outcome.goods ?? {}) },
+        });
         break;
       }
       case 'heroDeparts': {

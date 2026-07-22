@@ -8,12 +8,15 @@ import { createLocationStates } from './state';
 import { validateGameState } from './saveValidation';
 import { defaultSubPeople, discoveryAtLeast } from './types';
 import type {
+  FactionId,
   Gender,
   GameState,
   Heritage,
   LocationDef,
   MapFeatureDef,
   MapRegionDef,
+  RaidManeuver,
+  RaidSeverity,
 } from './types';
 
 /** Content the migrations need; injected so the engine stays content-free. */
@@ -104,6 +107,15 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
         break;
       case 12:
         current = migrateV12toV13(current, ctx);
+        break;
+      case 13:
+        current = migrateV13toV14(current);
+        break;
+      case 14:
+        current = migrateV14toV15(current);
+        break;
+      case 15:
+        current = migrateV15toV16(current);
         break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
@@ -357,6 +369,61 @@ function migrateV12toV13(save: GameState, ctx?: MigrationContext): GameState {
     ),
   };
   return migrated;
+}
+
+/**
+ * v14 adds raiding (RAIDING_SPEC.md): the pending-raid slot plus the cadence and
+ * cascade bookkeeping. All absent/zero on an old save — no aggressor knows the
+ * post yet, and the grace period is measured from `turn`, so a loaded game
+ * simply starts its raid clock from wherever it is.
+ */
+function migrateV13toV14(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 14,
+    pendingRaid: null,
+    lastRaidTurn: 0,
+    lastSackedTurn: 0,
+  };
+}
+
+/** v15 adds the standing tribute relationships for raiding Phase B. */
+function migrateV14toV15(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 15,
+    tributes: [],
+  };
+}
+
+interface LegacyPendingIncomingRaid {
+  faction: FactionId;
+  severity: RaidSeverity;
+  attackerForce: number;
+  attackerManeuver: RaidManeuver;
+  spotted: boolean;
+  band: string;
+}
+
+/** v16 broadens the pending raid slot from incoming-only to a typed encounter union. */
+function migrateV15toV16(save: GameState): GameState {
+  const pendingRaid = save.pendingRaid as unknown as LegacyPendingIncomingRaid | null;
+  return {
+    ...save,
+    saveVersion: 16,
+    pendingRaid:
+      pendingRaid === null
+        ? null
+        : {
+            kind: 'incoming',
+            faction: pendingRaid.faction,
+            severity: pendingRaid.severity,
+            attackerForce: pendingRaid.attackerForce,
+            attackerManeuver: pendingRaid.attackerManeuver,
+            spotted: pendingRaid.spotted,
+            band: pendingRaid.band,
+          },
+  };
 }
 
 export function autosave(state: GameState): void {

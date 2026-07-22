@@ -15,6 +15,7 @@ export type IconName =
   | 'caravan'
   | 'explore'
   | 'diplomacy'
+  | 'raid'
   | 'heart'
   | 'gear';
 
@@ -91,6 +92,16 @@ const PATHS: Record<IconName, ReactElement> = {
     <>
       <line x1="6" y1="3" x2="6" y2="21" />
       <path d="M6 4 L18 7 L6 11 Z" />
+    </>
+  ),
+  raid: (
+    <>
+      <path d="M7 5 L11 9" />
+      <path d="M13 9 L17 5" />
+      <path d="M11 9 L5 19" />
+      <path d="M13 9 L19 19" />
+      <path d="M4 19 H8" />
+      <path d="M16 19 H20" />
     </>
   ),
   heart: (

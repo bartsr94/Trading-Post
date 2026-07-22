@@ -16,12 +16,14 @@ import type {
   HeritageGroup,
   LocationId,
   MapPoint,
+  RaidSeverity,
   ResidentRole,
   Season,
   SkillId,
   StatId,
   TraitId,
   TransientKind,
+  TributeDirection,
   UnionSource,
 } from '../types';
 
@@ -74,6 +76,12 @@ export type Condition =
   | { type: 'heroHeritageInParty'; heritage: Heritage }
   | { type: 'postTierAtLeast'; value: number }
   | { type: 'postTierAtMost'; value: number }
+  | { type: 'postDefenseAtLeast'; value: number }
+  | { type: 'postDefenseAtMost'; value: number }
+  /** True once the grace period has elapsed and an aggressor exists (RAIDING_SPEC.md §6). */
+  | { type: 'raidReady' }
+  /** The post was sacked within the last `turns` (RAIDING_SPEC.md §7). */
+  | { type: 'raidedRecently'; turns: number }
   | { type: 'hasBuilding'; building: BuildingId }
   | { type: 'lacksBuilding'; building: BuildingId }
   | { type: 'constructionActive'; value: boolean }
@@ -125,6 +133,19 @@ export type Outcome =
   | { type: 'advanceTier' }
   | { type: 'completeBuilding'; building: BuildingId }
   | { type: 'addBuildProgress'; delta: number }
+  /** Burn a completed building and/or set back the active project (RAIDING_SPEC.md §9). */
+  | { type: 'damageBuilding'; building?: BuildingId; construction?: number }
+  /** Queue an incoming raid for the player to defend against (RAIDING_SPEC.md §9).
+   *  Bypasses eligibility — the event itself is the trigger. */
+  | { type: 'startRaid'; faction?: FactionId; severity?: RaidSeverity }
+  /** Establish or clear a standing tribute oath (RAIDING_SPEC.md Phase B). */
+  | {
+      type: 'tribute';
+      faction: FactionId;
+      direction: TributeDirection;
+      silver?: number;
+      goods?: Partial<Record<GoodId, number>>;
+    }
   | { type: 'heroDeparts' }
   /** Recruit a named character from a template (CHARACTERS_SPEC.md §6). */
   | { type: 'recruitCharacter'; templateId: string; toActive?: boolean }

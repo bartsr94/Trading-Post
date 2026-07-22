@@ -112,7 +112,7 @@ describe('save migration v9 -> v10', () => {
     preV10.factions = factions as GameState['factions'];
 
     const migrated = migrate(preV10);
-    expect(migrated.saveVersion).toBe(13); // migrate() chains all the way to current
+    expect(migrated.saveVersion).toBe(16); // migrate() chains all the way to current
     expect(migrated.factions.BEASTFOLK).toBeDefined();
     expect(migrated.factions.BEASTFOLK.standing).toBe(-60);
   });

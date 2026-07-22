@@ -74,6 +74,26 @@ describe('turn resolution pipeline', () => {
     };
     expect(run()).toEqual(run());
   });
+
+  it('settles tribute at season end', () => {
+    const s = testState();
+    s.turn = 6;
+    s.tributes = [{ faction: 'BEASTFOLK', direction: 'receive', silver: 18, goods: { grain: 2 } }];
+    resolveTurn(s, TEST_CONTENT);
+    expect(s.report.lines.some((l) => l.text.includes('Tribute comes in from The Greenskins'))).toBe(true);
+    expect(s.tributes).toHaveLength(1);
+  });
+
+  it('breaks tribute if the post cannot pay it', () => {
+    const s = testState();
+    s.turn = 6;
+    s.silver = 0;
+    s.goods.grain = 0;
+    s.tributes = [{ faction: 'BEASTFOLK', direction: 'pay', silver: 99, goods: { grain: 4 } }];
+    resolveTurn(s, TEST_CONTENT);
+    expect(s.tributes).toEqual([]);
+    expect(s.report.lines.some((l) => l.text.includes('Peace with The Greenskins is broken'))).toBe(true);
+  });
 });
 
 describe('event choice resolution', () => {

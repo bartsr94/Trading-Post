@@ -9,6 +9,7 @@ import { dispatchExpedition, travelContextFor } from '../expeditions';
 import { addChild, canWed, childrenOf, formUnion, isMarried, spousesOf } from '../family';
 import type { TravelContext } from '../events/types';
 import { mapCellIndex, pointReachable } from '../map';
+import { resolveIncomingRaid, resolveOutgoingRaid } from '../raids';
 import { Rng } from '../rng';
 import {
   hireResidents,
@@ -191,6 +192,37 @@ function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
       state.assignments[party[party.length - 1].id] = 'build';
     }
     resolveTurn(state, TEST_CONTENT);
+    // An incoming raid pauses the turn for a defence — the sim picks a default.
+    if (state.pendingRaid) {
+      const raidRng = new Rng(state.rngState);
+      if (state.pendingRaid.kind === 'incoming') {
+        resolveIncomingRaid(
+          state,
+          { goal: 'driveoff', maneuver: 'skirmish', rally: false },
+          raidRng,
+          {
+            goodDefs: TEST_CONTENT.goodDefs,
+            goodNames: TEST_CONTENT.goodNames,
+            buildingNames: TEST_CONTENT.buildingNames,
+          },
+        );
+      } else {
+        resolveOutgoingRaid(
+          state,
+          state.pendingRaid,
+          { goal: 'plunder', maneuver: 'skirmish', rally: false },
+          raidRng,
+          {
+            goodDefs: TEST_CONTENT.goodDefs,
+            goodNames: TEST_CONTENT.goodNames,
+            buildingNames: TEST_CONTENT.buildingNames,
+          },
+        );
+      }
+      state.rngState = raidRng.getState();
+      if (state.gameOver) return;
+      state.phase = state.pendingEvents.length > 0 ? 'event' : 'report';
+    }
     while (state.phase === 'event' && state.pendingEvents.length > 0) {
       const active = state.pendingEvents[0];
       const event = TEST_CONTENT.events.get(active.eventId)!;

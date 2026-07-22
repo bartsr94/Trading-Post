@@ -2,7 +2,8 @@ import { activeHeroes, discoveryAtLeast, livingHeroes, reserveHeroes, seasonOfTu
 import { canAdvanceTier, hasBuilding } from '../buildings';
 import { cargoUnits } from '../expeditions';
 import { isMarried } from '../family';
-import { heritageCount, nativeShare, residentCount } from '../residents';
+import { heritageCount, nativeShare, postDefense, residentCount } from '../residents';
+import { raidThreatActive } from '../raids';
 import type { GameState } from '../types';
 import type { Condition, TravelContext } from './types';
 
@@ -86,6 +87,14 @@ export function evalCondition(
       return state.postTier >= cond.value;
     case 'postTierAtMost':
       return state.postTier <= cond.value;
+    case 'postDefenseAtLeast':
+      return postDefense(state) >= cond.value;
+    case 'postDefenseAtMost':
+      return postDefense(state) <= cond.value;
+    case 'raidReady':
+      return raidThreatActive(state);
+    case 'raidedRecently':
+      return state.lastSackedTurn > 0 && state.turn - state.lastSackedTurn <= cond.turns;
     case 'hasBuilding':
       return hasBuilding(state, cond.building);
     case 'lacksBuilding':

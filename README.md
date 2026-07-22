@@ -65,7 +65,24 @@ Marriages bear **children** on a Communal, contented post — each a person of *
 
 Beyond the named company, the post gathers an **unnamed population** — farmers, porters, guards, and craftsfolk you feed, pay, and put to work. It's a pool you shape rather than a roster you command: farmers grow grain, porters haul more cargo when seconded to a caravan, guards steady a party on the road and hold the palisade, craftsfolk keep the place mended. Hire hands from the neighbouring towns, draw them in as the post prospers or as it grows more integrated with the native peoples, and assign idle newcomers to a trade. They eat every turn and draw wages every season; let either run short and **contentment** slides from content to grumbling to open unrest — output falls, then people desert. Manage them from the **People** screen.
 
-The post also draws **outsiders** it neither feeds nor pays, passing through for a time: a faction honour-guard that rides home with a successful envoy and helps hold the walls, a supplier crew that lends its backs to your caravans for a few nights, or Company inspectors who post themselves at the gate when a profit shipment goes unpaid — and quietly sour the mood until the debt is settled.
+The post also draws **outsiders** it neither feeds nor pays, passing through for a time: a faction honour-guard that rides home with a successful envoy and helps hold the walls, a supplier crew that lends its backs to your caravans for a few nights, or Company inspectors who post themselves at the gate when a profit shipment goes unpaid — and quietly sour the mood until the debt is settled. Those same residents now matter directly in war: guards strengthen the post against incoming raids, guard escorts add force to outbound strikes, and porters raise how much loot a raiding party can carry home.
+
+## Raiding
+
+The frontier can now turn violent in both directions. Hostile neighbours may
+**raid the post** after the early grace period, and you can also send an
+outbound **raid expedition** of your own against hostile camps or rival seats.
+Both use a focused, KoDP-style encounter screen: when raiders arrive you choose
+how to meet them, and when your own party reaches its mark you give the final
+order there rather than auto-resolving the clash off-screen.
+
+Defence reads the whole settlement: resident guards, walls and towers, visiting
+honour-guards, heroes currently at the post, and even a capped fyrd levy of
+farmers and idle hands. Outbound raids weigh the party's fighters, any resident
+guard escort, ally support, stealth on the approach, march fatigue, and how
+many porters came to haul the loot home. Results can bring back silver and
+goods, force tribute, sour faction standing, wound or kill named heroes, burn
+buildings, or in the worst case help push a hollowed post toward destruction.
 
 ## Whose post is it becoming
 
@@ -131,7 +148,7 @@ The engine never hardcodes content: new events, heroes, traits, or locations are
 ## Roadmap
 
 - **MVP 1 — the loop works** *(complete)*: core turn loop, heroes, visible checks, event engine, post market, saves.
-- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅, with its transient outsiders & craftsfolk build-crews ✅; the active-party ↔ reserve character roster ✅ and recruitment chains ✅; buildings, construction & tier 1→2 advancement ✅; the peoples of the Ashmark & the post's cultural character — heritage, the culture axis, and local-vs-homeland hiring ✅; marriage, partners, children & the multi-generational family tree ✅; still open — the rest of the buildings & post tiers 2→4, the Company's reaction to a compromised post (standing pressure, the charter-revoked ending, and its read of a household's bloodline), raids & their defence, event count to ~60 (~38 so far).
+- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅, with its transient outsiders & craftsfolk build-crews ✅; the active-party ↔ reserve character roster ✅ and recruitment chains ✅; buildings, construction & tier 1→2 advancement ✅; the peoples of the Ashmark & the post's cultural character — heritage, the culture axis, and local-vs-homeland hiring ✅; marriage, partners, children & the multi-generational family tree ✅; two-way raiding with tribute, destruction cascade, and encounter screens ✅; still open — the rest of the buildings & post tiers 2→4, the Company's reaction to a compromised post (standing pressure, the charter-revoked ending, and its read of a household's bloodline), and event count to ~60 (~38 so far).
 - **MVP 3 — it's a game**: balance pass, seasonal content, endgame variants, art, audio, onboarding.
 
 Hero names, cultures, faction identities, and location names are grounded in the Ashmark region of Palusteria; a handful of minor wilderness-node names and one trait name are still open.

@@ -5,7 +5,7 @@ import type { BuildingDefData, FactionId, Heritage, TierRequirement } from '../e
 
 export const TUNING = {
   save: {
-    version: 13,
+    version: 16,
     autosaveKey: 'trading-post-save',
     /** Manual import guard; current saves are far smaller than five MiB. */
     maxImportBytes: 5 * 1024 * 1024,
@@ -506,6 +506,217 @@ export const TUNING = {
       mixedCompromiseAdd: 1, // extra compromise per wed 'mixed' active hero
       informalCompromiseMult: 1.5, // informal households weigh heavier than alliances
       multiSpouseCompromiseMult: 1.25, // a multi-spouse mixed household heavier still
+    },
+  },
+
+  // Raiding, both directions (RAIDING_SPEC.md). Phase A wires the incoming side;
+  // outgoing (the `raid` ExpeditionKind) reuses the same resolver in Phase B.
+  raid: {
+    // --- The notoriety arc: when raids become possible (RAIDING_SPEC.md §6) ---
+    /** No incoming raid may trigger before this turn — the post is too new to
+     *  be a known target (24 turns/yr, so ~1.5 years of grace). */
+    graceTurns: 36,
+    /** Minimum turns between incoming raids, so they stay a periodic threat. */
+    minTurnsBetweenRaids: 8,
+    /** A faction at/below this standing is an eligible aggressor. */
+    hostileStandingThreshold: -30,
+    /** Beastfolk are always an eligible aggressor once grace elapses (no seat). */
+    beastfolkAlwaysEligible: true,
+
+    // Per-turn raid-chance formula: base + prosperity + hostility − deterrence.
+    raidChance: {
+      base: 0.02,
+      /** Added per point of prosperity — a fat post is a tempting target. */
+      perProsperity: 0.004,
+      /** Added per point of the angriest eligible faction's hostility (−standing). */
+      perHostility: 0.002,
+      /** Subtracted per point of postDefense — a strong wall deters. */
+      perDefense: 0.01,
+      /** Hard ceiling so a raid is never a certainty in a single turn. */
+      max: 0.35,
+    },
+
+    // --- Force tallies (RAIDING_SPEC.md §3.1) ---
+    /** Each at-post hero's combat skill contributes this much to defender force. */
+    heroCombatWeight: 1,
+    /** Each farmer/idle head grabs a spear and adds this to the fyrd levy. */
+    fyrdValuePerHead: 0.34,
+    /** Cap on the fyrd levy so a huge peasant pool can't trivialise defence. */
+    fyrdLevyMax: 6,
+    /** Each guard seconded onto an outgoing raid adds this much force. */
+    guardEscortForce: 1,
+
+    // Attacker war-band strength by severity (before hostility scaling + spread).
+    // `spotOffset` shifts the patrol spot-chance: a small probe sneaks, a big
+    // war-band is loud (KoDP: large parties are seen sooner).
+    severity: {
+      probe: { baseForce: 4, loot: 0.6, casualtyMult: 0.5, spotOffset: -0.15 },
+      raid: { baseForce: 8, loot: 1, casualtyMult: 1, spotOffset: 0 },
+      warband: { baseForce: 13, loot: 1.5, casualtyMult: 1.5, spotOffset: 0.15 },
+    } as Record<
+      string,
+      { baseForce: number; loot: number; casualtyMult: number; spotOffset: number }
+    >,
+    /** Attacker force gained per point of the aggressor's hostility (−standing). */
+    forcePerHostility: 0.08,
+    /** ± random spread applied to the rolled attacker force (as a fraction). */
+    forceSpread: 0.25,
+    /** Hostility above this can escalate probe→raid→warband. */
+    warbandHostility: 55,
+    raidHostility: 30,
+
+    // --- Spotting (RAIDING_SPEC.md §3.2) ---
+    /** Base chance the patrols spot an incoming band before it strikes. */
+    spotChanceBase: 0.3,
+    /** Added to the spot chance per point of postDefense (walls/watchtower/guards). */
+    spotChancePerDefense: 0.08,
+    /** Undetected raiders open with this much added to attacker force (surprise). */
+    surpriseForce: 3,
+    /** An outbound raiding party that slips past the watch strikes with this bonus. */
+    outgoingSurpriseForce: 4,
+    /** A detected target musters this much more force before the clash. */
+    outgoingDetectedDefenseBonus: 2,
+    /** Base difficulty to approach a target unseen on an outgoing raid. */
+    outgoingStealthDifficulty: 10,
+    /** Each hero in the party makes a raid harder to conceal. */
+    outgoingStealthPartyPenalty: 1,
+    /** Each guard escort makes a raid harder to conceal. */
+    outgoingStealthGuardPenalty: 1,
+    /** Calling in allied warriors makes stealth still harder. */
+    outgoingStealthAllyPenalty: 2,
+    /** A settled target with guards and stores behind it. */
+    outgoingSeatDefense: 9,
+    /** A wilderness camp or loose war-band. */
+    outgoingWildDefense: 6,
+    /** Long marches sap a raiding party's striking power. */
+    outgoingDistancePenaltyPerTurn: 0.5,
+    /** A friendly faction may be asked to lend warriors at or above this standing. */
+    allyStandingRequired: 15,
+    /** Warriors lent by an ally on an outgoing raid. */
+    allyForceBonus: 4,
+    /** Standing spent when calling in allied raiders. */
+    allyStandingCost: 2,
+
+    // Defender battle goals: how each shapes the fight (RAIDING_SPEC.md §4).
+    // forceMod adds to the defence tally; casualtyMult scales guard losses on a
+    // loss; bloody flips a repel into a feud (aggressor standing drops instead of
+    // rising); recover is the fraction of threatened value clawed back on a repel.
+    defendGoals: {
+      hold: { forceMod: 2, casualtyMult: 0.5, bloody: false, recover: 0 },
+      driveoff: { forceMod: 1, casualtyMult: 0.7, bloody: false, recover: 0 },
+      stand: { forceMod: -1, casualtyMult: 1.3, bloody: true, recover: 0 },
+      sally: { forceMod: 0, casualtyMult: 1.1, bloody: false, recover: 0.15 },
+    } as Record<
+      string,
+      { forceMod: number; casualtyMult: number; bloody: boolean; recover: number }
+    >,
+    attackGoals: {
+      plunder: {
+        forceMod: 0,
+        casualtyMult: 0.9,
+        lootSilverMult: 1,
+        lootGoodsMult: 1,
+        factionStandingLoss: 3,
+        companyStandingLoss: 2,
+        tributeSilver: 0,
+      },
+      burn: {
+        forceMod: -1,
+        casualtyMult: 1.1,
+        lootSilverMult: 0.3,
+        lootGoodsMult: 0.4,
+        factionStandingLoss: 5,
+        companyStandingLoss: 4,
+        tributeSilver: 0,
+      },
+      bloody: {
+        forceMod: 1,
+        casualtyMult: 1.25,
+        lootSilverMult: 0.15,
+        lootGoodsMult: 0.2,
+        factionStandingLoss: 6,
+        companyStandingLoss: 5,
+        tributeSilver: 0,
+      },
+      cow: {
+        forceMod: 0,
+        casualtyMult: 1,
+        lootSilverMult: 0.4,
+        lootGoodsMult: 0.3,
+        factionStandingLoss: 4,
+        companyStandingLoss: 3,
+        tributeSilver: 18,
+      },
+    } as Record<
+      string,
+      {
+        forceMod: number;
+        casualtyMult: number;
+        lootSilverMult: number;
+        lootGoodsMult: number;
+        factionStandingLoss: number;
+        companyStandingLoss: number;
+        tributeSilver: number;
+      }
+    >,
+
+    // --- Battle resolution (RAIDING_SPEC.md §3.3) ---
+    /** ± force swing from winning the maneuver rock-paper-scissors. */
+    maneuverSwing: 3,
+    /** Rally (a leadership check) adds this to the defender force on success. */
+    rallyForceBonus: 3,
+    rallyCheckDifficulty: 10,
+    /** Margin thresholds (defender POV) mapping the battle roll to an outcome. */
+    outcome: {
+      repelledMargin: 4, // decisive defence — attackers bloodied, driven off
+      holdMargin: -3, // held, but they got something
+      sackMargin: -9, // overrun: heavy loss, a sack
+    },
+
+    // --- Stakes (RAIDING_SPEC.md §7) ---
+    /** Fraction of held silver a full sack can carry off (scaled by deficit). */
+    lootSilverFraction: 0.3,
+    /** Fraction of a good's stock a full sack can carry off. */
+    lootGoodFraction: 0.35,
+    /** Goods raiders prefer, in rough priority order (grain/portable wealth). */
+    lootGoods: ['grain', 'furs', 'hides', 'cloth', 'salt', 'tools', 'amber'] as string[],
+    /** Silver an outbound raid can expect per point of winning margin. */
+    outgoingSilverPerMargin: 5,
+    /** Goods units an outbound raid expects even on a narrow win. */
+    outgoingGoodsBase: 2,
+    /** Extra goods units per point of winning margin on an outgoing raid. */
+    outgoingGoodsPerMargin: 0.45,
+    /** Guard residents lost, per point of losing margin, × severity casualtyMult. */
+    guardCasualtyPerMargin: 0.4,
+    /** Guard escorts lost, per point of losing margin, on an outgoing raid. */
+    outgoingGuardCasualtyPerMargin: 0.25,
+    /** Chance a bad loss wounds an at-post hero (health/stress). */
+    heroWoundChance: 0.5,
+    heroWoundHealth: 2,
+    heroWoundStress: 2,
+    /** Construction progress lost when a raid reaches the works. */
+    constructionDamage: 40,
+    /** On a sack with a building present, the chance a completed building burns. */
+    buildingBurnChance: 0.25,
+
+    // Standing consequences (KoDP feuds).
+    /** Aggressor standing change when we repel them decisively (they respect strength). */
+    repelStandingGain: 2,
+    /** Aggressor standing loss when we choose to bloody them (hardens the grudge). */
+    bloodyStandingLoss: 4,
+    /** Aggressor standing change when they sack us (emboldened). */
+    sackStandingLoss: 3,
+    /** Standing loss when tribute is broken or dishonoured. */
+    tributeBrokenStandingLoss: 8,
+
+    // --- The `destroyed` game-over: cascading failure only (RAIDING_SPEC.md §7.1) ---
+    destroyed: {
+      /** Post is "hollowed" at/below this many total residents. */
+      residentFloor: 3,
+      /** …and at/below this combined silver + stock value. */
+      wealthFloor: 60,
+      /** A prior sack within this many turns makes the next sack fatal. */
+      cascadeWindow: 6,
     },
   },
 } as const;

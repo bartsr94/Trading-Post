@@ -10,6 +10,7 @@ import {
   RESIDENT_ROLES,
   SKILL_IDS,
   STAT_IDS,
+  TRIBUTE_DIRECTIONS,
   TRANSIENT_KINDS,
 } from './types';
 import type { GameState } from './types';
@@ -20,12 +21,15 @@ const PHASES = ['assignment', 'event', 'report', 'gameover'] as const;
 const HERO_STATUSES = ['active', 'dead', 'departed'] as const;
 const GENDERS = ['male', 'female'] as const;
 const BLOODLINES = ['pure', 'mixed'] as const;
-const EXPEDITION_KINDS = ['caravan', 'explore', 'diplomacy', 'labor', 'courtship'] as const;
+const EXPEDITION_KINDS = ['caravan', 'explore', 'diplomacy', 'labor', 'courtship', 'raid'] as const;
 const EXPEDITION_PACES = ['fast', 'normal', 'slow'] as const;
 const EXPEDITION_LEGS = ['outbound', 'returning'] as const;
 const CHECK_TIERS = ['critSuccess', 'success', 'failure', 'critFailure'] as const;
 const AXIS_IDS = ['integration', 'communal', 'culture'] as const;
-const GAME_OVER_KINDS = ['bankrupt', 'brokenCompany', 'charterRevoked'] as const;
+const GAME_OVER_KINDS = ['bankrupt', 'brokenCompany', 'charterRevoked', 'destroyed'] as const;
+const RAID_SEVERITIES = ['probe', 'raid', 'warband'] as const;
+const RAID_MANEUVERS = ['skirmish', 'charge', 'evade'] as const;
+const RAID_ATTACK_GOALS = ['plunder', 'burn', 'bloody', 'cow'] as const;
 
 function invalid(path: string, detail = 'is invalid'): never {
   throw new Error(`Not a valid Trading Post save: ${path} ${detail}.`);
@@ -229,6 +233,10 @@ function validateExpedition(
   }
   if (exp.homelandLabor !== undefined) nonNegativeInteger(exp.homelandLabor, `${path}.homelandLabor`);
   if (exp.courtshipFor !== undefined) string(exp.courtshipFor, `${path}.courtshipFor`);
+  if (exp.raidGoal !== undefined) enumValue(exp.raidGoal, RAID_ATTACK_GOALS, `${path}.raidGoal`);
+  if (exp.raidManeuver !== undefined) enumValue(exp.raidManeuver, RAID_MANEUVERS, `${path}.raidManeuver`);
+  if (exp.raidRally !== undefined) boolean(exp.raidRally, `${path}.raidRally`);
+  if (exp.raidAlly !== undefined) enumValue(exp.raidAlly, FACTION_IDS, `${path}.raidAlly`);
   if (exp.surveyResult !== undefined) validateSurvey(exp.surveyResult, `${path}.surveyResult`, maxCell);
   return { id, heroIds: party };
 }
@@ -344,6 +352,41 @@ export function validateGameState(value: unknown): GameState {
   nonNegativeInteger(state.bankruptcyClock, 'save.bankruptcyClock');
   nonNegativeInteger(state.charterMissedStreak, 'save.charterMissedStreak');
   nonNegativeInteger(state.charterCompromisedStreak, 'save.charterCompromisedStreak');
+  nonNegativeInteger(state.lastRaidTurn, 'save.lastRaidTurn');
+  nonNegativeInteger(state.lastSackedTurn, 'save.lastSackedTurn');
+  const tributes = array(state.tributes, 'save.tributes');
+  const tributeFactions = tributes.map((entry, index) => {
+    const tribute = record(entry, `save.tributes[${index}]`);
+    enumValue(tribute.faction, FACTION_IDS, `save.tributes[${index}].faction`);
+    enumValue(tribute.direction, TRIBUTE_DIRECTIONS, `save.tributes[${index}].direction`);
+    nonNegativeInteger(tribute.silver, `save.tributes[${index}].silver`);
+    validateGoodCounts(tribute.goods, `save.tributes[${index}].goods`, true);
+    return tribute.faction as string;
+  });
+  unique(tributeFactions, 'save.tributes');
+  if (state.pendingRaid !== null) {
+    const raid = record(state.pendingRaid, 'save.pendingRaid');
+    const kind = enumValue(raid.kind, ['incoming', 'outgoing'], 'save.pendingRaid.kind');
+    enumValue(raid.faction, FACTION_IDS, 'save.pendingRaid.faction');
+    boolean(raid.spotted, 'save.pendingRaid.spotted');
+    if (kind === 'incoming') {
+      enumValue(raid.severity, RAID_SEVERITIES, 'save.pendingRaid.severity');
+      enumValue(raid.attackerManeuver, RAID_MANEUVERS, 'save.pendingRaid.attackerManeuver');
+      nonNegativeInteger(raid.attackerForce, 'save.pendingRaid.attackerForce');
+      string(raid.band, 'save.pendingRaid.band');
+    } else {
+      string(raid.expeditionId, 'save.pendingRaid.expeditionId');
+      string(raid.targetName, 'save.pendingRaid.targetName');
+      nonNegativeInteger(raid.defenderForce, 'save.pendingRaid.defenderForce');
+      enumValue(raid.defenderManeuver, RAID_MANEUVERS, 'save.pendingRaid.defenderManeuver');
+      enumValue(raid.goal, RAID_ATTACK_GOALS, 'save.pendingRaid.goal');
+      enumValue(raid.maneuver, RAID_MANEUVERS, 'save.pendingRaid.maneuver');
+      boolean(raid.rally, 'save.pendingRaid.rally');
+      if (raid.ally !== undefined) {
+        enumValue(raid.ally, FACTION_IDS, 'save.pendingRaid.ally');
+      }
+    }
+  }
   const report = record(state.report, 'save.report');
   nonNegativeInteger(report.turn, 'save.report.turn');
   array(report.lines, 'save.report.lines').forEach((entry, index) => {

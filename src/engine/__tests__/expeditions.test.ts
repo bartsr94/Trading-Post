@@ -5,7 +5,8 @@ import { regionAt, validMapPoint } from '../map';
 import { priceAt, priceOf } from '../economy';
 import { advanceExpeditions, dispatchError, dispatchExpedition } from '../expeditions';
 import { selectEvents } from '../events/selection';
-import { residentTotal } from '../residents';
+import { resolveOutgoingRaid, tributeFor } from '../raids';
+import { addResidents, residentTotal } from '../residents';
 import { Rng } from '../rng';
 import { resolveTurn } from '../turn';
 import { heroesAtPost } from '../types';
@@ -75,6 +76,13 @@ describe('dispatch validation', () => {
     // valid dispatches pass.
     expect(dispatchError(s, { kind: 'explore', destination: 'hill_fort', heroIds: ['p1'] }, DEFS)).toBeNull();
     expect(dispatchError(s, { kind: 'caravan', destination: 'river_meet', heroIds: ['p1'] }, DEFS)).toBeNull();
+  });
+
+  it('rejects raids against places with no faction or camp to hit', () => {
+    const s = testState();
+    expect(
+      dispatchError(s, { kind: 'raid', destination: 'old_road', heroIds: ['p1'] }, DEFS),
+    ).toBeTruthy();
   });
 
   it('rejects double-booking a hero', () => {
@@ -179,6 +187,70 @@ describe('expedition lifecycle', () => {
     expect(residentTotal(s)).toBe(0);
     expect(s.residents.heritage).toEqual({ homeland: 0, native: 0 });
     expect(s.residents.tags).toEqual({});
+  });
+
+  it('can cow a target into paying tribute after a successful raid', () => {
+    const s = testState(888);
+    addResidents(s, 'guards', 2, undefined, 'homeland');
+    const p1 = s.heroes.find((h) => h.id === 'p1')!;
+    const p2 = s.heroes.find((h) => h.id === 'p2')!;
+    for (const hero of [p1, p2]) {
+      hero.skills.combat = 5;
+      hero.skills.stealth = 5;
+      hero.skills.leadership = 5;
+      hero.stats.might = 5;
+      hero.stats.agility = 5;
+      hero.stats.resolve = 5;
+    }
+    const companyBefore = s.factions.CHARTER_COMPANY.standing;
+    expect(
+      dispatchExpedition(
+        s,
+        {
+          kind: 'raid',
+          destination: 'river_meet',
+          heroIds: ['p1', 'p2'],
+          residents: { guards: 2 },
+          raidGoal: 'cow',
+          raidManeuver: 'skirmish',
+          raidRally: true,
+          raidAlly: 'CHARTER_COMPANY',
+        },
+        DEFS,
+      ),
+    ).toBe(true);
+    expect(s.factions.CHARTER_COMPANY.standing).toBe(
+      companyBefore - TUNING.raid.allyStandingCost,
+    );
+
+    const tick = () => advanceExpeditions(s, TEST_CONTENT, new Rng(3), () => undefined);
+    while (s.expeditions.length > 0 && s.expeditions[0].leg === 'outbound' && !s.pendingRaid) tick();
+
+    expect(s.pendingRaid?.kind).toBe('outgoing');
+    const pending = s.pendingRaid;
+    if (!pending || pending.kind !== 'outgoing') throw new Error('Expected an outgoing raid encounter.');
+
+    const resolution = resolveOutgoingRaid(
+      s,
+      pending,
+      { goal: 'cow', maneuver: 'skirmish', rally: true },
+      new Rng(4),
+      {
+        goodDefs: TEST_CONTENT.goodDefs,
+        goodNames: TEST_CONTENT.goodNames,
+        buildingNames: TEST_CONTENT.buildingNames,
+      },
+    );
+
+    expect(resolution.direction).toBe('outgoing');
+    expect(tributeFor(s, 'RIVER_CLANS')?.direction).toBe('receive');
+    expect(s.expeditions[0].silver).toBeGreaterThan(0);
+    expect(s.expeditions[0].leg).toBe('returning');
+
+    while (s.expeditions.length > 0) tick();
+
+    expect(s.expeditions).toHaveLength(0);
+    expect(s.silver).toBeGreaterThan(0);
   });
 });
 

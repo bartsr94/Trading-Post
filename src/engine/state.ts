@@ -99,6 +99,10 @@ export function createInitialState(options: NewGameOptions): GameState {
     bankruptcyClock: 0,
     charterMissedStreak: 0,
     charterCompromisedStreak: 0,
+    pendingRaid: null,
+    lastRaidTurn: 0,
+    lastSackedTurn: 0,
+    tributes: [],
     report: { turn: 1, lines: [], silverDelta: 0, goodsDelta: {} },
     gameOver: null,
   };
