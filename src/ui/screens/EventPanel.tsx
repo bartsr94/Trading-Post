@@ -2,6 +2,8 @@
 // Illustration, body text, choices, inline dice with the full breakdown.
 
 import { useState } from 'react';
+import { FACTION_DEFS } from '../../content/factions';
+import { LOCATION_DEFS } from '../../content/locations';
 import { CONTENT } from '../../content/registry';
 import { evalConditions } from '../../engine/events/conditions';
 import { interpolate } from '../../engine/events/text';
@@ -34,7 +36,12 @@ export function EventPanel({ game }: { game: GameState }) {
   if (!event) return null;
   const hero = getHero(game, active.heroId);
   const travel = travelContextOf(game, active);
-  const ctx = { heroName: hero.name, destinationName: travel?.destination.name };
+  const contactSeat = !travel && active.locationId ? LOCATION_DEFS.get(active.locationId) : undefined;
+  const ctx = {
+    heroName: hero.name,
+    destinationName: travel?.destination.name ?? contactSeat?.name,
+    factionName: contactSeat?.faction ? FACTION_DEFS.get(contactSeat.faction)?.name : undefined,
+  };
   const showResult = resolution !== null && (resolution.check === null || diceSettled);
 
   return (

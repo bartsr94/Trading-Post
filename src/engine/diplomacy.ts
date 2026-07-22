@@ -2,6 +2,7 @@ import { TUNING } from '../content/tuning';
 import { clamp, stanceOf } from './types';
 import type {
   DiplomacySeatState,
+  DiscoveryState,
   FactionId,
   GameState,
   LocationDef,
@@ -11,6 +12,32 @@ import type {
 
 export function isDiplomacySeat(def: LocationDef): boolean {
   return def.faction !== undefined;
+}
+
+/** True when `def` is a settlement worth a first-contact moment — any market
+ *  town, faction-seated or not (e.g. neutral-ground Umoja-Njema). The home
+ *  post itself is excluded. */
+export function isCommunity(def: LocationDef): boolean {
+  return def.hasMarket && def.id !== TUNING.map.homeLocationId;
+}
+
+/** True when `def` is a community being contacted for the first time —
+ *  i.e. its discovery is advancing past `unknown`/`rumored`
+ *  (DIPLOMACY_DISCOVERY_SPEC.md §3). A community with no faction still fires
+ *  the event but never accrues standing/grievances — first contact there is
+ *  a one-time flavor beat, not the start of a tracked relationship. */
+export function isFirstContact(def: LocationDef, priorDiscovery: DiscoveryState): boolean {
+  return isCommunity(def) && (priorDiscovery === 'unknown' || priorDiscovery === 'rumored');
+}
+
+/** Queues the generic first-contact event for `def`, bound to `heroId`. */
+export function queueFirstContact(state: GameState, def: LocationDef, heroId: string): void {
+  state.queuedEvents.push({
+    eventId: TUNING.diplomacy.firstContactEventId,
+    fireOnTurn: state.turn,
+    heroId,
+    locationId: def.id,
+  });
 }
 
 export function diplomacySeatDefs(defs: Iterable<LocationDef>): LocationDef[] {
@@ -26,7 +53,7 @@ export function createDiplomacySeatStates(
     if (!def.faction) continue;
     seats[def.id] = {
       faction: def.faction,
-      standing: startingStandings[def.faction] ?? 0,
+      standing: def.startingStanding ?? startingStandings[def.faction] ?? 0,
       grievances: 0,
       pact: 'none',
       lastContactTurn: 0,

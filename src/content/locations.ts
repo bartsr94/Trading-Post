@@ -32,6 +32,20 @@ export const LOCATIONS: LocationDef[] = [
     mapRegion: 'northern_river',
   },
   {
+    id: 'kalasha_tora',
+    name: 'Kalasha-Tora',
+    blurb:
+      'Pilots and boatwrights on the northern bank, where the tributary\'s gradient turns to rapids. Their crews walked your first survey through the shoals and helped clear the ground your post now stands on, gambling that a Company clearing nearby would mean steadier trade than tolls alone ever could.',
+    faction: 'RIVER_CLANS',
+    startingStanding: 30,
+    hasMarket: true,
+    priceBias: { tools: 1.1, timber: 0.85, salt: 1.05, cloth: 1.05, furs: 0.95, hides: 0.95 },
+    initialDiscovery: 'visited',
+    tags: ['river', 'natives', 'trade'],
+    mapPoint: { x: 0.6218, y: 0.1928 },
+    mapRegion: 'northern_river',
+  },
+  {
     id: 'hill_fort',
     name: 'The Ashcircle',
     blurb:
@@ -105,13 +119,14 @@ export const LOCATIONS: LocationDef[] = [
   },
   {
     id: 'drowned_ruins',
-    name: 'The Drowned Weir',
+    name: 'Umoja-Njema',
     blurb:
-      'Roofless halls sunk to the lintels where the tributary runs its worst rapids. Even the Tributary Towns give the old weir a wide berth.',
-    hasMarket: false,
+      'A neutral market ground on the river\'s southern bank, opposite Kalasha-Tora\'s rapids. Weapons stay sheathed here; arbiters settle disputes, and Company and Cult traders alike are free to deal.',
+    hasMarket: true,
+    priceBias: { tools: 0.9, salt: 0.95, cloth: 0.9, furs: 1.1, hides: 1.05, amber: 1.1 },
     initialDiscovery: 'rumored',
-    tags: ['ruin', 'marsh'],
-    mapPoint: { x: 0.56, y: 0.235 },
+    tags: ['river', 'natives', 'trade'],
+    mapPoint: { x: 0.561221, y: 0.233372 },
     mapRegion: 'northern_river',
   },
   {

@@ -201,6 +201,31 @@ export const TUNING = {
     /** Truces and alliances sharply suppress a community's local raid threat. */
     truceRaidThreatReduction: 25,
     allianceRaidThreatReduction: 45,
+    /** Content event id fired when a seat is discovered for the first time
+     *  (DIPLOMACY_DISCOVERY_SPEC.md §3). */
+    firstContactEventId: 'post_first_contact',
+    firstContact: {
+      /** Unplanned encounter — a little easier than a resourced envoy mission. */
+      checkDifficulty: 8,
+      /** "Approach in peace" (diplomacy check). */
+      peaceStandingGainSuccess: 3,
+      peaceStandingGainCrit: 6,
+      peaceFailureStress: 1,
+      peaceCritFailureStandingLoss: 2,
+      peaceCritFailureGrievance: 1,
+      /** "Show strength" (combat check) — always costs standing/grievance;
+       *  failure adds injury on top (RAIDING_SPEC.md grievance feeds threat). */
+      hostileStandingLossSuccess: 3,
+      hostileGrievanceSuccess: 1,
+      hostileStandingLossFailure: 6,
+      hostileGrievanceFailure: 2,
+      hostileFailureHealth: 5,
+      hostileFailureStress: 2,
+      hostileStandingLossCritFailure: 10,
+      hostileGrievanceCritFailure: 3,
+      hostileCritFailureHealth: 10,
+      hostileCritFailureStress: 3,
+    },
   },
 
   residents: {

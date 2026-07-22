@@ -118,9 +118,10 @@ export type Outcome =
   | { type: 'silver'; delta: number }
   | { type: 'good'; good: GoodId; delta: number }
   | { type: 'standing'; faction: FactionId; delta: number }
-  | { type: 'communityStanding'; location: LocationId; delta: number }
-  | { type: 'communityGrievance'; location: LocationId; delta: number }
-  | { type: 'communityPact'; location: LocationId; pact: DiplomacyPact }
+  /** location defaults to the triggering event's location/expedition context. */
+  | { type: 'communityStanding'; location?: LocationId; delta: number }
+  | { type: 'communityGrievance'; location?: LocationId; delta: number }
+  | { type: 'communityPact'; location?: LocationId; pact: DiplomacyPact }
   | { type: 'axis'; axis: AxisId; delta: number }
   | { type: 'addTrait'; trait: TraitId }
   | { type: 'removeTrait'; trait: TraitId }

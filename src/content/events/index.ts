@@ -1,7 +1,9 @@
 // Event registry: all content events in one map for the engine.
 
 import type { GameEvent } from '../../engine/events/types';
+import { TUNING } from '../tuning';
 import { BEASTFOLK_EVENTS } from './beastfolkEvents';
+import { DIPLOMACY_EVENTS } from './diplomacyEvents';
 import { FAMILY_EVENTS } from './familyEvents';
 import { GENERIC_HERO_EVENTS, HERO_EVENTS } from './heroEvents';
 import { POST_EVENTS } from './postEvents';
@@ -21,6 +23,7 @@ export const ALL_EVENTS: GameEvent[] = [
   ...TRAVEL_EVENTS,
   ...BEASTFOLK_EVENTS,
   ...RAID_EVENTS,
+  ...DIPLOMACY_EVENTS,
 ];
 
 export const EVENT_MAP: ReadonlyMap<string, GameEvent> = uniqueIdMap('event', ALL_EVENTS);
@@ -36,4 +39,8 @@ for (const event of ALL_EVENTS) {
       }
     }
   }
+}
+
+if (!EVENT_MAP.has(TUNING.diplomacy.firstContactEventId)) {
+  throw new Error(`TUNING.diplomacy.firstContactEventId references unknown event ${TUNING.diplomacy.firstContactEventId}`);
 }

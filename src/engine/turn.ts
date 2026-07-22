@@ -92,10 +92,12 @@ export function outcomeCtx(
   heroId: string,
   expedition?: ExpeditionState,
   rng?: Rng,
+  locationId?: LocationId,
 ): OutcomeContext {
   return {
     heroId,
     expedition,
+    locationId,
     goodNames: ctx.goodNames,
     factionNames: ctx.factionNames,
     traitNames: ctx.traitNames,
@@ -656,6 +658,7 @@ export function resolveChoice(
   choiceIndex: number,
   heroId: string,
   expeditionId?: string,
+  locationId?: LocationId,
 ): ChoiceResolution {
   const hero = getHero(state, heroId);
   const choice = event.choices[choiceIndex];
@@ -688,7 +691,7 @@ export function resolveChoice(
   }
 
   const result = pickTierResult(choice, tier);
-  const log = applyOutcomes(state, result.outcomes, outcomeCtx(ctx, heroId, expedition, rng));
+  const log = applyOutcomes(state, result.outcomes, outcomeCtx(ctx, heroId, expedition, rng, locationId));
 
   state.rngState = rng.getState();
   checkBrokenCompany(state);

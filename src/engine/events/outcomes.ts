@@ -6,6 +6,8 @@ import { addBuildProgress, advanceTier, grantBuilding } from '../buildings';
 import {
   applyDiplomacyShift,
   diplomacySeatStateById,
+  isFirstContact,
+  queueFirstContact,
   setDiplomacyPactById,
 } from '../diplomacy';
 import {
@@ -40,6 +42,8 @@ export interface OutcomeContext {
   heroId: string;
   /** Set for travel events: outcomes hit the expedition's cargo and purse. */
   expedition?: ExpeditionState;
+  /** Set for first-contact events: community outcomes default to this seat. */
+  locationId?: LocationId;
   /** Content-provided display names, so the engine stays content-free. */
   goodNames: ReadonlyMap<GoodId, string>;
   factionNames: ReadonlyMap<string, string>;
@@ -84,32 +88,38 @@ export function applyOutcomes(
         break;
       }
       case 'communityStanding': {
-        const def = ctx.locationDefs.get(outcome.location);
+        const location = outcome.location ?? ctx.locationId ?? ctx.expedition?.destination;
+        if (!location) break;
+        const def = ctx.locationDefs.get(location);
         if (!def?.faction) break;
-        applyDiplomacyShift(state, ctx.locationDefs, outcome.location, outcome.delta);
+        applyDiplomacyShift(state, ctx.locationDefs, location, outcome.delta);
         log.push(
-          `${ctx.locationNames.get(outcome.location) ?? outcome.location} standing ${signed(outcome.delta)}`,
+          `${ctx.locationNames.get(location) ?? location} standing ${signed(outcome.delta)}`,
         );
         break;
       }
       case 'communityGrievance': {
-        const seat = diplomacySeatStateById(state, outcome.location);
+        const location = outcome.location ?? ctx.locationId ?? ctx.expedition?.destination;
+        if (!location) break;
+        const seat = diplomacySeatStateById(state, location);
         if (!seat) break;
         seat.grievances = Math.max(0, seat.grievances + outcome.delta);
         seat.lastContactTurn = state.turn;
         log.push(
-          `${ctx.locationNames.get(outcome.location) ?? outcome.location} ${outcome.delta >= 0 ? 'remembers the slight' : 'lets an old slight rest'}`,
+          `${ctx.locationNames.get(location) ?? location} ${outcome.delta >= 0 ? 'remembers the slight' : 'lets an old slight rest'}`,
         );
         break;
       }
       case 'communityPact': {
-        const seat = diplomacySeatStateById(state, outcome.location);
+        const location = outcome.location ?? ctx.locationId ?? ctx.expedition?.destination;
+        if (!location) break;
+        const seat = diplomacySeatStateById(state, location);
         if (!seat) break;
-        setDiplomacyPactById(state, outcome.location, outcome.pact);
+        setDiplomacyPactById(state, location, outcome.pact);
         log.push(
           outcome.pact === 'none'
-            ? `${ctx.locationNames.get(outcome.location) ?? outcome.location} pact lapses`
-            : `${ctx.locationNames.get(outcome.location) ?? outcome.location} pact: ${outcome.pact}`,
+            ? `${ctx.locationNames.get(location) ?? location} pact lapses`
+            : `${ctx.locationNames.get(location) ?? location} pact: ${outcome.pact}`,
         );
         break;
       }
@@ -373,8 +383,13 @@ export function applyOutcomes(
         // Discovery only moves forward; outcomes never re-fog the map.
         const ladder: DiscoveryState[] = ['unknown', 'rumored', 'visited', 'known'];
         if (ladder.indexOf(target) > ladder.indexOf(loc.discovery)) {
+          const priorDiscovery = loc.discovery;
           loc.discovery = target;
           log.push(`${ctx.locationNames.get(locationId) ?? locationId} is now ${target}`);
+          const seatDef = ctx.locationDefs.get(locationId);
+          if (target === 'visited' && seatDef && isFirstContact(seatDef, priorDiscovery)) {
+            queueFirstContact(state, seatDef, ctx.heroId);
+          }
         }
         break;
       }

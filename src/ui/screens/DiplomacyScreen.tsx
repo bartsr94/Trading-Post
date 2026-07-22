@@ -25,11 +25,15 @@ function positiveGoods(goods: Partial<Record<GoodId, number>>): Partial<Record<G
 
 export function DiplomacyScreen({ game }: { game: GameState }) {
   const dispatch = useGameStore((state) => state.dispatch);
-  const seatDefs = useMemo(() => diplomacySeatDefs(LOCATION_DEFS.values()), []);
-  const initialSeatId =
-    seatDefs.find((seat) => discoveryAtLeast(game.locations[seat.id]?.discovery ?? 'unknown', 'visited'))?.id ??
-    seatDefs[0]?.id ??
-    null;
+  const allSeatDefs = useMemo(() => diplomacySeatDefs(LOCATION_DEFS.values()), []);
+  const seatDefs = useMemo(
+    () =>
+      allSeatDefs.filter((seat) =>
+        discoveryAtLeast(game.locations[seat.id]?.discovery ?? 'unknown', 'visited'),
+      ),
+    [allSeatDefs, game.locations],
+  );
+  const initialSeatId = seatDefs[0]?.id ?? null;
 
   const [selectedId, setSelectedId] = useState<string | null>(initialSeatId);
   const [mission, setMission] = useState<DiplomacyMissionChoice>('talks');
@@ -108,37 +112,40 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
       <div className="diplomacy-layout">
         <div className="panel">
           <h3>Communities</h3>
-          {grouped.map(({ faction, seats }) => (
-            <div key={faction.id} className="diplomacy-group">
-              <div className="diplomacy-group-title">{faction.name}</div>
-              {seats.map((seat) => {
-                const seatState = diplomacySeatState(game, seat);
-                const discovery = game.locations[seat.id]?.discovery ?? 'unknown';
-                const tribute = tributeForCommunity(game, seat);
-                return (
-                  <button
-                    key={seat.id}
-                    className={`road-row diplomacy-seat-button ${selectedId === seat.id ? 'active' : ''}`}
-                    onClick={() => {
-                      setSelectedId(seat.id);
-                      setError(null);
-                    }}
-                  >
-                    <span>
-                      {seat.name}{' '}
-                      <span className="dim">
-                        ({discoveryAtLeast(discovery, 'visited') ? stanceOf(seatState.standing) : 'Unreached'})
+          {grouped.length === 0 ? (
+            <p className="dim" style={{ marginBottom: 0 }}>
+              You haven’t made contact with anyone yet. Send explorers into the Ashmark to find its
+              peoples.
+            </p>
+          ) : (
+            grouped.map(({ faction, seats }) => (
+              <div key={faction.id} className="diplomacy-group">
+                <div className="diplomacy-group-title">{faction.name}</div>
+                {seats.map((seat) => {
+                  const seatState = diplomacySeatState(game, seat);
+                  const tribute = tributeForCommunity(game, seat);
+                  return (
+                    <button
+                      key={seat.id}
+                      className={`road-row diplomacy-seat-button ${selectedId === seat.id ? 'active' : ''}`}
+                      onClick={() => {
+                        setSelectedId(seat.id);
+                        setError(null);
+                      }}
+                    >
+                      <span>
+                        {seat.name} <span className="dim">({stanceOf(seatState.standing)})</span>
                       </span>
-                    </span>
-                    <span className="dim">
-                      {seatState.pact !== 'none' ? seatState.pact : 'no pact'}
-                      {tribute ? ` · tribute ${tribute.direction}` : ''}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+                      <span className="dim">
+                        {seatState.pact !== 'none' ? seatState.pact : 'no pact'}
+                        {tribute ? ` · tribute ${tribute.direction}` : ''}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))
+          )}
         </div>
 
         <div className="panel">

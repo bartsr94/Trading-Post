@@ -227,6 +227,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       choiceIndex,
       active.heroId,
       active.expeditionId,
+      active.locationId,
     );
     set({ game: next, lastResolution: resolution });
   },

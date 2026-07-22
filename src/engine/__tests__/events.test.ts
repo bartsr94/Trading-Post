@@ -257,6 +257,30 @@ describe('outcome application', () => {
       { eventId: 'post_amber_find', fireOnTurn: 3, heroId: 'p3' },
     ]);
   });
+
+  it('defaults community outcomes to ctx.locationId when no location is given', () => {
+    const s = testState();
+    const before = s.diplomacySeats.hill_fort.standing;
+    applyOutcomes(s, [{ type: 'communityStanding', delta: 5 }], {
+      heroId: 'p1',
+      locationId: 'hill_fort',
+      ...NAME_CTX,
+    });
+    expect(s.diplomacySeats.hill_fort.standing).toBe(before + 5);
+    applyOutcomes(s, [{ type: 'communityGrievance', delta: 2 }], {
+      heroId: 'p1',
+      locationId: 'hill_fort',
+      ...NAME_CTX,
+    });
+    expect(s.diplomacySeats.hill_fort.grievances).toBe(2);
+  });
+
+  it('leaves community outcomes inert when no location can be resolved', () => {
+    const s = testState();
+    const before = { ...s.diplomacySeats.hill_fort };
+    applyOutcomes(s, [{ type: 'communityStanding', delta: 5 }], { heroId: 'p1', ...NAME_CTX });
+    expect(s.diplomacySeats.hill_fort).toEqual(before);
+  });
 });
 
 describe('text interpolation', () => {
@@ -264,5 +288,12 @@ describe('text interpolation', () => {
     expect(interpolate('{hero} nods. {hero} leaves.', { heroName: 'Sela' })).toBe(
       'Sela nods. Sela leaves.',
     );
+  });
+
+  it('replaces {faction}, falling back when absent', () => {
+    expect(interpolate('the {faction} watch', { heroName: 'Sela', factionName: 'River Clans' })).toBe(
+      'the River Clans watch',
+    );
+    expect(interpolate('the {faction} watch', { heroName: 'Sela' })).toBe('the this people watch');
   });
 });

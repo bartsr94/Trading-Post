@@ -287,6 +287,7 @@ export function validateGameState(value: unknown): GameState {
     enumValue(location.discovery, DISCOVERY_STATES, `save.locations.${id}.discovery`);
     if (location.market !== undefined) validateMarket(location.market, `save.locations.${id}.market`);
   }
+  const locationIds = new Set(Object.keys(locations));
 
   const maxCell = TUNING.map.fogGrid.width * TUNING.map.fogGrid.height;
   const knowledge = record(state.mapKnowledge, 'save.mapKnowledge');
@@ -362,6 +363,12 @@ export function validateGameState(value: unknown): GameState {
     if (queued.heroId !== undefined && !heroIds.has(string(queued.heroId, `save.queuedEvents[${index}].heroId`))) {
       invalid(`save.queuedEvents[${index}].heroId`, 'references an unknown hero');
     }
+    if (
+      queued.locationId !== undefined &&
+      !locationIds.has(string(queued.locationId, `save.queuedEvents[${index}].locationId`))
+    ) {
+      invalid(`save.queuedEvents[${index}].locationId`, 'references an unknown location');
+    }
   });
   array(state.pendingEvents, 'save.pendingEvents').forEach((entry, index) => {
     const pending = record(entry, `save.pendingEvents[${index}]`);
@@ -369,6 +376,12 @@ export function validateGameState(value: unknown): GameState {
     const heroId = string(pending.heroId, `save.pendingEvents[${index}].heroId`);
     if (!heroIds.has(heroId)) invalid(`save.pendingEvents[${index}].heroId`, 'references an unknown hero');
     if (pending.expeditionId !== undefined) string(pending.expeditionId, `save.pendingEvents[${index}].expeditionId`);
+    if (
+      pending.locationId !== undefined &&
+      !locationIds.has(string(pending.locationId, `save.pendingEvents[${index}].locationId`))
+    ) {
+      invalid(`save.pendingEvents[${index}].locationId`, 'references an unknown location');
+    }
   });
 
   nonNegativeInteger(state.bankruptcyClock, 'save.bankruptcyClock');

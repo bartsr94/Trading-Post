@@ -449,7 +449,7 @@ export function MapScreen({ game }: { game: GameState }) {
                     if (event.key === 'Enter' || event.key === ' ') chooseLocation(def);
                   }}
                 >
-                  <circle className="map-node-hit" cx={point.x} cy={point.y} r={20} />
+                  <circle className="map-node-hit" cx={point.x} cy={point.y} r={15} />
                   <circle cx={point.x} cy={point.y} r={isHome ? 8 : 6} />
                   <text x={point.x} y={point.y - (isHome ? 12 : 10)} className="map-label">{def.name}</text>
                 </g>

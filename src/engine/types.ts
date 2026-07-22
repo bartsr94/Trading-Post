@@ -206,6 +206,8 @@ export interface LocationDef {
   blurb: string;
   /** Faction seat, if any — standing there gates trade and events. */
   faction?: FactionId;
+  /** Seat-level standing override at game start; falls back to the faction default (spec §8). */
+  startingStanding?: number;
   hasMarket: boolean;
   /** Static local price multiplier per good (what's cheap or dear here). */
   priceBias?: Partial<Record<GoodId, number>>;
@@ -510,6 +512,8 @@ export interface QueuedEvent {
   fireOnTurn: number;
   /** Optionally pin the bound hero (e.g. breakdown events). */
   heroId?: string;
+  /** Optionally pin a location (e.g. first-contact events). */
+  locationId?: LocationId;
 }
 
 /** An event instance selected for this turn, with its hero binding resolved. */
@@ -518,6 +522,8 @@ export interface ActiveEvent {
   heroId: string;
   /** Set for travel events: the expedition this event happened to. */
   expeditionId?: string;
+  /** Set for first-contact events: the seat this event happened to. */
+  locationId?: LocationId;
 }
 
 export interface ReportLine {

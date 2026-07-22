@@ -15,6 +15,8 @@ import type { CheckModifier } from './checks';
 import {
   applyDiplomacyShift,
   ensureDiplomacySeat,
+  isFirstContact,
+  queueFirstContact,
   setDiplomacyPact,
 } from './diplomacy';
 import type { TravelContext } from './events/types';
@@ -906,8 +908,13 @@ function resolveHomecoming(
       const location = state.locations[locationId];
       if (!location) continue;
       if (!discoveryAtLeast(location.discovery, 'visited')) {
+        const priorDiscovery = location.discovery;
         location.discovery = 'visited';
         learned.push(ctx.locationDefs.get(locationId)?.name ?? locationId);
+        const seatDef = ctx.locationDefs.get(locationId);
+        if (seatDef && isFirstContact(seatDef, priorDiscovery)) {
+          queueFirstContact(state, seatDef, leadHero(state, exp, 'diplomacy').id);
+        }
       }
     }
     for (const locationId of exp.surveyResult.knownLocationIds) {

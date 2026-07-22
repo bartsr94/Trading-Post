@@ -79,7 +79,11 @@ export function selectEvents(
       ? heroesAtPost(state).find((h) => h.id === queued.heroId) ?? null
       : bindHero(state, event, rng);
     if (!hero) continue;
-    selected.push({ eventId: event.id, heroId: hero.id });
+    selected.push({
+      eventId: event.id,
+      heroId: hero.id,
+      ...(queued.locationId ? { locationId: queued.locationId } : {}),
+    });
     usedIds.add(event.id);
   }
 
