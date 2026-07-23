@@ -18,7 +18,8 @@ import type { DispatchParams } from '../engine/expeditions';
 import { resolveIncomingRaid, resolveOutgoingRaid } from '../engine/raids';
 import type { RaidAttackParams, RaidDefenseParams, RaidResolution } from '../engine/raids';
 import { Rng } from '../engine/rng';
-import { hireResidents, reallocate } from '../engine/residents';
+import { setLandAllocation as setLandAllocationFn } from '../engine/claim';
+import { reallocate } from '../engine/residents';
 import { activateHero, benchHero } from '../engine/roster';
 import { evalConditions } from '../engine/events/conditions';
 import { applyOutcomes } from '../engine/events/outcomes';
@@ -41,6 +42,7 @@ import type {
   BuildingId,
   GameState,
   GoodId,
+  LandUse,
   LocationId,
   ResidentRole,
 } from '../engine/types';
@@ -126,8 +128,8 @@ interface GameStore {
   startConstruction: (buildingId: BuildingId) => boolean;
   /** Abandon the active project — paid costs are forfeit. */
   cancelConstruction: () => void;
-  /** Hire native residents of a role from a local source (tribe/region). Returns false if invalid. */
-  hire: (role: ResidentRole, count: number, source: string) => boolean;
+  /** Re-apportion the Concession across cropland/pasture/wildland. Returns false if invalid. */
+  setLandAllocation: (allocation: Record<LandUse, number>) => boolean;
   /** Move residents between roles/idle at the post. Returns false if invalid. */
   reallocateResidents: (
     from: ResidentRole | 'idle',
@@ -147,6 +149,42 @@ interface GameStore {
 
 function draft(game: GameState): GameState {
   return structuredClone(game);
+}
+
+// Perf audit (2026-07-23): autosave() does a full JSON.stringify + synchronous
+// localStorage.setItem of the whole GameState. Actions a player can fire
+// repeatedly in quick succession (buy/sell steppers, resident/land sliders)
+// were each paying that cost inline. Coalesce those into one write per burst
+// instead of one per click; turn-phase-boundary actions (confirmTurn,
+// chooseOption, continueEvent, finishReport, resolveRaid, newGame, importSave)
+// still save immediately since each of those fires at most once per turn.
+const AUTOSAVE_DEBOUNCE_MS = 400;
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingAutosave: GameState | null = null;
+
+function flushAutosave(): void {
+  if (autosaveTimer !== null) {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+  }
+  if (pendingAutosave) {
+    autosave(pendingAutosave);
+    pendingAutosave = null;
+  }
+}
+
+function scheduleAutosave(state: GameState): void {
+  pendingAutosave = state;
+  if (autosaveTimer !== null) return;
+  autosaveTimer = setTimeout(() => {
+    autosaveTimer = null;
+    flushAutosave();
+  }, AUTOSAVE_DEBOUNCE_MS);
+}
+
+if (typeof window !== 'undefined') {
+  // A debounced save must not be lost to a closed tab.
+  window.addEventListener('beforeunload', flushAutosave);
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -309,7 +347,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!def) return;
     const next = draft(game);
     if (buyGood(next, def, qty)) {
-      autosave(next);
+      scheduleAutosave(next);
       set({ game: next });
     }
   },
@@ -321,7 +359,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!def) return;
     const next = draft(game);
     if (sellGood(next, def, qty)) {
-      autosave(next);
+      scheduleAutosave(next);
       set({ game: next });
     }
   },
@@ -331,7 +369,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!game || game.phase !== 'assignment') return false;
     const next = draft(game);
     if (!dispatchExpedition(next, params, CONTENT.locationDefs, CONTENT.mapRegionDefs)) return false;
-    autosave(next);
+    scheduleAutosave(next);
     set({ game: next });
     return true;
   },
@@ -341,7 +379,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!game || game.phase !== 'assignment') return false;
     const next = draft(game);
     if (!activateHero(next, heroId)) return false;
-    autosave(next);
+    scheduleAutosave(next);
     set({ game: next });
     return true;
   },
@@ -351,7 +389,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!game || game.phase !== 'assignment') return false;
     const next = draft(game);
     if (!benchHero(next, heroId)) return false;
-    autosave(next);
+    scheduleAutosave(next);
     set({ game: next });
     return true;
   },
@@ -361,7 +399,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!game || game.phase !== 'assignment') return false;
     const next = draft(game);
     if (!startConstructionFn(next, buildingId)) return false;
-    autosave(next);
+    scheduleAutosave(next);
     set({ game: next });
     return true;
   },
@@ -371,16 +409,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!game || game.phase !== 'assignment') return;
     const next = draft(game);
     cancelConstructionFn(next);
-    autosave(next);
+    scheduleAutosave(next);
     set({ game: next });
   },
 
-  hire: (role, count, source) => {
+  setLandAllocation: (allocation) => {
     const { game } = get();
     if (!game || game.phase !== 'assignment') return false;
     const next = draft(game);
-    if (!hireResidents(next, role, count, source)) return false;
-    autosave(next);
+    if (!setLandAllocationFn(next, allocation)) return false;
+    scheduleAutosave(next);
     set({ game: next });
     return true;
   },
@@ -390,7 +428,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!game || game.phase !== 'assignment') return false;
     const next = draft(game);
     if (!reallocate(next, from, to, count)) return false;
-    autosave(next);
+    scheduleAutosave(next);
     set({ game: next });
     return true;
   },

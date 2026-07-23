@@ -17,7 +17,7 @@ import { prosperity } from '../economy';
 import { evalConditions } from '../events/conditions';
 import { applyOutcomes } from '../events/outcomes';
 import type { OutcomeContext } from '../events/outcomes';
-import { postDefense, residentCap, updateContentment } from '../residents';
+import { postDefense, updateContentment } from '../residents';
 import { advancePendingEvent, advanceTurn, resolveChoice, resolveTurn } from '../turn';
 import { heroesAtPost } from '../types';
 import type { GameState } from '../types';
@@ -218,18 +218,16 @@ describe('the Build activity raises a project', () => {
 });
 
 describe('building effects feed derived selectors', () => {
-  it('sums cap, defense, and prosperity across the completed set', () => {
+  it('sums food storage, defense, and prosperity across the completed set', () => {
     const s = testState();
-    const cap0 = residentCap(s);
     const def0 = postDefense(s);
     const pros0 = prosperity(s, TEST_CONTENT.goodDefs);
 
-    s.buildings.push('storehouse'); // +2 cap, +1 prosperity
+    s.buildings.push('storehouse'); // +2 food storage, +1 prosperity
     s.buildings.push('palisade'); // +3 defense, +1 prosperity
 
-    expect(buildingEffect(s, 'residentCapBonus')).toBe(2);
+    expect(buildingEffect(s, 'foodStorageBonus')).toBe(2);
     expect(buildingEffect(s, 'defenseBonus')).toBe(3);
-    expect(residentCap(s)).toBe(cap0 + 2);
     expect(postDefense(s)).toBe(def0 + 3);
     expect(prosperity(s, TEST_CONTENT.goodDefs)).toBeCloseTo(pros0 + 2, 5);
   });

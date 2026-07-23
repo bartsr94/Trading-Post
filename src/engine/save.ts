@@ -2,8 +2,9 @@
 // stub from day one. localStorage autosave each turn + manual export/import.
 
 import { TUNING } from '../content/tuning';
+import { freshClaim, freshHerd } from './claim';
 import { createDiplomacySeatStates } from './diplomacy';
-import { freshResidents, residentTotal } from './residents';
+import { emptyRoles, freshResidents, residentTotal } from './residents';
 import { journeyTurns, mapKnowledgeFromDiscovery, mergeSurveyCells } from './map';
 import { createLocationStates } from './state';
 import { validateGameState } from './saveValidation';
@@ -130,6 +131,9 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
         break;
       case 19:
         current = migrateV19toV20(current, ctx);
+        break;
+      case 20:
+        current = migrateV20toV21(current);
         break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
@@ -531,6 +535,25 @@ function migrateV19toV20(save: GameState, ctx?: MigrationContext): GameState {
     ...save,
     saveVersion: 20,
     diplomacySeats: seeded,
+  };
+}
+
+/**
+ * v21 adds the Concession, herd, and the two new resident roles
+ * (TULA_SETTLEMENT_SPEC.md §10). Population is now uncapped, so old
+ * role counts carry over unchanged — nothing needs a population conversion.
+ * The starting Concession is seeded fresh; herders/hunters backfill to 0.
+ */
+function migrateV20toV21(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 21,
+    claim: save.claim ?? freshClaim(),
+    herd: save.herd ?? freshHerd(),
+    residents: {
+      ...save.residents,
+      roles: { ...emptyRoles(), ...save.residents.roles },
+    },
   };
 }
 

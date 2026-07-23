@@ -25,6 +25,7 @@ import {
   unionError,
 } from '../family';
 import { Rng } from '../rng';
+import { freshResidents } from '../residents';
 import { advanceTurn, resolveTurn } from '../turn';
 import { getHero } from '../types';
 import type { GameState } from '../types';
@@ -274,6 +275,7 @@ describe('family outcomes & conditions', () => {
 
   it('grown kin draw a retainer at season end', () => {
     const s = testState(2);
+    s.residents = freshResidents();
     s.dependants.push({
       id: 'd1',
       name: 'Grown',

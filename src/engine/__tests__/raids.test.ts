@@ -49,7 +49,7 @@ describe('raid force selectors', () => {
     addResidents(s, 'idle', 2, undefined, 'homeland');
     const defend = defenderForceBreakdown(s);
     expect(defend.guards).toBeGreaterThan(0);
-    expect(defend.fyrd).toBeGreaterThan(0);
+    expect(defend.muster).toBeGreaterThan(0);
 
     const expedition = {
       id: 'exp_breakdown',

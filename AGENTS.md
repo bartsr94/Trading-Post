@@ -21,6 +21,7 @@ This repo is **The Trading Post**: a KoDP-inspired narrative frontier-trading ga
 - `src/engine/saveValidation.ts` is the runtime invariant checker for `GameState` and saves; if you change state shape, migrations, or turn resolution invariants, update this and its tests.
 - Content registries expect unique `id`s for authored content; add new content via `src/content/` and keep the unique-id checks passing.
 - Event selection/choice resolution is strict about candidate context (bound heroes) and locked choice validation; avoid relying on implicit/global hero context in conditions/outcomes.
+- New portrait/illustration source art lands at full camera resolution (multi-MB); run `node scripts/optimize-images.mjs` before committing it — it resizes to the largest on-screen box and converts portraits to WebP.
 
 ## Repo map (high-signal)
 
@@ -38,10 +39,21 @@ This repo is **The Trading Post**: a KoDP-inspired narrative frontier-trading ga
   owns exact place anchors. Do not infer coordinates from pixels at runtime.
 - Exploration accepts reachable free coordinates. Knowledge commits only when
   explorers return; party loss discards pending `surveyResult` data.
-- Save version is **13**. v12 creates spatial state; v13 reapplies current
-  anchors, monotonic initial discoveries, and the familiar Black River corridor.
+- Save version is **21** (see `CLAUDE.md`'s per-feature notes for the full
+  v12→v21 migration history — spatial state, raiding, diplomacy seats, the
+  Concession/claim system, etc.). Don't hardcode an older version number from
+  memory; check `TUNING.save.version` in `src/content/tuning.ts` if unsure.
 - Map functionality is covered by `map.test.ts`, `map-functional.test.ts`,
   expedition/save tests, deterministic simulations, and focused Playwright tests.
+- **Perf (2026-07-23):** the fog grid (up to 3072 cells) renders through a
+  `React.memo`'d `FogLayers` subcomponent in `MapScreen.tsx`. Both pointer
+  handlers on the map SVG are rAF-throttled to one `setState` per animation
+  frame — drag-to-pan first, then wheel-zoom the same day (wheel-zoom's
+  listener also had to move off a JSX `onWheel` to a manual, non-passive
+  `addEventListener` so `preventDefault()` wouldn't warn) — because raw
+  pointer/wheel events fire faster than the screen repaints and each one
+  triggering its own `setState` re-diffs the whole fog grid. Don't
+  reintroduce an unthrottled `setState` in that file's pointer/wheel handlers.
 
 ## Common commands
 

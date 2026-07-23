@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { TUNING } from '../../content/tuning';
 import { advancePendingEvent, advanceTurn, resolveChoice, resolveTurn } from '../turn';
+import { freshResidents } from '../residents';
 import { livingHeroes } from '../types';
 import { TEST_CONTENT, testState } from './helpers';
 
 describe('turn resolution pipeline', () => {
   it('consumes grain for the party and pays post upkeep', () => {
     const s = testState();
+    s.residents = freshResidents(); // isolate hero food from the founding hands
     for (const h of s.heroes) s.assignments[h.id] = 'rest';
     resolveTurn(s, TEST_CONTENT);
     // 6 heroes × 1 grain, minus whatever events did (rest turns touch no goods pre-event).
-    expect(s.report.lines.some((l) => l.text.includes('eats 6 grain'))).toBe(true);
+    expect(s.report.lines.some((l) => l.text.includes('eats 6 food'))).toBe(true);
     expect(s.bankruptcyClock).toBe(0);
     expect(s.phase).toBe('event');
     expect(s.pendingEvents.length).toBeGreaterThanOrEqual(1);
@@ -39,6 +41,7 @@ describe('turn resolution pipeline', () => {
 
   it('trade brings silver in; provision brings food in; rest recovers', () => {
     const s = testState();
+    s.residents = freshResidents();
     const [trader, hunter, rester] = livingHeroes(s);
     rester.stress = 6;
     rester.health = 5;

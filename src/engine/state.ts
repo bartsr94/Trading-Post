@@ -2,6 +2,7 @@
 // caller so the engine never imports content beyond tuning numbers.
 
 import { TUNING } from '../content/tuning';
+import { freshClaim, freshHerd } from './claim';
 import { createDiplomacySeatStates } from './diplomacy';
 import { freshResidents } from './residents';
 import { mapKnowledgeFromDiscovery } from './map';
@@ -18,6 +19,7 @@ import type {
   MarketGoodState,
   MapFeatureDef,
   MapRegionDef,
+  ResidentRole,
 } from './types';
 
 export interface NewGameOptions {
@@ -65,6 +67,13 @@ export function createInitialState(options: NewGameOptions): GameState {
 
   const assignments: Record<string, never> = {};
 
+  const residents = freshResidents();
+  for (const [role, count] of Object.entries(TUNING.residents.startingRoles)) {
+    if (!count) continue;
+    residents.roles[role as ResidentRole] += count;
+    residents.heritage.homeland += count; // founding hands are Imanian homeland stock
+  }
+
   const state: GameState = {
     saveVersion: TUNING.save.version,
     seed: options.seed,
@@ -86,7 +95,9 @@ export function createInitialState(options: NewGameOptions): GameState {
     dependants: [],
     nextDependantId: 1,
     nextCharacterId: 1,
-    residents: freshResidents(),
+    residents,
+    claim: freshClaim(),
+    herd: freshHerd(),
     transients: [],
     nextTransientId: 1,
     axes: { integration: 0, communal: 0, culture: 0 },

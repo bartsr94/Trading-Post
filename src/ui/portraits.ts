@@ -1,11 +1,14 @@
 // Portrait asset registry. Art lives in src/assets/portraits/<culture>/ named
-// <culture>_<gender>_<NN>.png or <culture>_<ethnicity>_<gender>_<NN>.png and is addressed
-// by basename (e.g. "kiswani_bayuk_female_01") from content `portraitKey` strings.
-// imanian (Ansberrian/Imanian company folk), kiswani, dustwalker, bejasi
+// <culture>_<gender>_<NN>.webp or <culture>_<ethnicity>_<gender>_<NN>.webp and is
+// addressed by basename (e.g. "kiswani_bayuk_female_01") from content `portraitKey`
+// strings. imanian (Ansberrian/Imanian company folk), kiswani, dustwalker, bejasi
 // (per lore spec §6). Keys with no matching file fall back to the hash-hue
 // placeholder in Portrait.tsx, so keys for not-yet-painted pools are fine.
+// New source art should be run through `node scripts/optimize-images.mjs` before
+// being committed — it lands at full camera resolution otherwise (perf audit,
+// 2026-07-23: 22 files were 60.8MB before that pass, 0.3MB after).
 
-const modules = import.meta.glob('../assets/portraits/*/*.png', {
+const modules = import.meta.glob('../assets/portraits/*/*.webp', {
   eager: true,
   import: 'default',
 }) as Record<string, string>;

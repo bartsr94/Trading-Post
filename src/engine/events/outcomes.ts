@@ -19,6 +19,7 @@ import {
   graphNode,
   removeDependant,
 } from '../family';
+import { addClaim, addHerd, setLandAllocation } from '../claim';
 import { createIncomingRaid, setTribute } from '../raids';
 import { addResidents, addTransientGroup, adjustContentment, loseResidents } from '../residents';
 import { departCharacter, recruitCharacter } from '../roster';
@@ -232,6 +233,27 @@ export function applyOutcomes(
       case 'contentment': {
         adjustContentment(state, outcome.delta);
         log.push(`Residents ${outcome.delta >= 0 ? 'heartened' : 'discontented'}`);
+        break;
+      }
+      case 'addClaim': {
+        addClaim(state, outcome.delta);
+        log.push(
+          outcome.delta >= 0 ? `The Concession grows (+${outcome.delta})` : 'The Concession shrinks',
+        );
+        break;
+      }
+      case 'setLandAllocation': {
+        if (setLandAllocation(state, outcome.allocation)) log.push('The land is reapportioned');
+        break;
+      }
+      case 'addHerd': {
+        addHerd(state, outcome.delta);
+        log.push(outcome.delta >= 0 ? `The herd grows (+${outcome.delta})` : 'The herd thins');
+        break;
+      }
+      case 'loseHerd': {
+        addHerd(state, -Math.abs(outcome.delta));
+        log.push('The herd thins');
         break;
       }
       case 'addTransient': {

@@ -161,7 +161,7 @@ export function RaidModal({ game }: { game: GameState }) {
   if (raid.kind === 'incoming' && incomingBreakdown) {
     const faction = CONTENT.factionNames.get(raid.faction) ?? raid.faction;
     const guardHeads = game.residents.roles.guards;
-    const fyrdHeads = game.residents.roles.farmers + game.residents.idle;
+    const musterHeads = game.residents.roles.farmers + game.residents.idle;
 
     return (
       <div className="overlay">
@@ -208,9 +208,9 @@ export function RaidModal({ game }: { game: GameState }) {
                 note={`${homeHeroes.length} hero${homeHeroes.length === 1 ? '' : 'es'} able to fight`}
               />
               <BreakdownCard
-                label="Fyrd levy"
-                value={`+${formatScore(incomingBreakdown.fyrd)}`}
-                note={`${fyrdHeads} farmer/idle hand${fyrdHeads === 1 ? '' : 's'} that can be called up`}
+                label="Company muster"
+                value={`+${formatScore(incomingBreakdown.muster)}`}
+                note={`${musterHeads} farmer/idle hand${musterHeads === 1 ? '' : 's'} that can be called up`}
               />
             </div>
 

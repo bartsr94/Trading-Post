@@ -12,6 +12,7 @@ import {
   dependantCount,
   reconcileRoster,
 } from '../roster';
+import { freshResidents } from '../residents';
 import { resolveTurn, advanceTurn } from '../turn';
 import { activeHeroes, heroesAtPost, livingHeroes, reserveHeroes } from '../types';
 import type { GameState, Hero } from '../types';
@@ -110,24 +111,27 @@ describe('activate / bench', () => {
 describe('reserve upkeep and dependant food in the turn pipeline', () => {
   it('reserve characters still eat grain (benching does not change the mouth count)', () => {
     const s = testState(1);
+    s.residents = freshResidents();
     benchHero(s, 'p6'); // 5 active + 1 reserve, still 6 living mouths
     resolveTurn(s, TEST_CONTENT);
     const eatLine = s.report.lines.find((l) => l.text.includes('eats'));
-    expect(eatLine?.text).toContain('6 grain');
+    expect(eatLine?.text).toContain('6 food');
   });
 
   it('dependants add to the grain the post eats', () => {
     const s = testState(1);
+    s.residents = freshResidents();
     s.dependants.push({ id: 'd1', name: 'Anele', kind: 'spouse', parentId: 'p1', gender: 'female' });
     expect(dependantCount(s)).toBe(1);
     resolveTurn(s, TEST_CONTENT);
     const eatLine = s.report.lines.find((l) => l.text.includes('eats'));
     // 6 heroes + 1 dependant = 7 grain.
-    expect(eatLine?.text).toContain('7 grain');
+    expect(eatLine?.text).toContain('7 food');
   });
 
   it('reserve characters draw a retainer at season end; active heroes do not', () => {
     const s = testState(2);
+    s.residents = freshResidents();
     s.turn = 6; // season end
     s.silver = 1000;
     benchHero(s, 'p6'); // 1 reserve → 8 silver retainer, no residents

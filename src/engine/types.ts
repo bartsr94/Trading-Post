@@ -151,9 +151,48 @@ export type TraitId = string; // trait ids are defined by content
 
 export type LocationId = string; // location ids are defined by content
 
-/** Unnamed-population roles (spec: RESIDENTS_SPEC.md §2). */
-export const RESIDENT_ROLES = ['farmers', 'porters', 'guards', 'craftsfolk'] as const;
+/** Unnamed-population roles (RESIDENTS_SPEC.md §2; herders/hunters added by
+ *  TULA_SETTLEMENT_SPEC.md §3 to work pasture/wildland). */
+export const RESIDENT_ROLES = [
+  'farmers',
+  'porters',
+  'guards',
+  'craftsfolk',
+  'herders',
+  'hunters',
+] as const;
 export type ResidentRole = (typeof RESIDENT_ROLES)[number];
+
+/** The three ways the Concession's land can be put to use (TULA_SETTLEMENT_SPEC.md §2.2). */
+export const LAND_USES = ['cropland', 'pasture', 'wildland'] as const;
+export type LandUse = (typeof LAND_USES)[number];
+
+/** How lavish an Invite Settlers offer is — raises turnout and cost (§5.1). */
+export const INVITE_OFFERS = ['modest', 'generous', 'lavish'] as const;
+export type InviteOffer = (typeof INVITE_OFFERS)[number];
+
+/**
+ * The Concession — land the Charter Company has ceded the post to settle
+ * (TULA_SETTLEMENT_SPEC.md §2). Measured in chains; supports a population
+ * without resistance but is a soft threshold, not a hard cap. The engine field
+ * stays `claim`; the in-fiction display term is "the Concession".
+ */
+export interface ClaimState {
+  /** Total chains under claim; grows only via a successful Negotiate Land run. */
+  size: number;
+  /** % of `size` given to each use; sums to 100. Player-adjustable between turns. */
+  allocation: Record<LandUse, number>;
+  /** Accrues farmer effort each turn; converts to a Food harvest at season end. */
+  cropProgress: number;
+  /** People whose land was most recently negotiated — the over-Concession
+   *  standing target (§2.1). Unset until the first successful Negotiate Land run. */
+  landholder?: FactionId;
+}
+
+/** The post's abstracted livestock, tended by herders (TULA_SETTLEMENT_SPEC.md §4.2). */
+export interface HerdState {
+  count: number;
+}
 
 /** Transient outsiders we neither feed nor pay (RESIDENTS_SPEC.md §3, Phase B). */
 export const TRANSIENT_KINDS = ['visitorGuards', 'companyAgents', 'supplierCrew'] as const;
@@ -225,7 +264,14 @@ export interface LocationState {
   market?: Record<GoodId, MarketGoodState>;
 }
 
-export type ExpeditionKind = 'caravan' | 'explore' | 'diplomacy' | 'labor' | 'courtship' | 'raid';
+export type ExpeditionKind =
+  | 'caravan'
+  | 'explore'
+  | 'diplomacy'
+  | 'courtship'
+  | 'raid'
+  | 'invite'
+  | 'concession';
 export type ExpeditionPace = 'fast' | 'normal' | 'slow';
 
 export interface SurveyResult {
@@ -263,11 +309,22 @@ export interface ExpeditionState {
    */
   residentEscort?: Partial<Record<ResidentRole, number>>;
   /**
-   * Homeland (Imanian) laborers a `labor` run is bringing home from Thornwatch
-   * (HERITAGE_SPEC.md §5.2). Paid for at dispatch; added to the pool on
-   * homecoming. Optional so non-labor / pre-v7 expeditions deserialize cleanly.
+   * Retired `labor`-run field (Thornwatch homeland hands). Kept optional so a
+   * pre-TULA save with an in-flight labor run still deserializes; no live code
+   * reads it any more — Invite Settlers replaced the mechanism.
    */
   homelandLabor?: number;
+  /** Invite Settlers (§5.1): source key into hireSources, offer tier, and the
+   *  headcount asked for — set at dispatch. */
+  inviteSource?: string;
+  inviteOffer?: InviteOffer;
+  inviteCount?: number;
+  /** How many actually agreed to come, rolled at arrival, settled on homecoming. */
+  inviteArrivals?: number;
+  /** Negotiate Land (§5.2): chains asked for, set at dispatch. */
+  concessionAsk?: number;
+  /** Chains actually granted (0 on a failed negotiation), rolled at arrival. */
+  concessionGranted?: number;
   /**
    * Graph-node id a `courtship` run is bringing a homeland spouse home to wed
    * (FAMILY_SPEC.md §3.5). Optional so non-courtship / pre-v8 expeditions
@@ -458,14 +515,15 @@ export type BuildingId = string;
 
 /** Passive numeric effects a completed building contributes (summed by selectors). */
 export interface BuildingEffects {
-  residentCapBonus: number;
   defenseBonus: number;
   prosperityBonus: number;
   tradeIncomeBonus: number;
   stressReliefBonus: number;
   craftReliefBonus: number;
   upkeepSilver: number;
-  storageBonus: number; // reserved; unused until storage caps land (Phase C)
+  /** Bonus Food kept from each seasonal harvest — a storehouse eases spoilage
+   *  now that food arrives in lumps (TULA_SETTLEMENT_SPEC.md §7). */
+  foodStorageBonus: number;
   contentmentBonus: number;
   healingBonus: number; // extra health recovery on a Rest turn, alongside stressReliefBonus
 }
@@ -658,6 +716,10 @@ export interface GameState {
   nextCharacterId: number;
   /** The post's unnamed population (RESIDENTS_SPEC.md). */
   residents: ResidentState;
+  /** Land under settlement — the Concession (TULA_SETTLEMENT_SPEC.md §2). */
+  claim: ClaimState;
+  /** Abstracted livestock, tended by herders (TULA_SETTLEMENT_SPEC.md §4.2). */
+  herd: HerdState;
   /** Transient outsiders (Phase B); empty until spawn hooks land. */
   transients: TransientGroup[];
   /** Monotonic counter for transient group ids. */

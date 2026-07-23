@@ -18,14 +18,13 @@ import { useGameStore } from '../../store/gameStore';
 const DEFS = TUNING.building.defs;
 
 const EFFECT_LABELS: Record<string, (v: number) => string> = {
-  residentCapBonus: (v) => `+${v} population room`,
+  foodStorageBonus: (v) => `+${v} food kept each harvest`,
   defenseBonus: (v) => `+${v} defense`,
   prosperityBonus: (v) => `+${v} prosperity`,
   tradeIncomeBonus: (v) => `+${Math.round(v * 100)}% trade income`,
   stressReliefBonus: (v) => `+${v} rest relief`,
   craftReliefBonus: (v) => `−${v} silver upkeep`,
   upkeepSilver: (v) => `${v} silver upkeep/turn`,
-  storageBonus: () => '',
   contentmentBonus: (v) => `+${v} contentment`,
   healingBonus: (v) => `+${v} healing`,
 };

@@ -13,9 +13,9 @@ import {
   applyAxisArrivals,
   applyDesertion,
   applyGrowth,
+  claimCapacity,
   contentmentBand,
-  hireError,
-  hireResidents,
+  freshResidents,
   loseResidents,
   outputMultiplier,
   reallocate,
@@ -105,11 +105,12 @@ describe('resident selectors', () => {
 });
 
 describe('resident mutators', () => {
-  it('addResidents respects the tier cap and records tags', () => {
-    const s = testState(); // tier 1 cap = 4
+  it('addResidents is uncapped and records tags', () => {
+    const s = testState();
+    s.residents = freshResidents(); // isolate from the new-game starting hands
     expect(addResidents(s, 'farmers', 3, 'settlers')).toBe(3);
-    expect(addResidents(s, 'idle', 5)).toBe(1); // only 1 slot left
-    expect(residentTotal(s)).toBe(4);
+    expect(addResidents(s, 'idle', 5)).toBe(5); // no cap — all join
+    expect(residentTotal(s)).toBe(8);
     expect(s.residents.tags.settlers).toBe(3);
   });
 
@@ -125,6 +126,7 @@ describe('resident mutators', () => {
 
   it('reallocate moves present hands between roles and idle', () => {
     const s = testState();
+    s.residents = freshResidents();
     s.residents.idle = 3;
     expect(reallocate(s, 'idle', 'guards', 2)).toBe(true);
     expect(s.residents.roles.guards).toBe(2);
@@ -132,21 +134,15 @@ describe('resident mutators', () => {
     expect(reallocate(s, 'idle', 'guards', 5)).toBe(false); // not enough idle
   });
 
-  it('hiring validates silver and cap', () => {
-    const s = testState();
-    // Reach & warm to the Kiswani so the local-hire gate passes.
-    s.locations.river_meet.discovery = 'visited';
-    s.factions.RIVER_CLANS.standing = 20;
-    const guardCost = Math.ceil(TUNING.residents.hire.costPerHead.guards * TUNING.heritage.localCostMult);
-    const farmerCost = Math.ceil(TUNING.residents.hire.costPerHead.farmers * TUNING.heritage.localCostMult);
-    s.silver = guardCost - 1;
-    expect(hireError(s, 'guards', 1, 'tributary')).toBe('Not enough silver.');
-    s.silver = 500;
-    expect(hireError(s, 'farmers', 5, 'tributary')).toBe('No room for them yet.'); // cap 4
-    expect(hireError(s, 'farmers', 2, 'tributary')).toBeNull();
-    expect(hireResidents(s, 'farmers', 2, 'tributary')).toBe(true);
-    expect(s.residents.roles.farmers).toBe(2);
-    expect(s.silver).toBe(500 - 2 * farmerCost);
+  it('claimCapacity tracks the Concession, and the pool may exceed it', () => {
+    const s = testState(); // starting Concession size 10
+    s.residents = freshResidents();
+    expect(claimCapacity(s)).toBe(10 * TUNING.claim.residentsPerChain);
+    // Population is uncapped — adding past the supported number still succeeds.
+    const cap = claimCapacity(s);
+    expect(addResidents(s, 'farmers', cap + 5)).toBe(cap + 5);
+    expect(residentTotal(s)).toBe(cap + 5);
+    expect(residentTotal(s)).toBeGreaterThan(claimCapacity(s));
   });
 
   it('addResidents accumulates a tag count across multiple calls, not just presence', () => {
@@ -158,7 +154,8 @@ describe('resident mutators', () => {
   });
 
   it('loseResidents proportionally debits tag counts, and drops a tag once it hits zero', () => {
-    const s = testState(); // tier 1 cap = 4
+    const s = testState();
+    s.residents = freshResidents();
     addResidents(s, 'farmers', 4, 'orc', 'native');
     expect(loseResidents(s, undefined, 4)).toBe(4);
     expect(s.residents.tags.orc).toBeUndefined();
@@ -181,6 +178,7 @@ describe('contentment, desertion, growth', () => {
 
   it('does nothing with an empty pool', () => {
     const s = testState();
+    s.residents = freshResidents();
     const before = s.residents.contentment;
     expect(updateContentment(s, { missedFood: true, missedWages: true })).toBe(0);
     expect(s.residents.contentment).toBe(before);
@@ -204,34 +202,37 @@ describe('contentment, desertion, growth', () => {
     expect(applyDesertion(calm)).toBe(0);
   });
 
-  it('growth needs a content, under-cap post and never exceeds the cap', () => {
+  it('growth needs a content post; the cap no longer blocks it', () => {
     // Not content → never grows.
     const grumbling = testState();
     grumbling.residents.roles.farmers = 1;
     grumbling.residents.contentment = 5;
     expect(applyGrowth(grumbling, new Rng(1), 0)).toBe(0);
 
-    // Content and under cap → grows on at least some rng streams, never past cap.
+    // Content → grows on at least some rng streams.
     let grewAtLeastOnce = false;
     for (let seed = 1; seed <= 60; seed++) {
       const s = testState();
-      s.residents.roles.farmers = 1; // total 1, cap 4
+      s.residents.roles.farmers = 1;
       s.residents.contentment = 9;
-      const grew = applyGrowth(s, new Rng(seed), 5);
-      if (grew > 0) grewAtLeastOnce = true;
-      expect(residentTotal(s)).toBeLessThanOrEqual(4);
+      if (applyGrowth(s, new Rng(seed), 5) > 0) grewAtLeastOnce = true;
     }
     expect(grewAtLeastOnce).toBe(true);
 
-    // At cap → never grows.
-    const full = testState();
-    full.residents.roles.farmers = 4;
-    full.residents.contentment = 9;
-    expect(applyGrowth(full, new Rng(1), 99)).toBe(0);
+    // Even well past the Concession's supported number, a content post can grow.
+    let grewWhileCrowded = false;
+    for (let seed = 1; seed <= 60; seed++) {
+      const s = testState();
+      s.residents.roles.farmers = claimCapacity(s) + 5;
+      s.residents.contentment = 9;
+      if (applyGrowth(s, new Rng(seed), 99) > 0) grewWhileCrowded = true;
+    }
+    expect(grewWhileCrowded).toBe(true);
   });
 
   it('settlement axes draw arrivals at season end', () => {
     const s = testState();
+    s.residents = freshResidents();
     s.axes.integration = 5;
     s.axes.communal = 5;
     const arrivals = applyAxisArrivals(s);
@@ -244,6 +245,7 @@ describe('contentment, desertion, growth', () => {
 describe('resident event outcomes and conditions', () => {
   it('addResidents / loseResidents / contentment / addTransient apply', () => {
     const s = testState();
+    s.residents = freshResidents();
     applyOutcomes(s, [{ type: 'addResidents', role: 'farmers', count: 2 }], outcomeCtx(s));
     expect(s.residents.roles.farmers).toBe(2);
 
@@ -265,6 +267,7 @@ describe('resident event outcomes and conditions', () => {
 
   it('resident and contentment conditions read the pool', () => {
     const s = testState();
+    s.residents = freshResidents();
     s.residents.roles.guards = 3;
     s.residents.contentment = 6;
     expect(evalCondition(s, { type: 'residentsAtLeast', role: 'guards', value: 3 })).toBe(true);
@@ -278,6 +281,7 @@ describe('resident event outcomes and conditions', () => {
 describe('expedition escorts', () => {
   it('draws residents onto a caravan and returns survivors on homecoming', () => {
     const s = testState();
+    s.residents = freshResidents();
     // Make the market reachable and give the post porters/guards.
     s.locations.river_meet.discovery = 'visited';
     s.residents.roles.porters = 3;
@@ -320,17 +324,19 @@ describe('expedition escorts', () => {
 describe('resident upkeep in the turn pipeline', () => {
   it('residents add to the grain the post eats', () => {
     const s = testState(1);
+    s.residents = freshResidents();
     s.residents.roles.porters = 3; // eat, do not farm
     resolveTurn(s, TEST_CONTENT);
     const eatLine = s.report.lines.find((l) => l.text.includes('eats'));
-    // 6 heroes + 3 residents = 9 grain.
-    expect(eatLine?.text).toContain('9 grain');
+    // 6 heroes + 3 residents = 9 food.
+    expect(eatLine?.text).toContain('9 food');
   });
 
   it('wages are charged at season end', () => {
     const s = testState(2);
     s.turn = 6; // season end
     s.silver = 1000;
+    s.residents = freshResidents();
     s.residents.roles.farmers = 2; // total 2 → 12 silver in wages
     resolveTurn(s, TEST_CONTENT);
     const wageLine = s.report.lines.find((l) => l.text.includes('wages'));

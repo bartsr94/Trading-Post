@@ -1,5 +1,6 @@
 import { activeHeroes, discoveryAtLeast, livingHeroes, reserveHeroes, seasonOfTurn } from '../types';
 import { canAdvanceTier, hasBuilding } from '../buildings';
+import { isOverClaim } from '../claim';
 import { cargoUnits } from '../expeditions';
 import { isMarried } from '../family';
 import { diplomacySeatStateById } from '../diplomacy';
@@ -92,6 +93,14 @@ export function evalCondition(
       return nativeShare(state) >= cond.value;
     case 'nativeShareAtMost':
       return nativeShare(state) <= cond.value;
+    case 'claimAtLeast':
+      return state.claim.size >= cond.value;
+    case 'claimBelow':
+      return state.claim.size < cond.value;
+    case 'herdAtLeast':
+      return state.herd.count >= cond.value;
+    case 'overClaim':
+      return isOverClaim(state);
     case 'heritageCountAtLeast':
       return heritageCount(state, cond.group) >= cond.value;
     case 'heroHeritageInParty':

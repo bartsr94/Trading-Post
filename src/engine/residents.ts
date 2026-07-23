@@ -4,8 +4,7 @@
 
 import { TUNING } from '../content/tuning';
 import { addBuildProgress, buildingEffect } from './buildings';
-import { diplomacySeatStateById, effectiveDiplomacyStanding } from './diplomacy';
-import { clamp, discoveryAtLeast, RESIDENT_ROLES, stanceOf } from './types';
+import { clamp, RESIDENT_ROLES } from './types';
 import type {
   GameState,
   HeritageGroup,
@@ -18,7 +17,7 @@ import type { Rng } from './rng';
 export type ContentmentBand = 'content' | 'grumbling' | 'unrest';
 
 export function emptyRoles(): Record<ResidentRole, number> {
-  return { farmers: 0, porters: 0, guards: 0, craftsfolk: 0 };
+  return { farmers: 0, porters: 0, guards: 0, craftsfolk: 0, herders: 0, hunters: 0 };
 }
 
 export function freshResidents(): ResidentState {
@@ -64,9 +63,14 @@ export function residentCount(state: GameState, role?: ResidentRole): number {
   return role ? residentsAvailable(state, role) : residentTotal(state);
 }
 
-export function residentCap(state: GameState): number {
-  // Tier floor + whatever completed buildings add (Storehouse, Common House…).
-  return (TUNING.residents.capByTier[state.postTier] ?? 0) + buildingEffect(state, 'residentCapBonus');
+/**
+ * The population the Concession supports without resistance
+ * (TULA_SETTLEMENT_SPEC.md §2.1). Replaces the old hard `residentCap`: the pool
+ * may freely exceed this — over-Concession pressure (contentment + standing)
+ * applies instead of a block.
+ */
+export function claimCapacity(state: GameState): number {
+  return state.claim.size * TUNING.claim.residentsPerChain;
 }
 
 // ------------------------------------------------------- heritage (HERITAGE_SPEC.md)
@@ -145,10 +149,11 @@ export function outputMultiplier(state: GameState): number {
 // -------------------------------------------------------------- mutators
 
 /**
- * Adds residents into a role (or idle), never exceeding the cap. Returns how
- * many actually joined. `group` records their origin on the heritage tally
- * (kept summed-equal to residentTotal). Used by hiring, growth, axis arrivals,
- * and events.
+ * Adds residents into a role (or idle). Population is uncapped
+ * (TULA_SETTLEMENT_SPEC.md §2) — crowding past what the Concession supports
+ * costs mood and goodwill, it is never refused. Returns how many joined.
+ * `group` records their origin on the heritage tally (kept summed-equal to
+ * residentTotal). Used by settlement (Invite Settlers), growth, arrivals, events.
  */
 export function addResidents(
   state: GameState,
@@ -158,9 +163,7 @@ export function addResidents(
   group: HeritageGroup = 'homeland',
 ): number {
   if (count <= 0) return 0;
-  const space = Math.max(0, residentCap(state) - residentTotal(state));
-  const added = Math.min(count, space);
-  if (added <= 0) return 0;
+  const added = count;
   if (role === 'idle') state.residents.idle += added;
   else state.residents.roles[role] += added;
   state.residents.heritage[group] += added;
@@ -298,67 +301,6 @@ export function reallocate(
   return true;
 }
 
-/** Silver to hire `count` native hands of a role locally (discounted from base). */
-export function localHireCost(role: ResidentRole, count: number): number {
-  return Math.ceil(TUNING.residents.hire.costPerHead[role] * TUNING.heritage.localCostMult) * count;
-}
-
-/**
- * Why hiring `count` of `role` from a native `source` (a tribe/region key into
- * TUNING.heritage.hireSources — 'tributary', 'bejasi_hills', 'dustwalker', …) is
- * invalid, or null when it may proceed. Native hands only — homeland hands are
- * fetched from Thornwatch (PEOPLES_SPEC.md §7.1) and Weri are heroes-only, so
- * neither has a hire source. Gated on reaching that seat and their goodwill.
- */
-export function hireError(
-  state: GameState,
-  role: ResidentRole,
-  count: number,
-  source: string,
-): string | null {
-  if (count <= 0) return 'Hire at least one.';
-  const src = TUNING.heritage.hireSources[source];
-  if (!src) return 'No such people to hire from here.';
-  const loc = state.locations[src.seat];
-  if (!loc || !discoveryAtLeast(loc.discovery, 'visited')) {
-    return 'You have not reached their people yet.';
-  }
-  const seat = diplomacySeatStateById(state, src.seat);
-  const baseStanding = state.factions[src.faction].standing;
-  const standing = seat ? effectiveDiplomacyStanding(state, seat) : baseStanding;
-  const allianceBonus = seat?.pact === 'alliance' ? TUNING.diplomacy.allianceHiringBonus : 0;
-  const grievancePenalty =
-    (seat?.grievances ?? 0) * TUNING.diplomacy.grievanceHiringPenaltyPerPoint;
-  const effectiveTrust = standing + allianceBonus - grievancePenalty;
-  if (seat?.pact !== 'alliance' && stanceOf(baseStanding) === 'Hostile') {
-    return 'They will not send their people to you.';
-  }
-  if (stanceOf(effectiveTrust) === 'Hostile') return 'They will not send their people to you.';
-  if (effectiveTrust < TUNING.heritage.localHireStanding) {
-    return seat && seat.grievances >= TUNING.diplomacy.grievanceWarningThreshold
-      ? 'They remember old slights too clearly to send their people.'
-      : 'They do not trust you enough yet.';
-  }
-  if (state.silver < localHireCost(role, count)) return 'Not enough silver.';
-  if (residentTotal(state) + count > residentCap(state)) return 'No room for them yet.';
-  return null;
-}
-
-/** Hire native hands of a role from a local source (instant; they know their trade). */
-export function hireResidents(
-  state: GameState,
-  role: ResidentRole,
-  count: number,
-  source: string,
-): boolean {
-  if (hireError(state, role, count, source) !== null) return false;
-  const src = TUNING.heritage.hireSources[source];
-  state.silver -= localHireCost(role, count);
-  addResidents(state, role, count, src.people, 'native');
-  nudgeCulture(state, TUNING.heritage.hireAxisNudge * count);
-  return true;
-}
-
 /** Set contentment by a delta, clamped to the tuning band. */
 export function adjustContentment(state: GameState, delta: number): void {
   const t = TUNING.residents.contentment;
@@ -421,8 +363,10 @@ export function updateContentment(state: GameState, flags: UpkeepFlags): number 
   if (flags.missedFood) delta -= t.missedFoodPenalty;
   if (flags.missedWages) delta -= t.missedWagePenalty;
 
-  const over = residentTotal(state) - residentCap(state);
-  if (over > 0) delta -= t.overCapPenalty * over;
+  // Crowding past what the Concession supports drags the mood (§2.1) — steeper
+  // than the old over-cap penalty, since it is land the post never secured.
+  const over = residentTotal(state) - claimCapacity(state);
+  if (over > 0) delta -= TUNING.claim.overClaimPenalty * over;
 
   if (state.residents.idle > t.idleTolerance) delta -= t.idlePenalty;
 
@@ -450,10 +394,11 @@ export function applyDesertion(state: GameState): number {
   return loseResidents(state, undefined, leaving);
 }
 
-/** A content, under-cap post may draw a new pair of hands. Returns 1 if it grew. */
+/** A content post may draw a new pair of hands. Returns 1 if it grew. Growth is
+ *  no longer cap-gated (TULA_SETTLEMENT_SPEC.md §2); over-Concession pressure
+ *  self-limits it by pushing the pool out of the content band. */
 export function applyGrowth(state: GameState, rng: Rng, prosperityScore: number): number {
   if (contentmentBand(state) !== 'content') return 0;
-  if (residentTotal(state) >= residentCap(state)) return 0;
   const g = TUNING.residents.growth;
   const chance = g.baseGrowthChance + Math.max(0, prosperityScore) * g.prosperityBonus;
   if (rng.next() >= chance) return 0;

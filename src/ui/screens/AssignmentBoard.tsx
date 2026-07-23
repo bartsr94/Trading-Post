@@ -95,11 +95,13 @@ export function AssignmentBoard({ game }: { game: GameState }) {
                       ? '🗺️ Scouting'
                       : exp?.kind === 'diplomacy'
                         ? '🤝 Envoy'
-                        : exp?.kind === 'labor'
-                          ? '📜 Recruiters'
-                          : exp?.kind === 'courtship'
-                            ? '💍 Courtship'
-                            : '⚔️ Raid'}{' '}
+                        : exp?.kind === 'invite'
+                          ? '📣 Invitation'
+                          : exp?.kind === 'concession'
+                            ? '📐 Land talks'
+                            : exp?.kind === 'courtship'
+                              ? '💍 Courtship'
+                              : '⚔️ Raid'}{' '}
                   — {exp?.leg === 'outbound' ? `bound for ${dest}` : `returning from ${dest}`},{' '}
                   {exp?.turnsLeft} turn{exp?.turnsLeft === 1 ? '' : 's'} out
                 </span>

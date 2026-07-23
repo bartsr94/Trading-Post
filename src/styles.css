@@ -880,6 +880,16 @@ table.market td.num { text-align: right; font-variant-numeric: tabular-nums; fon
   margin-top: 6px;
 }
 
+/* The People screen packs a population summary + hands grid + the Concession's
+   land controls into two columns — tightened to hold the no-scroll floor now
+   that a fresh post always has founding hands (never the shorter "empty pool"
+   placeholder). */
+.people-panel .faction-row { padding: 2px 0; font-size: 0.84rem; }
+.people-panel h4 { margin-top: 8px !important; margin-bottom: 4px; }
+.people-panel .hand-cell { padding: 5px 8px; font-size: 0.84rem; }
+.people-panel .hands-grid { gap: 6px; margin: 4px 0 2px; }
+.people-panel .axis-track { margin: 3px 0 6px !important; }
+
 /* ---------- map ---------- */
 .map-layout {
   display: grid;

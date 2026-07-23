@@ -17,6 +17,13 @@ import {
   buildingEffect,
   completeConstructionIfDone,
 } from './buildings';
+import {
+  accrueCropProgress,
+  growHerd,
+  overClaimStandingTarget,
+  resolveHarvest,
+  wildlandTrickle,
+} from './claim';
 import { applyDiplomacyShift } from './diplomacy';
 import { driftMarket, priceOf, prosperity } from './economy';
 import type { GoodDef } from './economy';
@@ -29,6 +36,7 @@ import {
   applyCultureDrift,
   applyDesertion,
   applyGrowth,
+  claimCapacity,
   outputMultiplier,
   removeTransients,
   residentsAvailable,
@@ -162,6 +170,10 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   // 3c. The resident society settles: mood, desertion, growth, arrivals.
   resolveResidentSociety(state, ctx, rng, report, { missedFood, missedWages });
 
+  // 3c-ii. The land: over-Concession pressure each turn, and the season's harvest.
+  resolveOverClaimPressure(state, ctx, report);
+  if (isSeasonEnd(state.turn)) resolveClaimSeason(state, rng, report);
+
   // 3d. The frontier tests the post: an incoming raid may be sighted (the player
   //     defends it via the raid modal before the event phase; RAIDING_SPEC.md §6).
   resolveIncomingRaids(state, ctx, rng, report);
@@ -254,13 +266,13 @@ function payUpkeep(
   const party = livingHeroes(state);
   const res = TUNING.residents;
 
-  // Farmers work their plots before the post eats (mood scales the yield).
-  const farmers = residentsAvailable(state, 'farmers');
-  const grown = Math.round(farmers * res.effects.grainPerFarmerPerTurn * outputMultiplier(state));
-  if (grown > 0) {
-    state.goods.grain += grown;
-    report('🌾', `The fields yield ${grown} grain.`);
-  }
+  // Cropland is planted all season — its harvest lands in a lump at season end;
+  // farmers add their effort to it now. Hunters bring in a continuous Food
+  // trickle before the post eats; herders grow the herd (TULA_SETTLEMENT_SPEC.md §4).
+  accrueCropProgress(state);
+  growHerd(state);
+  const trickle = wildlandTrickle(state);
+  if (trickle > 0) report('🏹', `The wildland yields ${trickle} food.`);
 
   const mouths = residentTotal(state);
   // Named characters (active + reserve) eat as heroes; dependants eat too.
@@ -274,14 +286,14 @@ function payUpkeep(
 
   if (state.goods.grain >= grainNeeded) {
     state.goods.grain -= grainNeeded;
-    report('🍞', `The post eats ${grainNeeded} grain.`);
+    report('🍞', `The post eats ${grainNeeded} food.`);
   } else if (grainDef) {
     const shortfall = grainNeeded - state.goods.grain;
     const cost = shortfall * priceOf(state, grainDef);
     if (state.silver >= cost) {
       state.goods.grain = 0;
       state.silver -= cost;
-      report('🍞', `Grain ran short; bought ${shortfall} for ${cost} silver.`);
+      report('🍞', `Food ran short; bought ${shortfall} for ${cost} silver.`);
     } else {
       state.goods.grain = 0;
       missed = true;
@@ -455,6 +467,52 @@ function resolveResidentSociety(
           : 'The post holds to its Imanian ways.',
       );
     }
+  }
+}
+
+/**
+ * The season's harvest (TULA_SETTLEMENT_SPEC.md §4): the cropland's accumulated
+ * effort lands as a lump of Food (usually — occasionally a true failure), and
+ * the herd yields its milk-and-hide surplus. The biggest Food beat in the game's
+ * rhythm.
+ */
+function resolveClaimSeason(
+  state: GameState,
+  rng: Rng,
+  report: (icon: string, text: string) => void,
+): void {
+  const result = resolveHarvest(state, rng);
+  if (result.cropFailed) {
+    report('🥀', 'The crop fails. It will be a lean season.');
+  } else if (result.cropFood > 0) {
+    report('🌾', `The cropland yields ${result.cropFood} food.`);
+  }
+  if (result.herdFood > 0) {
+    report('🐄', `The herd brings in ${result.herdFood} food.`);
+  }
+}
+
+/**
+ * Crowding past what the Concession supports nudges down the goodwill of the
+ * people whose land the post is spilling onto (TULA_SETTLEMENT_SPEC.md §2.1) —
+ * pressure, not a block. Contentment already took its hit in updateContentment.
+ */
+function resolveOverClaimPressure(
+  state: GameState,
+  ctx: TurnContext,
+  report: (icon: string, text: string) => void,
+): void {
+  if (residentTotal(state) <= claimCapacity(state)) return;
+  const target = overClaimStandingTarget(state, ctx.locationDefs);
+  if (!target) return; // no neighbour discovered yet — no one to offend
+  const faction = state.factions[target];
+  const before = faction.standing;
+  faction.standing = clamp(faction.standing - TUNING.claim.overClaimStandingLossPerTurn, -100, 100);
+  if (faction.standing !== before) {
+    report(
+      '⛺',
+      `The ${ctx.factionNames.get(target) ?? target} chafe at the post crowding onto their land.`,
+    );
   }
 }
 

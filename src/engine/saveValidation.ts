@@ -24,7 +24,19 @@ const PHASES = ['assignment', 'event', 'report', 'gameover'] as const;
 const HERO_STATUSES = ['active', 'dead', 'departed'] as const;
 const GENDERS = ['male', 'female'] as const;
 const BLOODLINES = ['pure', 'mixed'] as const;
-const EXPEDITION_KINDS = ['caravan', 'explore', 'diplomacy', 'labor', 'courtship', 'raid'] as const;
+// 'labor' retained so a pre-TULA save with an in-flight labor run still validates.
+const EXPEDITION_KINDS = [
+  'caravan',
+  'explore',
+  'diplomacy',
+  'labor',
+  'courtship',
+  'raid',
+  'invite',
+  'concession',
+] as const;
+const INVITE_OFFERS = ['modest', 'generous', 'lavish'] as const;
+const LAND_USES = ['cropland', 'pasture', 'wildland'] as const;
 const EXPEDITION_PACES = ['fast', 'normal', 'slow'] as const;
 const EXPEDITION_LEGS = ['outbound', 'returning'] as const;
 const CHECK_TIERS = ['critSuccess', 'success', 'failure', 'critFailure'] as const;
@@ -246,6 +258,14 @@ function validateExpedition(
     }
   }
   if (exp.homelandLabor !== undefined) nonNegativeInteger(exp.homelandLabor, `${path}.homelandLabor`);
+  if (exp.inviteSource !== undefined) string(exp.inviteSource, `${path}.inviteSource`);
+  if (exp.inviteOffer !== undefined) enumValue(exp.inviteOffer, INVITE_OFFERS, `${path}.inviteOffer`);
+  if (exp.inviteCount !== undefined) nonNegativeInteger(exp.inviteCount, `${path}.inviteCount`);
+  if (exp.inviteArrivals !== undefined) nonNegativeInteger(exp.inviteArrivals, `${path}.inviteArrivals`);
+  if (exp.concessionAsk !== undefined) nonNegativeInteger(exp.concessionAsk, `${path}.concessionAsk`);
+  if (exp.concessionGranted !== undefined) {
+    nonNegativeInteger(exp.concessionGranted, `${path}.concessionGranted`);
+  }
   if (exp.courtshipFor !== undefined) string(exp.courtshipFor, `${path}.courtshipFor`);
   if (exp.raidGoal !== undefined) enumValue(exp.raidGoal, RAID_ATTACK_GOALS, `${path}.raidGoal`);
   if (exp.raidManeuver !== undefined) enumValue(exp.raidManeuver, RAID_MANEUVERS, `${path}.raidManeuver`);
@@ -342,6 +362,17 @@ export function validateGameState(value: unknown): GameState {
   finite(residents.contentment, 'save.residents.contentment');
   validateIntegerRecord(residents.tags, 'save.residents.tags', true);
   validateNumericRecord(residents.heritage, ['homeland', 'native'], 'save.residents.heritage', true);
+
+  const claim = record(state.claim, 'save.claim');
+  nonNegativeInteger(claim.size, 'save.claim.size');
+  nonNegativeInteger(claim.cropProgress, 'save.claim.cropProgress');
+  const allocation = record(claim.allocation, 'save.claim.allocation');
+  for (const use of LAND_USES) nonNegativeInteger(allocation[use], `save.claim.allocation.${use}`);
+  if (claim.landholder !== undefined) {
+    enumValue(claim.landholder, FACTION_IDS, 'save.claim.landholder');
+  }
+  const herd = record(state.herd, 'save.herd');
+  nonNegativeInteger(herd.count, 'save.herd.count');
 
   const transientIds = array(state.transients, 'save.transients').map((entry, index) => {
     const transient = record(entry, `save.transients[${index}]`);

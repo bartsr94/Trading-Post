@@ -1,11 +1,16 @@
-import { useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import ashmarkMap from '../../assets/ui/ashmark_map.jpg';
 import { FACTION_DEFS } from '../../content/factions';
 import { LOCATIONS, LOCATION_DEFS } from '../../content/locations';
 import { MAP_REGIONS } from '../../content/map';
 import { TUNING } from '../../content/tuning';
 import { diplomacySeatState } from '../../engine/diplomacy';
-import { cargoCapacity, dispatchError, laborRunCost } from '../../engine/expeditions';
+import {
+  cargoCapacity,
+  dispatchError,
+  inviteRunCost,
+  negotiateLandSilverCost,
+} from '../../engine/expeditions';
 import {
   journeyTurns,
   mapCellCenter,
@@ -38,9 +43,14 @@ const DISCOVERY_LABELS = {
   known: 'Well known',
 } as const;
 
-type PlaceAction = 'explore' | 'labor' | 'courtship' | 'raid';
+type PlaceAction = 'explore' | 'invite' | 'concession' | 'courtship' | 'raid';
 type PanelMode = 'explore' | 'place' | 'road';
 type FogCell = { index: number; points: string };
+
+/** The Invite Settlers source key (into hireSources) for a seat, if any. */
+function inviteSourceForSeat(seatId: string): string | undefined {
+  return Object.entries(TUNING.heritage.hireSources).find(([, s]) => s.seat === seatId)?.[0];
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -67,6 +77,34 @@ function expeditionName(game: GameState, heroIds: string[]): string {
   return heroIds.map((id) => game.heroes.find((hero) => hero.id === id)?.name ?? id).join(' & ');
 }
 
+/** Up to ~3072 fog polygons — memoized so panning/zooming (which only changes
+ *  the SVG viewBox, not the fog data) skips re-diffing all of them every
+ *  frame. `reachable`/`locked` are already stable references from the
+ *  `fogLayers` useMemo below, so this only re-renders when discovery/access
+ *  actually changes. */
+const FogLayers = memo(function FogLayers({
+  reachable,
+  locked,
+}: {
+  reachable: FogCell[];
+  locked: FogCell[];
+}) {
+  return (
+    <>
+      <g className="map-fog-layer map-fog-layer--reachable" pointerEvents="none">
+        {reachable.map((cell) => (
+          <polygon key={cell.index} points={cell.points} className="map-fog" />
+        ))}
+      </g>
+      <g className="map-fog-layer map-fog-layer--locked" pointerEvents="none">
+        {locked.map((cell) => (
+          <polygon key={cell.index} points={cell.points} className="map-fog locked" />
+        ))}
+      </g>
+    </>
+  );
+});
+
 export function MapScreen({ game }: { game: GameState }) {
   const dispatch = useGameStore((state) => state.dispatch);
   const openDiplomacy = useGameStore((state) => state.openDiplomacy);
@@ -77,7 +115,9 @@ export function MapScreen({ game }: { game: GameState }) {
   const [pace, setPace] = useState<ExpeditionPace>('normal');
   const [party, setParty] = useState<string[]>([]);
   const [placeAction, setPlaceAction] = useState<PlaceAction>('explore');
-  const [laborCount, setLaborCount] = useState(1);
+  const [inviteCount, setInviteCount] = useState(1);
+  const [inviteOffer, setInviteOffer] = useState<'modest' | 'generous' | 'lavish'>('generous');
+  const [concessionAsk, setConcessionAsk] = useState(1);
   const [raidGoal, setRaidGoal] = useState<RaidAttackGoal>('plunder');
   const [raidManeuver, setRaidManeuver] = useState<RaidManeuver>('skirmish');
   const [raidRally, setRaidRally] = useState(false);
@@ -89,6 +129,17 @@ export function MapScreen({ game }: { game: GameState }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<{ x: number; y: number; centerX: number; centerY: number } | null>(null);
   const draggedRef = useRef(false);
+  const panFrameRef = useRef<number | null>(null);
+  const pendingPanRef = useRef<{ clientX: number; clientY: number; width: number; height: number } | null>(
+    null,
+  );
+
+  useEffect(
+    () => () => {
+      if (panFrameRef.current !== null) cancelAnimationFrame(panFrameRef.current);
+    },
+    [],
+  );
 
   const available = heroesAtPost(game);
   const selected = selectedId ? LOCATION_DEFS.get(selectedId) ?? null : null;
@@ -147,6 +198,37 @@ export function MapScreen({ game }: { game: GameState }) {
     setZoom(1);
     setCenter({ x: 0.5, y: 0.5 });
   };
+
+  // React attaches its synthetic onWheel handler as a passive listener, so
+  // calling preventDefault() from JSX throws a console warning. A manual,
+  // non-passive native listener is the standard workaround. Trackpads/high
+  // poll-rate mice can fire many wheel events per animation frame; each one
+  // triggering its own setState would re-render the whole map (including the
+  // up-to-3072-cell fog grid) far more often than the screen can show, which
+  // is what made zooming feel sluggish — coalesce them to at most one state
+  // update per frame instead.
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    let frame: number | null = null;
+    let pendingDelta = 0;
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      pendingDelta += event.deltaY < 0 ? 0.25 : -0.25;
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        const delta = pendingDelta;
+        pendingDelta = 0;
+        setZoom((z) => clamp(z + delta, 1, 3));
+      });
+    };
+    svg.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      svg.removeEventListener('wheel', onWheel);
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, []);
 
   const pointerToMap = (clientX: number, clientY: number): MapPoint | null => {
     const svg = svgRef.current;
@@ -225,13 +307,23 @@ export function MapScreen({ game }: { game: GameState }) {
             heroIds: party,
             pace,
           }
-        : action === 'labor' && selected
+        : action === 'invite' && selected
             ? {
-                kind: 'labor' as const,
+                kind: 'invite' as const,
                 destination: selected.id,
                 heroIds: party,
                 pace,
-                laborCount,
+                inviteSource: inviteSourceForSeat(selected.id),
+                inviteOffer,
+                inviteCount,
+              }
+            : action === 'concession' && selected
+            ? {
+                kind: 'concession' as const,
+                destination: selected.id,
+                heroIds: party,
+                pace,
+                concessionAsk,
               }
             : action === 'raid' && selected
               ? {
@@ -268,14 +360,18 @@ export function MapScreen({ game }: { game: GameState }) {
     }
   };
 
+  const seatVisited = Boolean(selectedLoc && discoveryAtLeast(selectedLoc.discovery, 'visited'));
   const actionOptions: { value: PlaceAction; label: string }[] = selected
     ? [
         { value: 'explore', label: 'Explore nearby' },
-        ...(selected.faction === 'CHARTER_COMPANY' && selectedLoc && discoveryAtLeast(selectedLoc.discovery, 'visited')
-          ? [
-              { value: 'labor' as const, label: 'Call for hands' },
-              { value: 'courtship' as const, label: 'Seek a match' },
-            ]
+        ...(inviteSourceForSeat(selected.id) && seatVisited
+          ? [{ value: 'invite' as const, label: 'Invite settlers' }]
+          : []),
+        ...(selected.faction && selected.faction !== 'CHARTER_COMPANY' && seatVisited
+          ? [{ value: 'concession' as const, label: 'Negotiate land' }]
+          : []),
+        ...(selected.faction === 'CHARTER_COMPANY' && seatVisited
+          ? [{ value: 'courtship' as const, label: 'Seek a match' }]
           : []),
         ...(raidTargetFaction(selected) && selectedLoc && discoveryAtLeast(selectedLoc.discovery, 'rumored')
           ? [{ value: 'raid' as const, label: 'Send raiders' }]
@@ -309,10 +405,6 @@ export function MapScreen({ game }: { game: GameState }) {
           viewBox={`${viewX} ${viewY} ${viewWidth} ${viewHeight}`}
           className="map-svg spatial-map-svg"
           aria-label="Map of the Ashmark"
-          onWheel={(event) => {
-            event.preventDefault();
-            setZoomClamped(zoom + (event.deltaY < 0 ? 0.25 : -0.25));
-          }}
           onPointerDown={(event) => {
             if ((event.target as Element).closest('.map-node, .map-rumor')) return;
             dragRef.current = { x: event.clientX, y: event.clientY, centerX: center.x, centerY: center.y };
@@ -320,17 +412,29 @@ export function MapScreen({ game }: { game: GameState }) {
             event.currentTarget.setPointerCapture(event.pointerId);
           }}
           onPointerMove={(event) => {
+            // Same reasoning as the wheel handler above: pointermove can fire far
+            // more often than the screen repaints (high poll-rate mice/trackpads),
+            // and each setCenter re-renders the whole map. Coalesce to one update
+            // per animation frame instead of one per raw event.
             const drag = dragRef.current;
             if (!drag || zoom === 1) return;
             const rect = event.currentTarget.getBoundingClientRect();
-            const dx = event.clientX - drag.x;
-            const dy = event.clientY - drag.y;
-            if (Math.abs(dx) + Math.abs(dy) > 3) draggedRef.current = true;
-            const halfX = 0.5 / zoom;
-            const halfY = 0.5 / zoom;
-            setCenter({
-              x: clamp(drag.centerX - dx / rect.width / zoom, halfX, 1 - halfX),
-              y: clamp(drag.centerY - dy / rect.height / zoom, halfY, 1 - halfY),
+            pendingPanRef.current = { clientX: event.clientX, clientY: event.clientY, width: rect.width, height: rect.height };
+            if (panFrameRef.current !== null) return;
+            panFrameRef.current = requestAnimationFrame(() => {
+              panFrameRef.current = null;
+              const pending = pendingPanRef.current;
+              const currentDrag = dragRef.current;
+              if (!pending || !currentDrag) return;
+              const dx = pending.clientX - currentDrag.x;
+              const dy = pending.clientY - currentDrag.y;
+              if (Math.abs(dx) + Math.abs(dy) > 3) draggedRef.current = true;
+              const halfX = 0.5 / zoom;
+              const halfY = 0.5 / zoom;
+              setCenter({
+                x: clamp(currentDrag.centerX - dx / pending.width / zoom, halfX, 1 - halfX),
+                y: clamp(currentDrag.centerY - dy / pending.height / zoom, halfY, 1 - halfY),
+              });
             });
           }}
           onPointerUp={(event) => {
@@ -343,16 +447,7 @@ export function MapScreen({ game }: { game: GameState }) {
         >
           <image href={ashmarkMap} x="0" y="0" width={MAP_W} height={MAP_H} preserveAspectRatio="none" />
 
-          <g className="map-fog-layer map-fog-layer--reachable" pointerEvents="none">
-            {fogLayers.reachable.map((cell) => (
-              <polygon key={cell.index} points={cell.points} className="map-fog" />
-            ))}
-          </g>
-          <g className="map-fog-layer map-fog-layer--locked" pointerEvents="none">
-            {fogLayers.locked.map((cell) => (
-              <polygon key={cell.index} points={cell.points} className="map-fog locked" />
-            ))}
-          </g>
+          <FogLayers reachable={fogLayers.reachable} locked={fogLayers.locked} />
 
           <g className="map-expeditions" pointerEvents="none">
             {game.expeditions.map((expedition) => {
@@ -560,10 +655,54 @@ export function MapScreen({ game }: { game: GameState }) {
                   </select>
                 </label>
 
-                {placeAction === 'labor' && mode === 'place' && (
+                {placeAction === 'invite' && mode === 'place' && (
+                  <>
+                    <label className="compact-field">
+                      <span>Households ({inviteRunCost(inviteCount, inviteOffer)} silver)</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={inviteCount}
+                        onChange={(event) =>
+                          setInviteCount(Math.max(1, Number(event.target.value) || 1))
+                        }
+                      />
+                    </label>
+                    <label className="compact-field">
+                      <span>Offer</span>
+                      <select
+                        value={inviteOffer}
+                        onChange={(event) =>
+                          setInviteOffer(event.target.value as 'modest' | 'generous' | 'lavish')
+                        }
+                      >
+                        <option value="modest">Modest — cheaper, fewer come</option>
+                        <option value="generous">Generous — a fair offer</option>
+                        <option value="lavish">Lavish — dear, but draws more</option>
+                      </select>
+                    </label>
+                  </>
+                )}
+                {placeAction === 'concession' && mode === 'place' && (
                   <label className="compact-field">
-                    <span>Hands ({laborRunCost(laborCount)} silver)</span>
-                    <input type="number" min={1} value={laborCount} onChange={(event) => setLaborCount(Math.max(1, Number(event.target.value) || 1))} />
+                    <span>Chains ({negotiateLandSilverCost(concessionAsk)} silver)</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={TUNING.claim.negotiateLand.maxAsk}
+                      value={concessionAsk}
+                      onChange={(event) =>
+                        setConcessionAsk(
+                          Math.max(
+                            1,
+                            Math.min(
+                              TUNING.claim.negotiateLand.maxAsk,
+                              Number(event.target.value) || 1,
+                            ),
+                          ),
+                        )
+                      }
+                    />
                   </label>
                 )}
                 {placeAction === 'raid' && mode === 'place' && (

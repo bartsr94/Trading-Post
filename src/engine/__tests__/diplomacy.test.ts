@@ -49,7 +49,7 @@ describe('diplomacy seats', () => {
     delete expedition.diplomacyMission;
 
     const migrated = deserialize(JSON.stringify(legacy), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.diplomacySeats.river_meet).toBeDefined();
     expect(migrated.diplomacySeats.river_meet.faction).toBe('RIVER_CLANS');
     expect(migrated.expeditions[0].diplomacyMission).toEqual({ type: 'talks' });

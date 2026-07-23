@@ -16,6 +16,7 @@ import type {
   GoodId,
   Heritage,
   HeritageGroup,
+  LandUse,
   LocationId,
   MapPoint,
   RaidSeverity,
@@ -79,6 +80,12 @@ export type Condition =
   | { type: 'contentmentAtMost'; value: number }
   | { type: 'nativeShareAtLeast'; value: number }
   | { type: 'nativeShareAtMost'; value: number }
+  /** Concession & herd (TULA_SETTLEMENT_SPEC.md §6). */
+  | { type: 'claimAtLeast'; value: number }
+  | { type: 'claimBelow'; value: number }
+  | { type: 'herdAtLeast'; value: number }
+  /** True when the population has run past what the Concession supports. */
+  | { type: 'overClaim' }
   | { type: 'heritageCountAtLeast'; group: HeritageGroup; value: number }
   | { type: 'heroHeritageInParty'; heritage: Heritage }
   | { type: 'postTierAtLeast'; value: number }
@@ -151,6 +158,11 @@ export type Outcome =
     }
   | { type: 'loseResidents'; role?: ResidentRole; count: number; group?: HeritageGroup }
   | { type: 'contentment'; delta: number }
+  /** Grow/shrink the Concession or the herd (TULA_SETTLEMENT_SPEC.md §6). */
+  | { type: 'addClaim'; delta: number }
+  | { type: 'setLandAllocation'; allocation: Record<LandUse, number> }
+  | { type: 'addHerd'; delta: number }
+  | { type: 'loseHerd'; delta: number }
   | { type: 'addTransient'; kind: TransientKind; count: number; turns: number }
   | { type: 'advanceTier' }
   | { type: 'completeBuilding'; building: BuildingId }

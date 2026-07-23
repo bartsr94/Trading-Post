@@ -80,7 +80,7 @@ export interface DefenderForceBreakdown {
   transients: number;
   post: number;
   heroes: number;
-  fyrd: number;
+  muster: number;
   total: number;
 }
 
@@ -146,11 +146,14 @@ export function canCallRaidAlly(
 
 // ------------------------------------------------------------- force selectors
 
-/** Farmers & idle hands grab spears — the fyrd, cheaper than a warrior, capped. */
-export function fyrdLevy(state: GameState): number {
+/** Rural hands answer the Company's call to arms — cheaper than a warrior,
+ *  capped. Farmers, herders, hunters, and idle folk all take up a spear
+ *  (TULA_SETTLEMENT_SPEC.md §3). */
+export function companyMuster(state: GameState): number {
   const r = TUNING.raid;
-  const heads = state.residents.roles.farmers + state.residents.idle;
-  return Math.min(r.fyrdLevyMax, heads * r.fyrdValuePerHead);
+  const roles = state.residents.roles;
+  const heads = roles.farmers + roles.herders + roles.hunters + state.residents.idle;
+  return Math.min(r.musterMax, heads * r.musterValuePerHead);
 }
 
 export function defenderForceBreakdown(state: GameState): DefenderForceBreakdown {
@@ -163,15 +166,15 @@ export function defenderForceBreakdown(state: GameState): DefenderForceBreakdown
     (sum, hero) => sum + hero.skills.combat * TUNING.raid.heroCombatWeight,
     0,
   );
-  const fyrd = fyrdLevy(state);
+  const muster = companyMuster(state);
   return {
     guards,
     fortifications,
     transients,
     post,
     heroes,
-    fyrd,
-    total: post + heroes + fyrd,
+    muster,
+    total: post + heroes + muster,
   };
 }
 

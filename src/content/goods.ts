@@ -21,10 +21,12 @@ export const GOODS: GoodDef[] = [
   },
   {
     id: 'grain',
-    name: 'Grain',
+    name: 'Food',
     basePrice: 3,
-    seasonalMods: { spring: 1.2, summer: 1.0, autumn: 0.7, winter: 1.4 },
-    note: 'Food. The post consumes it every turn.',
+    // Tropical Ashmark: the big cropland harvest lands at season's turn; stores
+    // are dearest in the lean stretch before it comes in.
+    seasonalMods: { spring: 1.3, summer: 1.1, autumn: 0.7, winter: 1.2 },
+    note: 'Cropland, herds, and hunting feed the post; it is eaten every turn.',
   },
   {
     id: 'salt',

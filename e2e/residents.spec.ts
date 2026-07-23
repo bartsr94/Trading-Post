@@ -9,19 +9,25 @@ async function foundPost(page: Page): Promise<void> {
   await expect(page.getByRole('button', { name: /Confirm Orders/ })).toBeVisible();
 }
 
-test('hiring a resident adds a hand to the pool on the People screen', async ({ page }) => {
+test('the People screen shows the Concession and re-apportions its land', async ({ page }) => {
   await foundPost(page);
   await page.getByRole('button', { name: 'People', exact: true }).click();
 
   const panel = page.locator('.panel', { hasText: "The Post's People" });
-  await expect(panel).toContainText('No one has settled here yet');
+  // A fresh post starts with a founding handful of farmers/guards.
+  await expect(panel).toContainText('4 / 60');
+  await expect(panel).toContainText('The Concession');
+  await expect(panel).toContainText('10 chains'); // starting Concession size
+  await expect(panel).toContainText('supports 60');
 
-  // Default people is Kiswani (Tributary Towns, reachable & friendly at the start).
-  // Local farmers cost the discounted rate (ceil(20 × 0.6) = 12).
-  await panel.getByRole('button', { name: 'Hire (12)' }).click();
+  // Cropland starts at 50% of 10 chains = 5 chains.
+  await expect(panel).toContainText('5 chains');
 
-  // The pool now shows one hand against the tier-1 cap, with upkeep lines.
-  await expect(panel).not.toContainText('No one has settled here yet');
-  await expect(panel).toContainText('1 / 4');
-  await expect(panel).toContainText('grain / turn');
+  // Re-apportion to 60/20/20 and apply — cropland becomes 6 chains.
+  const landInputs = panel.locator('input[type="number"]');
+  await landInputs.nth(0).fill('60');
+  await landInputs.nth(1).fill('20');
+  await landInputs.nth(2).fill('20');
+  await panel.getByRole('button', { name: 'Apply' }).click();
+  await expect(panel).toContainText('6 chains');
 });

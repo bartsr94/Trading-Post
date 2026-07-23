@@ -42,10 +42,13 @@ blocked until monotonic route checkpoints open them, while the settled Black
 River corridor begins familiar. Survey results only enter the map when the
 party returns—if everyone is lost, their knowledge is lost too.
 
-Known destinations still anchor caravans, envoys, homeland-labor runs, and
-courtship expeditions. Every expedition stores its exact target and pace and
-can trigger travel events bound only to its own heroes. The Map and Market
-screens share the same spatial journey calculation.
+Known destinations still anchor caravans, envoys, invite/negotiate-land runs,
+courtship, and raid expeditions. Every expedition stores its exact target and
+pace and can trigger travel events bound only to its own heroes. The Map and
+Market screens share the same spatial journey calculation. Discovering a
+faction's seat — or any other market town — for the first time doesn't just
+quietly reveal it: it fires **first contact**, a proper story event where you
+choose how to approach them, before they ever show up on the Communities tab.
 
 ## Diplomacy & the Charter
 
@@ -63,9 +66,13 @@ Marriages bear **children** on a Communal, contented post — each a person of *
 
 ## The post's people
 
-Beyond the named company, the post gathers an **unnamed population** — farmers, porters, guards, and craftsfolk you feed, pay, and put to work. It's a pool you shape rather than a roster you command: farmers grow grain, porters haul more cargo when seconded to a caravan, guards steady a party on the road and hold the palisade, craftsfolk keep the place mended. Hire hands from the neighbouring towns, draw them in as the post prospers or as it grows more integrated with the native peoples, and assign idle newcomers to a trade. They eat every turn and draw wages every season; let either run short and **contentment** slides from content to grumbling to open unrest — output falls, then people desert. Manage them from the **People** screen.
+Beyond the named company, the post gathers an **unnamed population** — farmers, herders, hunters, porters, guards, and craftsfolk you feed, pay, and put to work. It's a pool you shape rather than a roster you command: farmers work the cropland, herders tend the pasture herd, hunters bring in food from the wildland, porters haul more cargo when seconded to a caravan, guards steady a party on the road and hold the palisade, craftsfolk keep the place mended. A new post doesn't start from bare tents — a handful of founding hands come with you. Grow the population further by sending a party to **Invite Settlers** at any neighbouring town you've discovered, native or homeland alike, and assign idle newcomers to a trade. They eat every turn and draw wages every season; let either run short and **contentment** slides from content to grumbling to open unrest — output falls, then people desert. Manage them from the **People** screen.
 
 The post also draws **outsiders** it neither feeds nor pays, passing through for a time: a faction honour-guard that rides home with a successful envoy and helps hold the walls, a supplier crew that lends its backs to your caravans for a few nights, or Company inspectors who post themselves at the gate when a profit shipment goes unpaid — and quietly sour the mood until the debt is settled. Those same residents now matter directly in war: guards strengthen the post against incoming raids, guard escorts add force to outbound strikes, and porters raise how much loot a raiding party can carry home.
+
+## The Concession
+
+The post sits on a **Concession** of land, measured in chains, apportioned between cropland, pasture, and wildland. There's no hard population ceiling any more — the Concession simply sets how many people it comfortably supports; run past that and it's mounting discontent, not a wall you can't cross. Cropland pays off once a season as a harvest (with its own share of bad-year risk), pasture carries a herd for milk and hides, and wildland trickles in food every turn through your hunters. When the land itself runs short, send a party to **Negotiate Land** with a neighbouring seat and grow the Concession outright.
 
 ## Raiding
 
@@ -86,7 +93,9 @@ buildings, or in the worst case help push a hollowed post toward destruction.
 
 ## Whose post is it becoming
 
-Everyone at the post belongs to a **people** of the Ashmark — your Imanian countrymen from the homeland, or the native Kiswani, Dustwalker, and Bejasi — and the balance of them becomes the post's **cultural character**, a third settlement dial running from *Imanian* to *Sauromatian*. It's set by who you hire. **Native hands come cheap and arrive the same day** — but only from a neighbour who has come to trust you, and every one of them tilts the post toward the frontier. **Homeland hands keep the post Imanian**, but there's no one local to hire: you send a party down to the Company garrison at Thornwatch and wait for them to march back, dearer and slower. Lean hard toward the frontier and the Ansberry Company starts to see a foothold gone native — *dangerously compromised* rather than *loyal countrymen bringing civilization*. (The teeth behind that judgment — standing pressure that reads your own party's makeup, and a charter that can be **revoked** outright — are the next layer; see the roadmap.)
+Everyone at the post belongs to a **people** of the Ashmark — your Imanian countrymen from the homeland, or the native Kiswani and Hanjoda, each with their own tribes and river-towns — and the balance of them becomes the post's **cultural character**, a third settlement dial running from *Imanian* to *Sauromatian*. It's set by who you settle: every discovered neighbour, homeland or native, is a destination for an **Invite Settlers** run, and every native hire tilts the post toward the frontier while every homeland one holds it Imanian. Lean hard toward the frontier and the Ansberry Company starts to see a foothold gone native — *dangerously compromised* rather than *loyal countrymen bringing civilization*. (The teeth behind that judgment — standing pressure that reads your own party's makeup, and a charter that can be **revoked** outright — are the next layer; see the roadmap.)
+
+Beyond the Ashmark's human peoples, two more powers can enter the post's life. The **Weri**, underground miners and metalworkers neither colonist nor Sauromatian native, never settle as residents — you meet them only as a recruited hero or through events, and court their allies the **Knights of Saint Eirwen** as their own faction. And out in the wilds, **Orcs and Goblins** hold their own camps: hostile at first, they can be paid tribute, fought, or — at high enough standing — welcomed into the post as residents or even by marriage.
 
 ## Raising the post
 
@@ -119,22 +128,26 @@ src/
     turn.ts        # turn pipeline: economy → expeditions → activities → events
     economy.ts     # prices, drift, trade math (post market + per-location markets)
     map.ts         # pure geometry, access checkpoints, fog, rumors, survey helpers
-    expeditions.ts # caravan, explore, envoy, labor & courtship travel resolution
+    expeditions.ts # caravan, explore, envoy, invite/negotiate-land, courtship & raid resolution
     residents.ts   # unnamed population: roles, contentment, upkeep, escorts
+    claim.ts       # the Concession: land, allocation, harvest, herd
     roster.ts      # named-character roster: active party ↔ reserve bench, recruitment
     family.ts      # the family graph: unions, children, ancestry, coming of age
     buildings.ts   # construction projects, building effects, tier advancement
+    raids.ts       # incoming/outgoing raid battle math, tribute
     events/        # event selection, conditions, hero binding, outcomes
     rng.ts         # seeded PRNG (runs are reproducible)
     save.ts        # versioned JSON saves + migrations
   content/     # pure data — incl. normalized locations and map regions/features
   ui/          # React screens & components
-    components/    # Sidebar, HeroBar, Portrait, Icon, ConditionBars, Illustration
+    components/    # Sidebar, HeroBar, Portrait, Icon, ConditionBars, Illustration, RaidModal
     screens/       # one component per Screen (Post, Assignments, Map, Market, Hero Sheet, ...)
     portraits.ts    # portraitKey → bundled asset URL registry (see assets/portraits/)
   assets/
-    portraits/   # <race>/<race>_<gender>_<NN>.png — dropped in by key, no code changes needed
+    portraits/   # <race>/<race>_<gender>_<NN>.webp — dropped in by key, no code changes needed
   store/       # Zustand store wrapping the serializable GameState
+scripts/
+  optimize-images.mjs # resizes/recompresses new source art before it's committed
 ```
 
 The engine never hardcodes content: new events, heroes, traits, or locations are data entries in `src/content/`, and every balance number lives in [`src/content/tuning.ts`](src/content/tuning.ts).
@@ -144,11 +157,12 @@ The engine never hardcodes content: new events, heroes, traits, or locations are
 - `src/engine/saveValidation.ts` validates runtime invariants for `GameState` and saves; keep it in sync with state shape, migrations, and turn-resolution invariants.
 - Authored content `id`s are expected to be unique (see `src/content/uniqueIdMap.ts`); if you add content and tests fail, fix collisions rather than working around them.
 - Event selection/choice resolution is strict about candidate context (bound heroes) and locked choice validation; avoid relying on implicit/global hero context in conditions/outcomes.
+- New portrait/illustration art lands at full camera resolution — run `node scripts/optimize-images.mjs` before committing it (resizes to the largest on-screen box and converts to WebP; see CLAUDE.md's Portraits note for details).
 
 ## Roadmap
 
 - **MVP 1 — the loop works** *(complete)*: core turn loop, heroes, visible checks, event engine, post market, saves.
-- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅, with its transient outsiders & craftsfolk build-crews ✅; the active-party ↔ reserve character roster ✅ and recruitment chains ✅; buildings, construction & tier 1→2 advancement ✅; the peoples of the Ashmark & the post's cultural character — heritage, the culture axis, and local-vs-homeland hiring ✅; marriage, partners, children & the multi-generational family tree ✅; two-way raiding with tribute, destruction cascade, and encounter screens ✅; still open — the rest of the buildings & post tiers 2→4, the Company's reaction to a compromised post (standing pressure, the charter-revoked ending, and its read of a household's bloodline), and event count to ~60 (~38 so far).
+- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅, with discovery-gated first contact ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅, with its transient outsiders & craftsfolk build-crews ✅; the active-party ↔ reserve character roster ✅ and recruitment chains ✅; buildings, construction & tier 1→2 advancement ✅; the peoples of the Ashmark & the post's cultural character — heritage, the culture axis, the Weri and the Knights of Saint Eirwen ✅; marriage, partners, children & the multi-generational family tree ✅; Orcs and Goblins as the Ashmark's first non-human peoples ✅; two-way raiding with tribute, destruction cascade, and encounter screens ✅; same-sitting chain events ✅; **the Concession** — uncapped population, land allocation, herds, and settlers/land won through travel expeditions rather than an instant hire menu ✅; still open — the rest of the buildings & post tiers 2→4, the Company's reaction to a compromised post (standing pressure, the charter-revoked ending, and its read of a household's bloodline), and event count to ~60 (~47 so far).
 - **MVP 3 — it's a game**: balance pass, seasonal content, endgame variants, art, audio, onboarding.
 
 Hero names, cultures, faction identities, and location names are grounded in the Ashmark region of Palusteria; a handful of minor wilderness-node names and one trait name are still open.

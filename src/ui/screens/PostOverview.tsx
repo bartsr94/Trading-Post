@@ -11,7 +11,7 @@ import { CONTENT } from '../../content/registry';
 import { TUNING } from '../../content/tuning';
 import { canAdvanceTier, tierRequirement } from '../../engine/buildings';
 import { prosperity } from '../../engine/economy';
-import { contentmentBand, postDefense, residentCap, residentTotal } from '../../engine/residents';
+import { claimCapacity, contentmentBand, postDefense, residentTotal } from '../../engine/residents';
 import { stanceOf } from '../../engine/types';
 import type { ExpeditionState, GameState } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
@@ -24,9 +24,10 @@ const EXPEDITION_KIND_ICONS: Record<ExpeditionState['kind'], IconName> = {
   caravan: 'caravan',
   explore: 'explore',
   diplomacy: 'diplomacy',
-  labor: 'people',
   courtship: 'heart',
   raid: 'raid',
+  invite: 'people',
+  concession: 'map',
 };
 
 const BAND_LABEL = {
@@ -51,7 +52,7 @@ export function PostOverview({ game }: { game: GameState }) {
   const setScreen = useGameStore((s) => s.setScreen);
 
   const total = residentTotal(game);
-  const cap = residentCap(game);
+  const cap = claimCapacity(game);
   const band = BAND_LABEL[contentmentBand(game)];
   const construction = game.construction;
   const activeDef = construction ? TUNING.building.defs[construction.building] : undefined;
@@ -197,7 +198,7 @@ export function PostOverview({ game }: { game: GameState }) {
           <div className="faction-row">
             <span>Population</span>
             <span className={total > cap ? 'bad' : 'dim'}>
-              {total} / {cap}
+              {total} / {cap} <span className="dim">supported</span>
             </span>
           </div>
           <div className="faction-row">

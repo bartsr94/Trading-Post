@@ -5,7 +5,7 @@ import type { BuildingDefData, FactionId, Heritage, TierRequirement } from '../e
 
 export const TUNING = {
   save: {
-    version: 20,
+    version: 21,
     autosaveKey: 'trading-post-save',
     /** Manual import guard; current saves are far smaller than five MiB. */
     maxImportBytes: 5 * 1024 * 1024,
@@ -229,8 +229,10 @@ export const TUNING = {
   },
 
   residents: {
-    /** Provisional cap by post tier; buildings add to this later (Phase C). */
-    capByTier: { 1: 4, 2: 10, 3: 20, 4: 40 } as Record<number, number>,
+    /** A new post doesn't start from bare tents — a handful of hands came with
+     *  the founding party. New-game only (createInitialState); old-save
+     *  migrations never backfill this. */
+    startingRoles: { farmers: 2, guards: 2 } as Partial<Record<string, number>>,
     /** Grain eaten per resident per turn (heroes eat separately). */
     grainPerResidentPerTurn: 1,
     /** Silver wage per resident, paid at each season end (Charter cadence). */
@@ -247,8 +249,6 @@ export const TUNING = {
       fedPaidDrift: 1,
       missedFoodPenalty: 2,
       missedWagePenalty: 2,
-      /** Per resident over cap, per turn. */
-      overCapPenalty: 1,
       /** Idle residents beyond this many start dragging contentment. */
       idleTolerance: 2,
       idlePenalty: 1,
@@ -269,7 +269,6 @@ export const TUNING = {
       prosperityBonus: 0.01,
     },
     effects: {
-      grainPerFarmerPerTurn: 2,
       cargoPerPorter: 15,
       /** Escort bonus to a caravan/explore/envoy arrival check when guards ride along. */
       guardEscortBonus: 2,
@@ -278,12 +277,6 @@ export const TUNING = {
       upkeepReliefPerCraftsperson: 1,
       /** Build progress a craftsperson adds to the active project per turn (Phase C). */
       crewYieldPerCraftsperson: 1,
-    },
-    hire: {
-      costPerHead: { farmers: 20, porters: 15, guards: 30, craftsfolk: 40 } as Record<
-        string,
-        number
-      >,
     },
     axisGrowth: {
       integrationThreshold: 4,
@@ -310,6 +303,57 @@ export const TUNING = {
     },
   },
 
+  // The Concession, settlement & farming (TULA_SETTLEMENT_SPEC.md). Land is
+  // measured in chains; population is uncapped, the Concession a soft threshold.
+  claim: {
+    /** Starting Concession for a new game — the ground the post already sits on. */
+    startingSize: 10,
+    startingAllocation: { cropland: 50, pasture: 30, wildland: 20 } as Record<string, number>,
+
+    residentsPerChain: 6, // 1 chain "supports" 6 residents without resistance
+    chainsPerFarmer: 1, // cropland chains one farmer usefully works
+    chainsPerHerder: 2, // pasture chains one herder usefully tends
+    chainsPerHunter: 3, // wildland chains one hunter usefully covers
+    herdPerPastureChain: 5, // herd carrying capacity per pasture chain
+    herdGrowthPerHerder: 2, // herd count growth per herder per turn (capped)
+    herdYieldFraction: 0.3, // fraction of herd count converted to Food at season end
+    yieldPerFarmerPerTurn: 2, // feeds cropProgress each turn (mood-scaled)
+    yieldPerHunterPerTurn: 1, // continuous wildland Food trickle, smaller than farming
+    harvestVariance: 0.35, // ± swing on an ordinary season-end harvest roll
+    harvestMultMin: 0.4, // ordinary bad luck still guarantees some crop
+    harvestMultMax: 1.5,
+    cropFailureChance: 0.08, // ~1 season in 12 rolls a true failure instead
+    cropFailureMult: 0.1, // near-total loss on a true failure
+    overClaimPenalty: 2, // contentment penalty per head over claimCapacity, per turn
+    overClaimStandingLossPerTurn: 1, // standing lost/turn over-Concession, vs the landholder
+
+    invite: {
+      baseCostPerHead: 18,
+      offerTierMultiplier: { modest: 0.7, generous: 1.0, lavish: 1.4 } as Record<string, number>,
+      offerTierRollBonus: { modest: -1, generous: 0, lavish: 2 } as Record<string, number>,
+      baseFractionByCheckTier: {
+        critSuccess: 1.1,
+        success: 0.8,
+        failure: 0.4,
+        critFailure: 0.1,
+      } as Record<string, number>,
+      contentmentMult: { content: 1.1, grumbling: 1.0, unrest: 0.7 } as Record<string, number>,
+      overflowBonus: 2, // extra arrivals possible on a crit success
+      arrivalStandingGain: 1,
+      checkDifficulty: 10,
+    },
+
+    negotiateLand: {
+      silverCostPerLandUnit: 15,
+      goodsCostPerLandUnit: { timber: 1 } as Partial<Record<string, number>>,
+      checkDifficulty: 11,
+      successStandingGain: 1,
+      failureGrievance: 1,
+      /** Chains a single Negotiate Land run may ask for at most. */
+      maxAsk: 10,
+    },
+  },
+
   // Buildings & construction (BUILDINGS_SPEC.md). Prose (names/blurbs) lives in
   // content/buildings.ts; every balance number lives here, keyed by building id.
   building: {
@@ -325,7 +369,7 @@ export const TUNING = {
         cost: { silver: 40, goods: { timber: 10 } },
         buildProgress: 4,
         prerequisites: [],
-        effects: { residentCapBonus: 2, prosperityBonus: 1, upkeepSilver: 1 },
+        effects: { foodStorageBonus: 2, prosperityBonus: 1, upkeepSilver: 1 },
       },
       palisade: {
         cost: { silver: 60, goods: { timber: 20 } },
@@ -343,7 +387,7 @@ export const TUNING = {
         cost: { silver: 70, goods: { timber: 15 } },
         buildProgress: 5,
         prerequisites: [],
-        effects: { residentCapBonus: 4, stressReliefBonus: 1, upkeepSilver: 1 },
+        effects: { contentmentBonus: 1, stressReliefBonus: 1, upkeepSilver: 1 },
       },
       workshop: {
         cost: { silver: 90, goods: { timber: 10, tools: 6 } },
@@ -357,7 +401,7 @@ export const TUNING = {
         buildProgress: 6,
         prerequisites: ['storehouse'],
         minTier: 2,
-        effects: { residentCapBonus: 3, prosperityBonus: 1, upkeepSilver: 1 },
+        effects: { foodStorageBonus: 3, prosperityBonus: 1, upkeepSilver: 1 },
       },
       palisade_ii: {
         cost: { silver: 130, goods: { timber: 15, tools: 10 } },
@@ -471,22 +515,24 @@ export const TUNING = {
      *  Hanjoda across the three nomad seats). Weri are heroes-only — not hireable. */
     hireSources: {
       tributary: { people: 'kiswani', faction: 'RIVER_CLANS', seat: 'river_meet' },
+      // Kalasha-Tora is a second RIVER_CLANS seat (pilots/boatwrights, not
+      // fisherfolk) — same people, same faction, its own settler pool.
+      kalasha_tora: { people: 'kiswani', faction: 'RIVER_CLANS', seat: 'kalasha_tora' },
       bejasi_hills: { people: 'kiswani', faction: 'OLD_PEOPLE', seat: 'elder_grove' },
       dustwalker: { people: 'hanjoda', faction: 'HILL_TRIBES', seat: 'hill_fort' },
       sunspear: { people: 'hanjoda', faction: 'HILL_TRIBES', seat: 'blackstone_plateau' },
       redsand: { people: 'hanjoda', faction: 'HILL_TRIBES', seat: 'redsand_range' },
+      // Homeland folds into the same table (TULA_SETTLEMENT_SPEC.md §5.1) so
+      // Invite Settlers has one generic target list, not an "if homeland" branch.
+      homeland: { people: 'imanian', faction: 'CHARTER_COMPANY', seat: 'charter_landing' },
+      // Shackle Station is a second CHARTER_COMPANY seat, Ansberite/Sauromatian
+      // creole rather than fresh-off-the-barge Imanian — still homeland stock.
+      shackle_station: { people: 'imanian', faction: 'CHARTER_COMPANY', seat: 'shackle_station' },
     } as Record<string, { people: Heritage; faction: FactionId; seat: string }>,
 
-    // Hiring
-    /** Native-faction standing needed to hire that people locally. */
-    localHireStanding: 0,
-    /** Local hands are cheaper than the base costPerHead. */
-    localCostMult: 0.6,
-    /** Thornwatch labor is dearer than any local hire (per head, flat). */
-    homelandCostPerHead: 45,
-    /** Culture nudge per head hired (Frontier for local, Homeland for homeland). */
+    /** Culture nudge per settler who arrives (Frontier for native, Homeland for imanian). */
     hireAxisNudge: 0.4,
-    /** CHARTER_COMPANY bump when a labor run reaches Thornwatch. */
+    /** Source-faction standing bump when an Invite Settlers run succeeds. */
     homelandArrivalStanding: 1,
 
     // Axis drift (season end)
@@ -589,10 +635,10 @@ export const TUNING = {
     // --- Force tallies (RAIDING_SPEC.md §3.1) ---
     /** Each at-post hero's combat skill contributes this much to defender force. */
     heroCombatWeight: 1,
-    /** Each farmer/idle head grabs a spear and adds this to the fyrd levy. */
-    fyrdValuePerHead: 0.34,
-    /** Cap on the fyrd levy so a huge peasant pool can't trivialise defence. */
-    fyrdLevyMax: 6,
+    /** Each farmer/idle head grabs a spear and adds this to the Company muster. */
+    musterValuePerHead: 0.34,
+    /** Cap on the Company muster so a huge farmhand pool can't trivialise defence. */
+    musterMax: 6,
     /** Each guard seconded onto an outgoing raid adds this much force. */
     guardEscortForce: 1,
 

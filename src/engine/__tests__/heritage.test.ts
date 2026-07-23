@@ -1,27 +1,21 @@
 // Heritage & the cultural character of the post (HERITAGE_SPEC.md Phase A):
-// the culture axis, the resident heritage tally, per-neighbor native hiring,
-// the Thornwatch labor expedition, culture drift, and the new event vocabulary.
+// the culture axis, the resident heritage tally, culture drift, and the new
+// event vocabulary. (Local hiring and the Thornwatch labor run were retired by
+// TULA_SETTLEMENT_SPEC.md in favour of Invite Settlers.)
 
 import { describe, expect, it } from 'vitest';
 import { TUNING } from '../../content/tuning';
 import { evalCondition } from '../events/conditions';
 import { applyOutcomes } from '../events/outcomes';
 import type { OutcomeContext } from '../events/outcomes';
-import {
-  advanceExpeditions,
-  dispatchError,
-  dispatchExpedition,
-  laborRunCost,
-} from '../expeditions';
+import { advanceExpeditions, dispatchExpedition } from '../expeditions';
 import type { ExpeditionContext } from '../expeditions';
 import {
   addResidents,
   applyCultureDrift,
   applyDesertion,
-  hireError,
-  hireResidents,
+  freshResidents,
   loseResidents,
-  localHireCost,
   nativeShare,
   reallocate,
   residentTotal,
@@ -67,6 +61,7 @@ function runToHomecoming(s: GameState, ctx: ExpeditionContext): number {
 describe('the heritage tally', () => {
   it('starts empty and stays summed-equal to the pool', () => {
     const s = testState();
+    s.residents = freshResidents();
     expect(s.residents.heritage).toEqual({ homeland: 0, native: 0 });
     expect(nativeShare(s)).toBe(0);
     expectTallyInvariant(s);
@@ -74,7 +69,7 @@ describe('the heritage tally', () => {
 
   it('records origin on add and debits proportionally on loss', () => {
     const s = testState();
-    s.buildings = ['common_house']; // cap 4 + 4 = 8
+    s.residents = freshResidents();
     addResidents(s, 'farmers', 4, 'settlers', 'homeland');
     addResidents(s, 'guards', 4, 'kiswani', 'native');
     expect(s.residents.heritage).toEqual({ homeland: 4, native: 4 });
@@ -90,7 +85,7 @@ describe('the heritage tally', () => {
 
   it('can bias loss to a group', () => {
     const s = testState();
-    s.buildings = ['common_house'];
+    s.residents = freshResidents();
     addResidents(s, 'farmers', 3, 'settlers', 'homeland');
     addResidents(s, 'guards', 3, 'kiswani', 'native');
     loseResidents(s, undefined, 3, 'native');
@@ -101,7 +96,6 @@ describe('the heritage tally', () => {
 
   it('reallocation never changes the tally; escorts stay counted while away', () => {
     const s = testState();
-    s.buildings = ['common_house'];
     addResidents(s, 'guards', 2, 'kiswani', 'native');
     addResidents(s, 'porters', 2, 'settlers', 'homeland');
     const before = { ...s.residents.heritage };
@@ -126,9 +120,7 @@ describe('the heritage tally', () => {
 
   it('desertion debits the tally', () => {
     const s = testState();
-    s.buildings = ['common_house'];
     addResidents(s, 'farmers', 4, 'settlers', 'homeland');
-    addResidents(s, 'guards', 0, undefined, 'native');
     s.residents.contentment = 0; // force unrest
     const lost = applyDesertion(s);
     expect(lost).toBeGreaterThan(0);
@@ -136,172 +128,10 @@ describe('the heritage tally', () => {
   });
 });
 
-describe('local (native) hiring', () => {
-  it('is gated on reaching the people and their goodwill', () => {
-    const s = testState();
-    // Unreached seat.
-    s.locations.hill_fort.discovery = 'rumored';
-    expect(hireError(s, 'farmers', 1, 'dustwalker')).toMatch(/reached their people/);
-
-    // Reached but hostile.
-    s.locations.hill_fort.discovery = 'visited';
-    s.factions.HILL_TRIBES.standing = -60;
-    expect(hireError(s, 'farmers', 1, 'dustwalker')).toMatch(/will not send/);
-
-    // Reached and warm, both in the wider faction and at this specific seat.
-    s.factions.HILL_TRIBES.standing = 10;
-    s.diplomacySeats.hill_fort.standing = 10;
-    expect(hireError(s, 'farmers', 1, 'dustwalker')).toBeNull();
-  });
-
-  it('has no local source for homeland or Weri hands (heroes-only / Thornwatch run)', () => {
-    const s = testState();
-    expect(hireError(s, 'farmers', 1, 'imanian')).toMatch(/No such people/);
-    expect(hireError(s, 'farmers', 1, 'weri')).toMatch(/No such people/);
-  });
-
-  it('costs the discount, adds native heads, and pulls culture toward the frontier', () => {
-    const s = testState(); // river_meet visited, RIVER_CLANS friendly
-    const silverBefore = s.silver;
-    const cultureBefore = s.axes.culture;
-    expect(hireResidents(s, 'farmers', 2, 'tributary')).toBe(true);
-    expect(s.residents.roles.farmers).toBe(2);
-    expect(s.residents.heritage.native).toBe(2);
-    expect(s.silver).toBe(silverBefore - localHireCost('farmers', 2));
-    expect(localHireCost('farmers', 1)).toBeLessThan(TUNING.residents.hire.costPerHead.farmers);
-    expect(s.axes.culture).toBeCloseTo(cultureBefore + TUNING.heritage.hireAxisNudge * 2);
-    expect(s.residents.tags.kiswani).toBeGreaterThan(0);
-    expectTallyInvariant(s);
-  });
-
-  it('hires the one Kiswani people from two different seats (Tributary vs Bejasi Hills)', () => {
-    const s = testState();
-    s.buildings = ['common_house']; // room for both
-    // Tributary seat is visited & friendly out of the box.
-    expect(hireError(s, 'farmers', 1, 'tributary')).toBeNull();
-    // Bejasi Hills seat gates on OLD_PEOPLE + its own discovery.
-    expect(hireError(s, 'farmers', 1, 'bejasi_hills')).toMatch(/reached their people/);
-    s.locations.elder_grove.discovery = 'visited';
-    s.factions.OLD_PEOPLE.standing = 10;
-    expect(hireError(s, 'farmers', 1, 'bejasi_hills')).toBeNull();
-    // Both add Kiswani (native) heads to the same tally.
-    expect(hireResidents(s, 'farmers', 1, 'tributary')).toBe(true);
-    expect(hireResidents(s, 'guards', 1, 'bejasi_hills')).toBe(true);
-    expect(s.residents.heritage.native).toBe(2);
-    expectTallyInvariant(s);
-  });
-});
-
-describe('the Thornwatch labor run', () => {
-  function readyForLabor(): GameState {
-    const s = testState();
-    s.postTier = 2; // cap 10 so there is room to house them
-    s.locations.charter_landing.discovery = 'visited';
-    s.silver = 1000;
-    return s;
-  }
-
-  it('validates faction seat, silver, and room', () => {
-    const s = readyForLabor();
-    // Wrong faction seat.
-    expect(
-      dispatchError(
-        s,
-        { kind: 'labor', destination: 'river_meet', heroIds: ['p1'], laborCount: 2 },
-        TEST_CONTENT.locationDefs,
-      ),
-    ).toMatch(/Company garrison/);
-    // Not enough silver.
-    s.silver = laborRunCost(2) - 1;
-    expect(
-      dispatchError(
-        s,
-        { kind: 'labor', destination: 'charter_landing', heroIds: ['p1'], laborCount: 2 },
-        TEST_CONTENT.locationDefs,
-      ),
-    ).toMatch(/recruiters/);
-    // No room (plenty of silver, but the cap can't hold them).
-    s.silver = 100000;
-    expect(
-      dispatchError(
-        s,
-        { kind: 'labor', destination: 'charter_landing', heroIds: ['p1'], laborCount: 99 },
-        TEST_CONTENT.locationDefs,
-      ),
-    ).toMatch(/room/);
-  });
-
-  it('pays up front, reserves the cap, and settles homeland hands on homecoming', () => {
-    const s = readyForLabor();
-    const silverBefore = s.silver;
-    const cultureBefore = s.axes.culture;
-    const standingBefore = s.factions.CHARTER_COMPANY.standing;
-
-    expect(
-      dispatchExpedition(
-        s,
-        { kind: 'labor', destination: 'charter_landing', heroIds: ['p1'], laborCount: 3 },
-        TEST_CONTENT.locationDefs,
-      ),
-    ).toBe(true);
-    // Fee paid at dispatch; hands reserved in-flight.
-    expect(s.silver).toBe(silverBefore - laborRunCost(3));
-    expect(s.expeditions[0].homelandLabor).toBe(3);
-    expect(residentTotal(s)).toBe(0); // not home yet
-
-    runToHomecoming(s, TEST_CONTENT);
-    expect(residentTotal(s)).toBe(3);
-    expect(s.residents.heritage.homeland).toBe(3);
-    expect(s.residents.idle).toBe(3);
-    expect(s.factions.CHARTER_COMPANY.standing).toBe(
-      standingBefore + TUNING.heritage.homelandArrivalStanding,
-    );
-    // Culture pulled toward Homeland (negative).
-    expect(s.axes.culture).toBeLessThan(cultureBefore);
-    expectTallyInvariant(s);
-  });
-
-  it('reserves cap across concurrent runs', () => {
-    const s = readyForLabor();
-    s.postTier = 1; // cap 4
-    dispatchExpedition(
-      s,
-      { kind: 'labor', destination: 'charter_landing', heroIds: ['p1'], laborCount: 4 },
-      TEST_CONTENT.locationDefs,
-    );
-    // The first run already reserved all 4 slots.
-    expect(
-      dispatchError(
-        s,
-        { kind: 'labor', destination: 'charter_landing', heroIds: ['p2'], laborCount: 1 },
-        TEST_CONTENT.locationDefs,
-      ),
-    ).toMatch(/room/);
-  });
-
-  it('refunds hands turned away for want of room', () => {
-    const s = readyForLabor();
-    s.postTier = 2; // cap 10
-    dispatchExpedition(
-      s,
-      { kind: 'labor', destination: 'charter_landing', heroIds: ['p1'], laborCount: 6 },
-      TEST_CONTENT.locationDefs,
-    );
-    // Fill the pool while the run is out so there's no room on return.
-    addResidents(s, 'farmers', 8, 'settlers', 'homeland');
-    const silverMid = s.silver;
-    runToHomecoming(s, TEST_CONTENT);
-    // cap 10, 8 already home → only 2 of 6 settle, 4 refunded.
-    expect(s.residents.heritage.homeland).toBe(10);
-    expect(s.silver).toBe(silverMid + laborRunCost(4));
-    expectTallyInvariant(s);
-  });
-});
-
 describe('culture drift', () => {
   it('moves toward the tally-implied target, capped per season', () => {
     const s = testState();
-    s.buildings = ['common_house'];
+    s.residents = freshResidents();
     addResidents(s, 'guards', 4, 'kiswani', 'native'); // all native → target +10
     s.axes.culture = 0;
     const delta = applyCultureDrift(s);
@@ -311,6 +141,7 @@ describe('culture drift', () => {
 
   it('is a no-op with no residents', () => {
     const s = testState();
+    s.residents = freshResidents();
     s.axes.culture = 3;
     expect(applyCultureDrift(s)).toBe(0);
     expect(s.axes.culture).toBe(3);
@@ -328,7 +159,7 @@ describe('party heritage & new event vocabulary', () => {
 
   it('evaluates the heritage conditions', () => {
     const s = testState();
-    s.buildings = ['common_house'];
+    s.residents = freshResidents();
     addResidents(s, 'guards', 3, 'kiswani', 'native');
     addResidents(s, 'farmers', 1, 'settlers', 'homeland');
     expect(evalCondition(s, { type: 'nativeShareAtLeast', value: 0.5 })).toBe(true);
@@ -340,7 +171,6 @@ describe('party heritage & new event vocabulary', () => {
 
   it('honors the group param on addResidents / loseResidents outcomes', () => {
     const s = testState();
-    s.buildings = ['common_house'];
     applyOutcomes(
       s,
       [{ type: 'addResidents', role: 'idle', count: 2, tag: 'kiswani', group: 'native' }],

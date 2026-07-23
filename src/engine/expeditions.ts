@@ -14,6 +14,7 @@ import {
 import type { CheckModifier } from './checks';
 import {
   applyDiplomacyShift,
+  applyDiplomacyShiftById,
   ensureDiplomacySeat,
   isFirstContact,
   queueFirstContact,
@@ -22,16 +23,16 @@ import {
 import type { TravelContext } from './events/types';
 import { priceAt } from './economy';
 import type { GoodDef } from './economy';
+import { addClaim } from './claim';
 import { canWed, formUnion, unionError } from './family';
 import { canCallRaidAlly, createOutgoingRaid, raidTargetFaction } from './raids';
 import {
   addResidents,
   addTransientGroup,
+  contentmentBand,
   loseResidentEscort,
   nudgeCulture,
-  residentCap,
   residentsAvailable,
-  residentTotal,
   transientEffect,
 } from './residents';
 import { Rng } from './rng';
@@ -55,8 +56,10 @@ import {
   clamp,
   discoveryAtLeast,
   getHero,
+  heritageGroup,
   oppositeGender,
   RESIDENT_ROLES,
+  stanceOf,
 } from './types';
 import type {
   DiplomacyMissionType,
@@ -70,6 +73,7 @@ import type {
   GoodId,
   Heritage,
   Hero,
+  InviteOffer,
   LocationDef,
   LocationId,
   MapFeatureDef,
@@ -105,8 +109,13 @@ export interface DispatchParams {
   buyOrders?: Partial<Record<GoodId, number>>;
   /** Residents seconded to the party (porters add cargo, guards add escort). */
   residents?: Partial<Record<ResidentRole, number>>;
-  /** For `labor` runs: homeland hands to fetch from Thornwatch (HERITAGE_SPEC.md §5.2). */
-  laborCount?: number;
+  /** For `invite` runs (TULA_SETTLEMENT_SPEC.md §5.1): the community to invite
+   *  from (key into hireSources), how lavish the offer, and how many are hoped for. */
+  inviteSource?: string;
+  inviteOffer?: InviteOffer;
+  inviteCount?: number;
+  /** For `concession` runs (§5.2): chains of land to negotiate for. */
+  concessionAsk?: number;
   /** For `courtship` runs: the graph-node id to wed (defaults to heroIds[0]). */
   courtshipFor?: string;
   /** For `raid` runs: how the party means to fight once it reaches the target. */
@@ -122,14 +131,25 @@ export function cargoUnits(cargo: Partial<Record<GoodId, number>>): number {
   return Object.values(cargo).reduce((sum: number, qty) => sum + (qty ?? 0), 0);
 }
 
-/** Homeland laborers currently in flight (reserve cap so runs can't overflow). */
-export function inFlightHomelandLabor(state: GameState): number {
-  return state.expeditions.reduce((sum, e) => sum + (e.homelandLabor ?? 0), 0);
+/** Up-front silver an Invite Settlers run costs (paid regardless of turnout, §5.1). */
+export function inviteRunCost(count: number, offer: InviteOffer): number {
+  const inv = TUNING.claim.invite;
+  return Math.round(count * inv.baseCostPerHead * (inv.offerTierMultiplier[offer] ?? 1));
 }
 
-/** Total silver a labor run of `count` hands costs up front. */
-export function laborRunCost(count: number): number {
-  return TUNING.heritage.homelandCostPerHead * count;
+/** Up-front silver a Negotiate Land run costs (scales with chains asked, §5.2). */
+export function negotiateLandSilverCost(ask: number): number {
+  return ask * TUNING.claim.negotiateLand.silverCostPerLandUnit;
+}
+
+/** Goods a Negotiate Land run must carry as a land-clearing gift (scales with ask). */
+export function negotiateLandGoodsCost(ask: number): Partial<Record<GoodId, number>> {
+  const per = TUNING.claim.negotiateLand.goodsCostPerLandUnit;
+  const goods: Partial<Record<GoodId, number>> = {};
+  for (const [good, qty] of Object.entries(per) as [GoodId, number][]) {
+    goods[good] = qty * ask;
+  }
+  return goods;
 }
 
 export function cargoCapacity(
@@ -242,17 +262,39 @@ export function dispatchError(
     if (mission === 'tribute') {
       return 'Tribute negotiations are not ready yet.';
     }
-  } else if (params.kind === 'labor') {
+  } else if (params.kind === 'invite') {
     if (!def) return 'Choose a known destination.';
-    if (def.faction !== 'CHARTER_COMPANY') return 'Only the Company garrison hires out homeland hands.';
-    if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to the garrison yet.';
-    const count = params.laborCount ?? 0;
-    if (!Number.isFinite(count) || !Number.isInteger(count) || count < 1) {
-      return 'Send for at least one whole hand.';
+    if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to their people yet.';
+    const source = params.inviteSource;
+    const src = source ? TUNING.heritage.hireSources[source] : undefined;
+    if (!src) return 'Choose a people to invite.';
+    if (src.seat !== def.id) return 'That is not where their people are.';
+    if (stanceOf(state.factions[src.faction].standing) === 'Hostile') {
+      return 'They will not answer an invitation from you.';
     }
-    if (state.silver < laborRunCost(count)) return "Not enough silver for the recruiters' fee.";
-    if (residentTotal(state) + inFlightHomelandLabor(state) + count > residentCap(state)) {
-      return 'No room to house them yet.';
+    const offer = params.inviteOffer ?? 'generous';
+    const count = params.inviteCount ?? 0;
+    if (!Number.isFinite(count) || !Number.isInteger(count) || count < 1) {
+      return 'Invite at least one household.';
+    }
+    if (state.silver < inviteRunCost(count, offer)) return 'Not enough silver for the invitation.';
+  } else if (params.kind === 'concession') {
+    if (!def) return 'Choose a known destination.';
+    if (!def.faction) return 'There is no one there to grant you land.';
+    if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to their people yet.';
+    if (stanceOf(state.factions[def.faction].standing) === 'Hostile') {
+      return 'They will cede you no land while hostile.';
+    }
+    const ask = params.concessionAsk ?? 0;
+    if (!Number.isFinite(ask) || !Number.isInteger(ask) || ask < 1) {
+      return 'Ask for at least one chain of land.';
+    }
+    if (ask > TUNING.claim.negotiateLand.maxAsk) {
+      return `They will not consider more than ${TUNING.claim.negotiateLand.maxAsk} chains at once.`;
+    }
+    if (state.silver < negotiateLandSilverCost(ask)) return 'Not enough silver for the land-price.';
+    for (const [good, qty] of Object.entries(negotiateLandGoodsCost(ask)) as [GoodId, number][]) {
+      if ((state.goods[good] ?? 0) < qty) return `Not enough ${good} for the land-gift.`;
     }
   } else if (params.kind === 'courtship') {
     if (!def) return 'Choose a known destination.';
@@ -334,12 +376,20 @@ export function dispatchExpedition(
   const silver = params.silver ?? 0;
   state.silver -= silver;
 
-  // A labor run pays the recruiters' fee up front and reserves its hands.
-  let homelandLabor: number | undefined;
-  if (params.kind === 'labor') {
-    const count = params.laborCount ?? 0;
-    state.silver -= laborRunCost(count);
-    homelandLabor = count;
+  // An Invite Settlers run pays for the invitation's effort/gifts up front —
+  // no refund on a poor turnout (§5.1).
+  if (params.kind === 'invite') {
+    const offer = params.inviteOffer ?? 'generous';
+    state.silver -= inviteRunCost(params.inviteCount ?? 0, offer);
+  }
+
+  // A Negotiate Land run pays the land-price and the land-gift up front (§5.2).
+  if (params.kind === 'concession') {
+    const ask = params.concessionAsk ?? 0;
+    state.silver -= negotiateLandSilverCost(ask);
+    for (const [good, qty] of Object.entries(negotiateLandGoodsCost(ask)) as [GoodId, number][]) {
+      state.goods[good] = Math.max(0, (state.goods[good] ?? 0) - qty);
+    }
   }
 
   // A courtship run pays the bride-price up front and records who is to be wed.
@@ -376,7 +426,14 @@ export function dispatchExpedition(
     silver,
     buyOrders: { ...(params.buyOrders ?? {}) },
     residentEscort: escort,
-    ...(homelandLabor !== undefined ? { homelandLabor } : {}),
+    ...(params.kind === 'invite'
+      ? {
+          inviteSource: params.inviteSource,
+          inviteOffer: params.inviteOffer ?? 'generous',
+          inviteCount: params.inviteCount ?? 0,
+        }
+      : {}),
+    ...(params.kind === 'concession' ? { concessionAsk: params.concessionAsk ?? 0 } : {}),
     ...(courtshipFor !== undefined ? { courtshipFor } : {}),
     ...(params.kind === 'diplomacy'
       ? { diplomacyMission: { ...(params.diplomacyMission ?? { type: 'talks' as const }) } }
@@ -452,13 +509,15 @@ export function advanceExpeditions(
       if (exp.kind === 'caravan' && def) resolveCaravanArrival(state, ctx, exp, def, rng, report);
       else if (exp.kind === 'explore') resolveExploreArrival(state, ctx, exp, def, rng, report);
       else if (exp.kind === 'diplomacy' && def) resolveDiplomacyArrival(state, ctx, exp, def, rng, report);
-      else if (exp.kind === 'labor' && def) resolveLaborArrival(state, exp, def, report);
+      else if (exp.kind === 'invite' && def) resolveInviteArrival(state, ctx, exp, def, rng, report);
+      else if (exp.kind === 'concession' && def)
+        resolveConcessionArrival(state, ctx, exp, def, rng, report);
       else if (exp.kind === 'raid' && def) {
         if (queueRaidArrival(state, exp, def, rng, report)) continue;
         exp.leg = 'returning';
         exp.turnsLeft = Math.max(1, exp.legTurns);
         continue;
-      } else if (def) resolveCourtshipArrival(state, exp, def, report);
+      } else if (exp.kind === 'courtship' && def) resolveCourtshipArrival(state, exp, def, report);
       exp.leg = 'returning';
       exp.turnsLeft = Math.max(1, exp.legTurns);
     } else {
@@ -851,22 +910,116 @@ function resolveDiplomacyMissionArrival(
   );
 }
 
-function resolveLaborArrival(
+/** The party best suited to lead an invitation/negotiation — bargain or
+ *  leadership, whichever any single hero is strongest in (§5.1). */
+function bestNegotiator(state: GameState, exp: ExpeditionState): { hero: Hero; skill: SkillId } {
+  const heroes = exp.heroIds.map((id) => getHero(state, id));
+  let best = { hero: heroes[0], skill: 'bargain' as SkillId };
+  for (const hero of heroes) {
+    for (const skill of ['bargain', 'leadership'] as SkillId[]) {
+      if (hero.skills[skill] > best.hero.skills[best.skill]) best = { hero, skill };
+    }
+  }
+  return best;
+}
+
+/**
+ * An Invite Settlers run reaches a community (§5.1): a hero-led Bargain/
+ * Leadership check, the offer tier, and the post's own mood together set how
+ * many households actually agree to come. The count is rolled here and the
+ * settlers land on homecoming.
+ */
+function resolveInviteArrival(
   state: GameState,
+  ctx: ExpeditionContext,
   exp: ExpeditionState,
   def: LocationDef,
+  rng: Rng,
   report: (icon: string, text: string) => void,
 ): void {
-  const count = exp.homelandLabor ?? 0;
-  const factionId = def.faction;
-  if (factionId) {
-    const faction = state.factions[factionId];
-    faction.standing = clamp(faction.standing + TUNING.heritage.homelandArrivalStanding, -100, 100);
+  const inv = TUNING.claim.invite;
+  const src = exp.inviteSource ? TUNING.heritage.hireSources[exp.inviteSource] : undefined;
+  const offer = exp.inviteOffer ?? 'generous';
+  const wanted = exp.inviteCount ?? 0;
+  const { hero, skill } = bestNegotiator(state, exp);
+  const tags = ['strangers', ...def.tags, ...(def.faction ? [def.faction] : [])];
+  const mods = [
+    ...traitModifiers(hero, ctx.traitDefs, skill, tags),
+    ...escortMods(exp),
+    ...paceMods(exp),
+    { label: 'offer', value: inv.offerTierRollBonus[offer] ?? 0 },
+  ];
+  const stat = bestGoverningStat(hero, skill);
+  const check = resolveCheck(rng, hero, skill, stat, inv.checkDifficulty, mods);
+  if (isSuccess(check.tier)) markSkill(hero, skill);
+
+  const band = contentmentBand(state);
+  const raw =
+    wanted *
+    (inv.baseFractionByCheckTier[check.tier] ?? 0) *
+    (inv.offerTierMultiplier[offer] ?? 1) *
+    (inv.contentmentMult[band] ?? 1);
+  const ceiling = check.tier === 'critSuccess' ? wanted + inv.overflowBonus : wanted;
+  const actual = clamp(Math.round(raw), 0, ceiling);
+  exp.inviteArrivals = actual;
+
+  if (isSuccess(check.tier) && src) {
+    const faction = state.factions[src.faction];
+    faction.standing = clamp(faction.standing + inv.arrivalStandingGain, -100, 100);
   }
+
   report(
-    '📜',
-    `${partyNames(state, exp)} sign on ${count} homeland hand${count === 1 ? '' : 's'} at ${def.name}.`,
+    '📣',
+    `${hero.name} presses the case at ${def.name}: ${checkBreakdown(check)}. ` +
+      (actual > 0
+        ? `${actual} household${actual === 1 ? '' : 's'} agree to come.`
+        : 'None will make the move.'),
   );
+}
+
+/**
+ * A Negotiate Land run reaches a neighbouring people's seat (§5.2): a hero-led
+ * check against their patience. Success grants the chains asked for (settled on
+ * homecoming); failure costs the gift and leaves a grievance.
+ */
+function resolveConcessionArrival(
+  state: GameState,
+  ctx: ExpeditionContext,
+  exp: ExpeditionState,
+  def: LocationDef,
+  rng: Rng,
+  report: (icon: string, text: string) => void,
+): void {
+  const neg = TUNING.claim.negotiateLand;
+  const ask = exp.concessionAsk ?? 0;
+  const { hero, skill } = bestNegotiator(state, exp);
+  const tags = ['bargain', ...def.tags, ...(def.faction ? [def.faction] : [])];
+  const mods = [
+    ...traitModifiers(hero, ctx.traitDefs, skill, tags),
+    ...escortMods(exp),
+    ...paceMods(exp),
+  ];
+  const stat = bestGoverningStat(hero, skill);
+  const check = resolveCheck(rng, hero, skill, stat, neg.checkDifficulty, mods);
+
+  if (isSuccess(check.tier)) {
+    markSkill(hero, skill);
+    exp.concessionGranted = ask;
+    if (def.faction) applyDiplomacyShiftById(state, def.id, neg.successStandingGain, 0);
+    report(
+      '📐',
+      `${hero.name} treats for land at ${def.name}: ${checkBreakdown(check)}. ` +
+        `${ask} chain${ask === 1 ? '' : 's'} are ceded to the post.`,
+    );
+  } else {
+    exp.concessionGranted = 0;
+    if (def.faction) applyDiplomacyShiftById(state, def.id, 0, neg.failureGrievance);
+    report(
+      '📐',
+      `${hero.name} treats for land at ${def.name}: ${checkBreakdown(check)}. ` +
+        'They cede nothing, and the asking rankles.',
+    );
+  }
 }
 
 /** A courtship run reaches Thornwatch: the Company approves of its people marrying
@@ -946,20 +1099,28 @@ function resolveHomecoming(
   // Seconded residents rejoin the post pool.
   returnResidentEscort(state, exp);
 
-  // Homeland hands fetched from Thornwatch settle in (HERITAGE_SPEC.md §5.2).
-  let laborLine = '';
-  if (exp.homelandLabor && exp.homelandLabor > 0) {
-    const wanted = exp.homelandLabor;
-    const settled = addResidents(state, 'idle', wanted, 'settlers', 'homeland');
-    if (settled > 0) nudgeCulture(state, -TUNING.heritage.hireAxisNudge * settled);
-    const overflow = wanted - settled;
-    if (overflow > 0) {
-      const refund = laborRunCost(overflow);
-      state.silver += refund;
-      laborLine = ` ${settled} homeland hand${settled === 1 ? '' : 's'} settle in; ${overflow} turned away for want of room (${refund} silver refunded).`;
-    } else {
-      laborLine = ` ${settled} homeland hand${settled === 1 ? '' : 's'} settle in.`;
-    }
+  // Invited settlers put down roots — the population is uncapped now (§5.1), so
+  // all who agreed to come do. Homeland arrivals pull culture Homeland-ward,
+  // native ones Frontier-ward.
+  let settleLine = '';
+  if (exp.kind === 'invite' && exp.inviteArrivals && exp.inviteArrivals > 0) {
+    const src = exp.inviteSource ? TUNING.heritage.hireSources[exp.inviteSource] : undefined;
+    const group = src ? heritageGroup(src.people) : 'homeland';
+    const settled = addResidents(state, 'idle', exp.inviteArrivals, src?.people, group);
+    const nudge = TUNING.heritage.hireAxisNudge * settled;
+    nudgeCulture(state, group === 'native' ? nudge : -nudge);
+    settleLine = ` ${settled} newcomer${settled === 1 ? '' : 's'} settle in.`;
+  }
+
+  // Negotiated land is added to the Concession; its grantor becomes the
+  // over-Concession standing target (§5.2).
+  let landLine = '';
+  if (exp.kind === 'concession' && exp.concessionGranted && exp.concessionGranted > 0) {
+    addClaim(state, exp.concessionGranted);
+    if (def?.faction) state.claim.landholder = def.faction;
+    landLine = ` The Concession grows by ${exp.concessionGranted} chain${
+      exp.concessionGranted === 1 ? '' : 's'
+    }.`;
   }
 
   // A courtship run brings a certified homeland spouse home to wed (FAMILY_SPEC.md §5.1).
@@ -989,7 +1150,10 @@ function resolveHomecoming(
   const tail =
     haul.length > 0
       ? ` with ${haul.join(' and ')}.`
-      : exp.kind === 'diplomacy' || exp.kind === 'labor' || exp.kind === 'courtship'
+      : exp.kind === 'diplomacy' ||
+          exp.kind === 'invite' ||
+          exp.kind === 'concession' ||
+          exp.kind === 'courtship'
         ? '.'
         : ' with empty hands.';
   const destinationName =
@@ -998,7 +1162,7 @@ function resolveHomecoming(
     'the frontier';
   report(
     '🏠',
-    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${destinationName}${tail}${surveyLine}${laborLine}${matchLine}`,
+    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${destinationName}${tail}${surveyLine}${settleLine}${landLine}${matchLine}`,
   );
 }
 

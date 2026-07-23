@@ -16,9 +16,10 @@ const KIND_ICONS: Record<ExpeditionState['kind'], IconName> = {
   caravan: 'caravan',
   explore: 'explore',
   diplomacy: 'diplomacy',
-  labor: 'people',
   courtship: 'heart',
   raid: 'raid',
+  invite: 'people',
+  concession: 'map',
 };
 
 function StatusLine({

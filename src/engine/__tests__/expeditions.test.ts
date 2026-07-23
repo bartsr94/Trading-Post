@@ -6,7 +6,7 @@ import { priceAt, priceOf } from '../economy';
 import { advanceExpeditions, dispatchError, dispatchExpedition } from '../expeditions';
 import { selectEvents } from '../events/selection';
 import { resolveOutgoingRaid, tributeFor } from '../raids';
-import { addResidents, residentTotal } from '../residents';
+import { addResidents, freshResidents, residentTotal } from '../residents';
 import { Rng } from '../rng';
 import { resolveTurn } from '../turn';
 import { heroesAtPost } from '../types';
@@ -169,6 +169,7 @@ describe('expedition lifecycle', () => {
 
   it('debits resident demographics when an escorted party is lost', () => {
     const s = testState();
+    s.residents = freshResidents();
     s.residents.roles.guards = 2;
     s.residents.heritage.homeland = 2;
     s.residents.tags.settlers = 2;

@@ -94,7 +94,7 @@ describe('saves', () => {
     v1.silver = 123;
 
     const migrated = deserialize(JSON.stringify(v1), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.silver).toBe(123);
     expect(migrated.expeditions).toEqual([]);
     expect(migrated.locations.river_meet.discovery).toBe('visited');
@@ -129,7 +129,7 @@ describe('saves', () => {
     v2.silver = 77;
 
     const migrated = deserialize(JSON.stringify(v2), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.silver).toBe(77);
     expect(migrated.charterMissedStreak).toBe(0);
     expect(migrated.residents.contentment).toBeGreaterThan(0);
@@ -149,7 +149,7 @@ describe('saves', () => {
     v3.silver = 88;
 
     const migrated = deserialize(JSON.stringify(v3), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.silver).toBe(88);
     expect(migrated.residents.idle).toBe(0);
     expect(migrated.nextTransientId).toBe(1);
@@ -166,7 +166,7 @@ describe('saves', () => {
     v4.silver = 99;
 
     const migrated = deserialize(JSON.stringify(v4), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.silver).toBe(99);
     expect(migrated.activePartyIds).toEqual(migrated.heroes.map((h) => h.id));
     expect(migrated.dependants).toEqual([]);
@@ -181,7 +181,7 @@ describe('saves', () => {
     v5.silver = 111;
 
     const migrated = deserialize(JSON.stringify(v5), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.silver).toBe(111);
     expect(migrated.buildings).toEqual([]);
     expect(migrated.construction).toBeNull();
@@ -200,6 +200,7 @@ describe('saves', () => {
       return copy as GameState['heroes'][number];
     });
     v6.residents!.roles.farmers = 3;
+    v6.residents!.roles.guards = 0; // isolate from the new-game starting hands
     v6.saveVersion = 6;
 
     const heroHeritage = new Map([['p4', 'kiswani'], ['p5', 'hanjoda']] as const);
@@ -207,7 +208,7 @@ describe('saves', () => {
       locationDefs: TEST_LOCATIONS,
       heroHeritage,
     });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.axes.culture).toBe(0);
     expect(migrated.charterCompromisedStreak).toBe(0);
     // Pre-feature residents are treated as homeland founders.
@@ -238,7 +239,7 @@ describe('saves', () => {
       locationDefs: TEST_LOCATIONS,
       heroGender,
     });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.nextCharacterId).toBe(1);
     // Gender from the injected map; unknown ids default to male.
     expect(migrated.heroes.find((h) => h.id === 'p2')!.gender).toBe('female');
@@ -275,7 +276,7 @@ describe('saves', () => {
     ];
 
     const migrated = deserialize(JSON.stringify(v8), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     // Knights of Saint Eirwen seeded neutral.
     expect(migrated.factions.KNIGHTS_EIRWEN.standing).toBe(0);
     // Dustwalker folds into the Hanjoda people; the tribe survives as subPeople.
@@ -300,7 +301,7 @@ describe('saves', () => {
     residents.tags = ['kiswani', 'orc'];
 
     const migrated = deserialize(JSON.stringify(v10), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.residents.tags).toEqual({ kiswani: 1, orc: 1 });
   });
 
@@ -324,7 +325,7 @@ describe('saves', () => {
       mapRegionDefs: MAP_REGIONS,
       mapFeatureDefs: MAP_FEATURES,
     });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.mapKnowledge.surveyedCells.length).toBeGreaterThan(0);
     expect(migrated.expeditions[0].target).toEqual(LOCATION_DEFS.get('river_meet')!.mapPoint);
     expect(migrated.expeditions[0].pace).toBe('normal');
@@ -342,7 +343,7 @@ describe('saves', () => {
       mapRegionDefs: MAP_REGIONS,
       mapFeatureDefs: MAP_FEATURES,
     });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.locations.shackle_station.discovery).toBe('known');
     expect(migrated.mapKnowledge.surveyedCells.length).toBeGreaterThan(0);
   });
@@ -353,7 +354,7 @@ describe('saves', () => {
     delete (v14 as Partial<GameState>).tributes;
 
     const migrated = deserialize(JSON.stringify(v14), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.tributes).toEqual([]);
   });
 
@@ -367,7 +368,7 @@ describe('saves', () => {
       mapRegionDefs: MAP_REGIONS,
       mapFeatureDefs: MAP_FEATURES,
     });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.mapKnowledge.surveyedCells).toContain(mapCellIndex({ x: 0.9, y: 0.4 }));
     expect(migrated.mapKnowledge.surveyedCells).not.toContain(mapCellIndex({ x: 0.25, y: 0.4 }));
   });
@@ -389,7 +390,7 @@ describe('saves', () => {
       mapRegionDefs: MAP_REGIONS,
       mapFeatureDefs: MAP_FEATURES,
     });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.mapKnowledge.surveyedCells).not.toContain(mapCellIndex({ x: 0.5, y: 0.1 }));
     expect(migrated.mapKnowledge.surveyedCells).toContain(mapCellIndex({ x: 0.9, y: 0.4 }));
   });
@@ -407,7 +408,7 @@ describe('saves', () => {
     };
 
     const migrated = deserialize(JSON.stringify(v15), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(20);
+    expect(migrated.saveVersion).toBe(21);
     expect(migrated.pendingRaid).toEqual({
       kind: 'incoming',
       faction: 'BEASTFOLK',

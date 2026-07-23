@@ -11,13 +11,7 @@ import type { TravelContext } from '../events/types';
 import { mapCellIndex, pointReachable } from '../map';
 import { resolveIncomingRaid, resolveOutgoingRaid } from '../raids';
 import { Rng } from '../rng';
-import {
-  hireResidents,
-  reallocate,
-  residentCap,
-  residentsAvailable,
-  residentTotal,
-} from '../residents';
+import { reallocate, residentsAvailable, residentTotal } from '../residents';
 import { advancePendingEvent, advanceTurn, resolveChoice, resolveTurn } from '../turn';
 import { discoveryAtLeast, heroesAtPost, RESIDENT_ROLES } from '../types';
 import type { ActiveEvent, GameState } from '../types';
@@ -53,20 +47,22 @@ function maybeDispatch(state: GameState, rng: Rng): void {
     const loc = state.locations[d.id];
     return d.faction !== undefined && loc && discoveryAtLeast(loc.discovery, 'visited');
   });
-  const laborTarget = defs.find((d) => {
+  const inviteTarget = defs.find((d) => {
     const loc = state.locations[d.id];
     return d.faction === 'CHARTER_COMPANY' && loc && discoveryAtLeast(loc.discovery, 'visited');
   });
   const roll = rng.next();
-  if (
-    roll < 0.15 &&
-    laborTarget &&
-    state.silver > 120 &&
-    residentTotal(state) < residentCap(state)
-  ) {
+  if (roll < 0.15 && inviteTarget && state.silver > 120) {
     dispatchExpedition(
       state,
-      { kind: 'labor', destination: laborTarget.id, heroIds: [heroIds[0]], laborCount: 1 },
+      {
+        kind: 'invite',
+        destination: inviteTarget.id,
+        heroIds: [heroIds[0]],
+        inviteSource: 'homeland',
+        inviteOffer: 'generous',
+        inviteCount: 2,
+      },
       TEST_CONTENT.locationDefs,
       TEST_CONTENT.mapRegionDefs,
     );
@@ -172,11 +168,7 @@ function maybeBuild(state: GameState): void {
 function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
   for (let i = 0; i < turns; i++) {
     if (state.gameOver) return;
-    // Take on a few hands when there's room and coin, and put idle ones to work.
-    if (state.turn % 2 === 0 && state.silver > 80 && residentTotal(state) < residentCap(state)) {
-      // Local hire is gated on native standing/discovery; a no-op when unmet.
-      hireResidents(state, choiceRng.next() < 0.5 ? 'farmers' : 'porters', 1, 'tributary');
-    }
+    // Put idle newcomers to work (invitations arrive via maybeDispatch).
     if (state.residents.idle > 0) reallocate(state, 'idle', 'guards', state.residents.idle);
     maybeDispatch(state, choiceRng);
     maybeBuild(state);
@@ -269,12 +261,15 @@ describe('full-season simulation', () => {
         expect(exp.silver).toBeGreaterThanOrEqual(0);
         for (const qty of Object.values(exp.cargo)) expect(qty).toBeGreaterThanOrEqual(0);
       }
-      // Resident pool invariants: non-negative, within cap, mood in band.
+      // Resident pool invariants: non-negative (uncapped now), mood in band.
       for (const role of RESIDENT_ROLES) expect(s.residents.roles[role]).toBeGreaterThanOrEqual(0);
       expect(s.residents.idle).toBeGreaterThanOrEqual(0);
-      expect(residentTotal(s)).toBeLessThanOrEqual(residentCap(s));
+      expect(residentTotal(s)).toBeGreaterThanOrEqual(0);
       expect(s.residents.contentment).toBeGreaterThanOrEqual(0);
       expect(s.residents.contentment).toBeLessThanOrEqual(10);
+      // Concession & herd invariants: land only ever grows; herd non-negative.
+      expect(s.claim.size).toBeGreaterThanOrEqual(TUNING.claim.startingSize);
+      expect(s.herd.count).toBeGreaterThanOrEqual(0);
       // Heritage tally stays non-negative and summed-equal to the pool; culture in band.
       expect(s.residents.heritage.homeland).toBeGreaterThanOrEqual(0);
       expect(s.residents.heritage.native).toBeGreaterThanOrEqual(0);
@@ -297,7 +292,6 @@ describe('full-season simulation', () => {
       for (const h of s.heroes) {
         expect(spousesOf(s, h.id).length).toBeLessThanOrEqual(TUNING.family.maxSpousesPerHero);
       }
-      expect(residentTotal(s)).toBeLessThanOrEqual(residentCap(s)); // dependants excluded from the pool
     }
   });
 
