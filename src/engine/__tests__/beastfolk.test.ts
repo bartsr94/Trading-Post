@@ -6,9 +6,11 @@
 import { describe, expect, it } from 'vitest';
 import { LOCATIONS } from '../../content/locations';
 import { addChild, formUnion, isMixed, nodePeoples } from '../family';
+import { isEligible } from '../events/selection';
 import { addResidents, residentTotal } from '../residents';
 import { Rng } from '../rng';
 import { migrate } from '../save';
+import { advancePendingEvent, resolveChoice } from '../turn';
 import {
   defaultSubPeople,
   getHero,
@@ -125,5 +127,98 @@ describe('save migration v9 -> v10', () => {
 
     const migrated = migrate(preV10);
     expect(migrated.factions.BEASTFOLK.standing).toBe(12);
+  });
+});
+
+// CHAIN_EVENTS_SPEC.md §2: all 5 pre-existing events used to gate on
+// BEASTFOLK standing alone, so they could in principle fire before the
+// player had ever found the Gnawback Camp. Confirms the discovery gate
+// added to each is load-bearing, not decorative.
+describe('Beastfolk discovery gating', () => {
+  it('tribute events are ineligible before beast_wilds is discovered, even though starting standing already qualifies', () => {
+    const s = testState();
+    expect(s.locations.beast_wilds.discovery).toBe('rumored');
+    expect(s.factions.BEASTFOLK.standing).toBeLessThanOrEqual(-20);
+
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_tribute')!)).toBe(false);
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_tribute')!)).toBe(false);
+
+    s.locations.beast_wilds.discovery = 'visited';
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_tribute')!)).toBe(true);
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_tribute')!)).toBe(true);
+  });
+
+  it('match and settlement events are ineligible before discovery, even once standing qualifies', () => {
+    const s = testState();
+    s.factions.BEASTFOLK.standing = 50;
+    expect(s.locations.beast_wilds.discovery).toBe('rumored');
+
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(false);
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(false);
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_settlement')!)).toBe(false);
+
+    s.locations.beast_wilds.discovery = 'visited';
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(true);
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(true);
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_settlement')!)).toBe(true);
+  });
+});
+
+// CHAIN_EVENTS_SPEC.md §5: the showcase same-sitting chain. Walks the whole
+// "speak first" branch to prove continueChain/setChainVar/chainVar work end
+// to end through the real content, then confirms the "withdraw" choice is a
+// legitimate short ending with no continuation at all.
+describe('"A Patrol at the Treeline" chain', () => {
+  function readyState() {
+    const s = testState();
+    s.locations.beast_wilds.discovery = 'visited';
+    return s;
+  }
+
+  it('is eligible only once beast_wilds is discovered', () => {
+    const s = testState();
+    const entry = TEST_CONTENT.events.get('beastfolk_first_encounter')!;
+    expect(isEligible(s, entry)).toBe(false);
+    s.locations.beast_wilds.discovery = 'visited';
+    expect(isEligible(s, entry)).toBe(true);
+  });
+
+  it('walks the speak-first branch through all three stages to a standing/tribute payoff', () => {
+    const s = readyState();
+    const entry = TEST_CONTENT.events.get('beastfolk_first_encounter')!;
+    s.pendingEvents = [{ eventId: entry.id, heroId: 'p1' }];
+    for (const hero of s.heroes) hero.stats.charm = 10;
+
+    // Mirrors the real flow: EventPanel always resolves pendingEvents[0], and
+    // the player clicking "Continue" (advancePendingEvent) removes it before
+    // the next stage is ever resolved.
+    resolveChoice(s, TEST_CONTENT, entry, 0, 'p1');
+    expect(s.pendingEvents).toHaveLength(2);
+    advancePendingEvent(s);
+    const stage2 = s.pendingEvents[0];
+    expect(stage2.eventId).toBe('beastfolk_first_encounter_talks');
+    expect(stage2.vars?.approach).toBe('peace');
+
+    const talks = TEST_CONTENT.events.get('beastfolk_first_encounter_talks')!;
+    resolveChoice(s, TEST_CONTENT, talks, 0, stage2.heroId, undefined, stage2.locationId);
+    advancePendingEvent(s);
+    const stage3 = s.pendingEvents[0];
+    expect(stage3.eventId).toBe('beastfolk_first_encounter_close');
+    expect(stage3.vars?.outcome).toBe('alliance');
+
+    const before = s.factions.BEASTFOLK.standing;
+    const close = TEST_CONTENT.events.get('beastfolk_first_encounter_close')!;
+    resolveChoice(s, TEST_CONTENT, close, 0, stage3.heroId, undefined, stage3.locationId);
+    expect(s.factions.BEASTFOLK.standing).toBe(before + 6);
+    expect(s.tributes.some((t) => t.faction === 'BEASTFOLK' && t.direction === 'receive')).toBe(true);
+  });
+
+  it('the withdraw choice ends the encounter without spawning a continuation', () => {
+    const s = readyState();
+    const entry = TEST_CONTENT.events.get('beastfolk_first_encounter')!;
+    s.pendingEvents = [{ eventId: entry.id, heroId: 'p1' }];
+
+    resolveChoice(s, TEST_CONTENT, entry, 2, 'p1');
+    expect(s.pendingEvents).toHaveLength(1);
   });
 });

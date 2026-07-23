@@ -33,8 +33,12 @@ for (const event of ALL_EVENTS) {
   for (const choice of event.choices) {
     for (const tier of Object.values(choice.outcomes)) {
       for (const outcome of tier.outcomes) {
-        if (outcome.type === 'queueEvent' && !EVENT_MAP.has(outcome.eventId)) {
-          throw new Error(`Event ${event.id} queues unknown event ${outcome.eventId}`);
+        if (
+          (outcome.type === 'queueEvent' || outcome.type === 'continueChain') &&
+          !EVENT_MAP.has(outcome.eventId)
+        ) {
+          const verb = outcome.type === 'queueEvent' ? 'queues' : 'chains to';
+          throw new Error(`Event ${event.id} ${verb} unknown event ${outcome.eventId}`);
         }
       }
     }

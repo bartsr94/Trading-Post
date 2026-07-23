@@ -25,6 +25,7 @@ import { departCharacter, recruitCharacter } from '../roster';
 import { Rng } from '../rng';
 import { clamp, getHero, livingHeroes, nextDiscovery, oppositeGender } from '../types';
 import type {
+  ActiveEvent,
   BuildingId,
   DiscoveryState,
   ExpeditionState,
@@ -176,11 +177,32 @@ export function applyOutcomes(
         break;
       }
       case 'queueEvent': {
+        const current = state.pendingEvents[0];
         state.queuedEvents.push({
           eventId: outcome.eventId,
           fireOnTurn: state.turn + outcome.delayTurns,
           ...(outcome.sameHero ? { heroId: hero.id } : {}),
+          ...(current?.vars ? { vars: { ...current.vars } } : {}),
         });
+        break;
+      }
+      case 'continueChain': {
+        const current = state.pendingEvents[0];
+        const next: ActiveEvent = {
+          eventId: outcome.eventId,
+          heroId: outcome.heroId ?? ctx.heroId,
+          ...(ctx.expedition ? { expeditionId: ctx.expedition.id } : {}),
+          ...(ctx.locationId ? { locationId: ctx.locationId } : {}),
+          ...(current?.vars ? { vars: { ...current.vars } } : {}),
+        };
+        state.pendingEvents.splice(state.pendingEvents.length > 0 ? 1 : 0, 0, next);
+        break;
+      }
+      case 'setChainVar': {
+        const current = state.pendingEvents[0];
+        if (current) {
+          current.vars = { ...(current.vars ?? {}), [outcome.key]: outcome.value };
+        }
         break;
       }
       case 'setFlag': {

@@ -57,7 +57,11 @@ export function EventPanel({ game }: { game: GameState }) {
                 {event.choices.map((choice, i) => {
                   const available =
                     !choice.requires ||
-                    evalConditions(game, choice.requires, { travel, heroId: active.heroId });
+                    evalConditions(game, choice.requires, {
+                      travel,
+                      heroId: active.heroId,
+                      chainVars: active.vars,
+                    });
                   const hint = checkHint(game, choice);
                   return (
                     <button

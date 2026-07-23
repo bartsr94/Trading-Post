@@ -120,6 +120,17 @@ function validateIntegerRecord(value: unknown, path: string, nonNegative = false
   }
 }
 
+function validateChainVars(value: unknown, path: string): void {
+  const obj = record(value, path);
+  for (const [key, entry] of Object.entries(obj)) {
+    if (typeof entry === 'number') {
+      if (!Number.isFinite(entry)) invalid(`${path}.${key}`, 'must be finite');
+    } else if (typeof entry !== 'string' && typeof entry !== 'boolean') {
+      invalid(`${path}.${key}`, 'must be a string, number, or boolean');
+    }
+  }
+}
+
 function validateGoodCounts(value: unknown, path: string, partial: boolean): void {
   const obj = record(value, path);
   for (const key of Object.keys(obj)) {
@@ -369,6 +380,7 @@ export function validateGameState(value: unknown): GameState {
     ) {
       invalid(`save.queuedEvents[${index}].locationId`, 'references an unknown location');
     }
+    if (queued.vars !== undefined) validateChainVars(queued.vars, `save.queuedEvents[${index}].vars`);
   });
   array(state.pendingEvents, 'save.pendingEvents').forEach((entry, index) => {
     const pending = record(entry, `save.pendingEvents[${index}]`);
@@ -382,6 +394,7 @@ export function validateGameState(value: unknown): GameState {
     ) {
       invalid(`save.pendingEvents[${index}].locationId`, 'references an unknown location');
     }
+    if (pending.vars !== undefined) validateChainVars(pending.vars, `save.pendingEvents[${index}].vars`);
   });
 
   nonNegativeInteger(state.bankruptcyClock, 'save.bankruptcyClock');

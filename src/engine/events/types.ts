@@ -4,6 +4,7 @@
 import type {
   AxisId,
   BuildingId,
+  ChainVarValue,
   DependantKind,
   DiplomacyPact,
   DiscoveryState,
@@ -84,6 +85,9 @@ export type Condition =
   | { type: 'postTierAtMost'; value: number }
   | { type: 'postDefenseAtLeast'; value: number }
   | { type: 'postDefenseAtMost'; value: number }
+  /** Chain-scoped branch memory set by `setChainVar` earlier in the same
+   *  chain run (CHAIN_EVENTS_SPEC.md §3). */
+  | { type: 'chainVar'; key: string; value: ChainVarValue }
   /** True once the grace period has elapsed and an aggressor exists (RAIDING_SPEC.md §6). */
   | { type: 'raidReady' }
   /** The post was sacked within the last `turns` (RAIDING_SPEC.md §7). */
@@ -128,6 +132,14 @@ export type Outcome =
   | { type: 'health'; delta: number }
   | { type: 'stress'; delta: number; allHeroes?: boolean }
   | { type: 'queueEvent'; eventId: string; delayTurns: number; sameHero?: boolean }
+  /** Splices the next event straight into this turn's resolution — the
+   *  player sees it the instant they click Continue, no turn boundary
+   *  crossed (CHAIN_EVENTS_SPEC.md §3.3). Always inherits the current hero
+   *  unless `heroId` overrides it. */
+  | { type: 'continueChain'; eventId: string; heroId?: string }
+  /** Writes chain-scoped branch memory onto the in-flight event/queued-event
+   *  (CHAIN_EVENTS_SPEC.md §3), read back later via the `chainVar` condition. */
+  | { type: 'setChainVar'; key: string; value: ChainVarValue }
   | { type: 'setFlag'; flag: string; value?: boolean }
   | { type: 'priceShock'; good: GoodId; mod: number }
   | {

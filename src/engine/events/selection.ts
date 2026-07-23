@@ -83,6 +83,7 @@ export function selectEvents(
       eventId: event.id,
       heroId: hero.id,
       ...(queued.locationId ? { locationId: queued.locationId } : {}),
+      ...(queued.vars ? { vars: queued.vars } : {}),
     });
     usedIds.add(event.id);
   }

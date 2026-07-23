@@ -20,7 +20,15 @@ async function resolvePendingEvents(page: Page): Promise<void> {
 test('Diplomacy assignment hosts the Company factor and moves standing', async ({ page }) => {
   await foundPost(page);
 
-  await page.getByRole('button', { name: 'Diplomacy', exact: true }).first().click();
+  // Scoped to the first hero's assignment row: an unscoped role lookup for
+  // "Diplomacy" also matches the sidebar's nav button of the same name,
+  // which sits earlier in the DOM and would just navigate screens instead
+  // of assigning the activity.
+  await page
+    .locator('.assign-row')
+    .first()
+    .getByRole('button', { name: 'Diplomacy', exact: true })
+    .click();
   await page.getByRole('button', { name: /Confirm Orders/ }).click();
 
   await resolvePendingEvents(page);
