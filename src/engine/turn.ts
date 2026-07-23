@@ -667,7 +667,10 @@ export function resolveChoice(
     ? state.expeditions.find((e) => e.id === expeditionId)
     : undefined;
   const travel = expedition ? travelContextFor(expedition, ctx) : undefined;
-  if (choice.requires && !evalConditions(state, choice.requires, { heroId, travel })) {
+  if (
+    choice.requires &&
+    !evalConditions(state, choice.requires, { heroId, travel, chainVars: state.pendingEvents[0]?.vars })
+  ) {
     throw new Error(`Choice ${choiceIndex} is not available for event ${event.id}.`);
   }
   const rng = new Rng(state.rngState);

@@ -92,6 +92,18 @@ describe('event selection', () => {
     expect(selected[0]).toEqual({ eventId: 'hero_breakdown', heroId: 'p3' });
   });
 
+  it('carries a due queued event\'s chain vars across the turn boundary', () => {
+    const s = testState();
+    s.queuedEvents.push({
+      eventId: 'hero_breakdown',
+      fireOnTurn: 1,
+      heroId: 'p3',
+      vars: { approach: 'force' },
+    });
+    const selected = selectEvents(s, TEST_CONTENT.events, TEST_CONTENT.locationDefs, new Rng(1));
+    expect(selected[0]).toEqual({ eventId: 'hero_breakdown', heroId: 'p3', vars: { approach: 'force' } });
+  });
+
   it('does not fire queued events before their turn', () => {
     const s = testState();
     s.queuedEvents.push({ eventId: 'post_amber_find', fireOnTurn: 3 });
@@ -258,6 +270,19 @@ describe('outcome application', () => {
     ]);
   });
 
+  it('queueEvent carries the current pending event vars forward', () => {
+    const s = testState();
+    s.pendingEvents = [{ eventId: 'post_drifter', heroId: 'p3', vars: { approach: 'force' } }];
+    applyOutcomes(
+      s,
+      [{ type: 'queueEvent', eventId: 'post_amber_find', delayTurns: 2, sameHero: true }],
+      { heroId: 'p3', ...NAME_CTX },
+    );
+    expect(s.queuedEvents).toEqual([
+      { eventId: 'post_amber_find', fireOnTurn: 3, heroId: 'p3', vars: { approach: 'force' } },
+    ]);
+  });
+
   it('defaults community outcomes to ctx.locationId when no location is given', () => {
     const s = testState();
     const before = s.diplomacySeats.hill_fort.standing;
@@ -280,6 +305,95 @@ describe('outcome application', () => {
     const before = { ...s.diplomacySeats.hill_fort };
     applyOutcomes(s, [{ type: 'communityStanding', delta: 5 }], { heroId: 'p1', ...NAME_CTX });
     expect(s.diplomacySeats.hill_fort).toEqual(before);
+  });
+});
+
+describe('chain events (CHAIN_EVENTS_SPEC.md)', () => {
+  it('setChainVar merges onto the current pending event', () => {
+    const s = testState();
+    s.pendingEvents = [{ eventId: 'post_drifter', heroId: 'p1' }];
+    applyOutcomes(s, [{ type: 'setChainVar', key: 'approach', value: 'peace' }], {
+      heroId: 'p1',
+      ...NAME_CTX,
+    });
+    expect(s.pendingEvents[0].vars).toEqual({ approach: 'peace' });
+
+    applyOutcomes(s, [{ type: 'setChainVar', key: 'outcome', value: 3 }], {
+      heroId: 'p1',
+      ...NAME_CTX,
+    });
+    expect(s.pendingEvents[0].vars).toEqual({ approach: 'peace', outcome: 3 });
+  });
+
+  it('setChainVar no-ops safely when there is no pending event', () => {
+    const s = testState();
+    expect(() =>
+      applyOutcomes(s, [{ type: 'setChainVar', key: 'x', value: true }], { heroId: 'p1', ...NAME_CTX }),
+    ).not.toThrow();
+    expect(s.pendingEvents).toEqual([]);
+  });
+
+  it('continueChain splices the next event right after the current one, copying vars', () => {
+    const s = testState();
+    s.pendingEvents = [{ eventId: 'post_drifter', heroId: 'p1', vars: { approach: 'peace' } }];
+    applyOutcomes(s, [{ type: 'continueChain', eventId: 'post_wolves' }], { heroId: 'p1', ...NAME_CTX });
+    expect(s.pendingEvents).toEqual([
+      { eventId: 'post_drifter', heroId: 'p1', vars: { approach: 'peace' } },
+      { eventId: 'post_wolves', heroId: 'p1', vars: { approach: 'peace' } },
+    ]);
+  });
+
+  it('continueChain pushes onto an empty pendingEvents array', () => {
+    const s = testState();
+    applyOutcomes(s, [{ type: 'continueChain', eventId: 'post_wolves' }], { heroId: 'p1', ...NAME_CTX });
+    expect(s.pendingEvents).toEqual([{ eventId: 'post_wolves', heroId: 'p1' }]);
+  });
+
+  it('continueChain respects an explicit heroId override', () => {
+    const s = testState();
+    s.pendingEvents = [{ eventId: 'post_drifter', heroId: 'p1' }];
+    applyOutcomes(s, [{ type: 'continueChain', eventId: 'post_wolves', heroId: 'p2' }], {
+      heroId: 'p1',
+      ...NAME_CTX,
+    });
+    expect(s.pendingEvents[1].heroId).toBe('p2');
+  });
+
+  it('evaluates the chainVar condition against ConditionContext.chainVars', () => {
+    const s = testState();
+    expect(
+      evalCondition(s, { type: 'chainVar', key: 'approach', value: 'peace' }, { chainVars: { approach: 'peace' } }),
+    ).toBe(true);
+    expect(
+      evalCondition(s, { type: 'chainVar', key: 'approach', value: 'force' }, { chainVars: { approach: 'peace' } }),
+    ).toBe(false);
+    expect(evalCondition(s, { type: 'chainVar', key: 'approach', value: 'peace' })).toBe(false);
+  });
+
+  it('resolveChoice gates a chainVar-locked choice using the current pending event', () => {
+    const s = testState();
+    const event: GameEvent = {
+      id: 'test_chain_gate',
+      category: 'chain',
+      illustration: 'test',
+      title: 'Test',
+      text: 'Test',
+      conditions: [],
+      weight: 0,
+      choices: [
+        {
+          label: 'Peace path',
+          requires: [{ type: 'chainVar', key: 'approach', value: 'peace' }],
+          outcomes: { success: { text: 'Done', outcomes: [] } },
+        },
+      ],
+    };
+
+    s.pendingEvents = [{ eventId: event.id, heroId: 'p1', vars: { approach: 'force' } }];
+    expect(() => resolveChoice(s, TEST_CONTENT, event, 0, 'p1')).toThrow(/not available/);
+
+    s.pendingEvents = [{ eventId: event.id, heroId: 'p1', vars: { approach: 'peace' } }];
+    expect(() => resolveChoice(s, TEST_CONTENT, event, 0, 'p1')).not.toThrow();
   });
 });
 

@@ -507,6 +507,13 @@ export interface ConstructionState {
   progress: number;
 }
 
+/** Chain-scoped branch memory (CHAIN_EVENTS_SPEC.md §3.1): small values that
+ *  ride on one event/queued-event's own instance rather than the global
+ *  `flags` bag, so concurrent or future chains can't collide and nothing
+ *  needs cleanup once the chain ends. */
+export type ChainVarValue = string | number | boolean;
+export type ChainVars = Record<string, ChainVarValue>;
+
 export interface QueuedEvent {
   eventId: string;
   fireOnTurn: number;
@@ -514,6 +521,8 @@ export interface QueuedEvent {
   heroId?: string;
   /** Optionally pin a location (e.g. first-contact events). */
   locationId?: LocationId;
+  /** Carried forward from the chain stage that queued this one, if any. */
+  vars?: ChainVars;
 }
 
 /** An event instance selected for this turn, with its hero binding resolved. */
@@ -524,6 +533,8 @@ export interface ActiveEvent {
   expeditionId?: string;
   /** Set for first-contact events: the seat this event happened to. */
   locationId?: LocationId;
+  /** Chain-scoped branch memory (CHAIN_EVENTS_SPEC.md §3.1). */
+  vars?: ChainVars;
 }
 
 export interface ReportLine {

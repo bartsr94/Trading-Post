@@ -17,6 +17,29 @@ describe('saves', () => {
     expect(restored).toEqual(s);
   });
 
+  it('round-trips chain-scoped vars on queued and pending events', () => {
+    const s = testState(2024);
+    s.queuedEvents.push({
+      eventId: 'post_amber_find',
+      fireOnTurn: 11,
+      heroId: 'p3',
+      vars: { approach: 'force', tries: 2, resolved: true },
+    });
+    s.pendingEvents.push({ eventId: 'post_drifter', heroId: 'p1', vars: { outcome: 'alliance' } });
+    const restored = deserialize(serialize(s));
+    expect(restored).toEqual(s);
+  });
+
+  it('rejects a non-primitive chain var', () => {
+    const withBadVars = JSON.parse(serialize(testState())) as Record<string, unknown>;
+    (withBadVars.pendingEvents as unknown[]).push({
+      eventId: 'post_drifter',
+      heroId: 'p1',
+      vars: { bad: { nested: true } },
+    });
+    expect(() => deserialize(JSON.stringify(withBadVars))).toThrow(/vars/);
+  });
+
   it('rejects garbage', () => {
     expect(() => deserialize('{"hello":"world"}')).toThrow();
     expect(() => deserialize('not json')).toThrow();

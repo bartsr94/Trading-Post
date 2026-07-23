@@ -5,13 +5,15 @@ import { isMarried } from '../family';
 import { diplomacySeatStateById } from '../diplomacy';
 import { heritageCount, nativeShare, postDefense, residentCount } from '../residents';
 import { raidThreatActive } from '../raids';
-import type { GameState } from '../types';
+import type { ChainVars, GameState } from '../types';
 import type { Condition, TravelContext } from './types';
 
 export interface ConditionContext {
   /** The event's candidate/bound hero for implicit hero-scoped predicates. */
   heroId?: string;
   travel?: TravelContext;
+  /** Chain-scoped branch memory from the in-flight event (CHAIN_EVENTS_SPEC.md §3). */
+  chainVars?: ChainVars;
 }
 
 export function evalCondition(
@@ -118,6 +120,8 @@ export function evalCondition(
       const loc = state.locations[cond.location];
       return loc !== undefined && discoveryAtLeast(loc.discovery, cond.atLeast);
     }
+    case 'chainVar':
+      return ctx.chainVars?.[cond.key] === cond.value;
     case 'expeditionKind':
       return ctx.travel !== undefined && ctx.travel.expedition.kind === cond.kind;
     case 'expeditionLeg':
