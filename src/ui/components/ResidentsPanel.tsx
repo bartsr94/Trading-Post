@@ -18,6 +18,7 @@ import { dependantHeritageBreakdown, dependantHeritageGroupCounts } from '../../
 import {
   claimCapacity,
   contentmentBand,
+  frictionBand,
   heritageCount,
   residentTagCounts,
   residentTotal,
@@ -30,6 +31,7 @@ const TRANSIENT_LABELS: Record<TransientKind, string> = {
   visitorGuards: 'Visiting guards',
   companyAgents: 'Company inspectors',
   supplierCrew: 'Supplier crew',
+  beastfolkVisitors: 'Beastfolk visitors',
 };
 
 const ROLE_LABELS: Record<ResidentRole, string> = {
@@ -70,6 +72,14 @@ const BAND_LABEL = {
   unrest: { text: 'Unrest', cls: 'bad' },
 } as const;
 
+/** Friction bands read opposite contentment's — high is bad, so the color
+ *  classes flip relative to BAND_LABEL above. */
+const FRICTION_BAND_LABEL = {
+  settled: 'good',
+  tense: 'dim',
+  volatile: 'bad',
+} as const;
+
 /** Dashboard column: population summary + hands + idle reassignment. */
 export function PeopleOverviewColumn({ game }: { game: GameState }) {
   const reallocate = useGameStore((s) => s.reallocateResidents);
@@ -90,6 +100,10 @@ export function PeopleOverviewColumn({ game }: { game: GameState }) {
   const makeupTotal = homeland + native;
   const nativePct = makeupTotal === 0 ? 0 : Math.round((native / makeupTotal) * 100);
   const tagCounts = residentTagCounts(game);
+  const frictionEntries = Object.entries(r.friction).filter(([, value]) => (value ?? 0) > 0) as [
+    string,
+    number,
+  ][];
   const dependants = dependantHeritageBreakdown(game);
   const dependantCounts = Object.entries(dependants.counts).sort((a, b) => b[1] - a[1]);
 
@@ -138,6 +152,23 @@ export function PeopleOverviewColumn({ game }: { game: GameState }) {
               </span>
               <span className="dim" style={{ fontSize: '0.78rem', textAlign: 'right' }}>
                 {tagCounts.map(([tag, count]) => `${formatTag(tag)} ${count}`).join(' · ')}
+              </span>
+            </div>
+          )}
+          {frictionEntries.length > 0 && (
+            <div
+              className="faction-row"
+              title="Lingering integration tension for a settled newcomer group — settles on its own over time, faster with a mediation event."
+            >
+              <span className="dim" style={{ fontSize: '0.78rem' }}>
+                Friction
+              </span>
+              <span className="dim" style={{ fontSize: '0.78rem', textAlign: 'right' }}>
+                {frictionEntries.map(([heritage, value]) => (
+                  <span key={heritage} className={FRICTION_BAND_LABEL[frictionBand(value)]}>
+                    {formatTag(heritage)} {Math.round(value)}/10{' '}
+                  </span>
+                ))}
               </span>
             </div>
           )}

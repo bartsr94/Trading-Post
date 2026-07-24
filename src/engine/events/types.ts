@@ -82,6 +82,11 @@ export type Condition =
   | { type: 'residentsBelow'; role?: ResidentRole; value: number }
   | { type: 'contentmentAtLeast'; value: number }
   | { type: 'contentmentAtMost'; value: number }
+  /** Integration friction for a settled heritage group, 0–10 (ResidentState.friction). */
+  | { type: 'frictionAtLeast'; heritage: Heritage; value: number }
+  | { type: 'frictionAtMost'; heritage: Heritage; value: number }
+  /** How many residents carry a given composition tag (ResidentState.tags). */
+  | { type: 'residentTagAtLeast'; tag: string; value: number }
   | { type: 'nativeShareAtLeast'; value: number }
   | { type: 'nativeShareAtMost'; value: number }
   /** Concession & herd (TULA_SETTLEMENT_SPEC.md §6). */
@@ -162,6 +167,8 @@ export type Outcome =
     }
   | { type: 'loseResidents'; role?: ResidentRole; count: number; group?: HeritageGroup }
   | { type: 'contentment'; delta: number }
+  /** Adjust a heritage's settled-in integration friction, clamped 0–10. */
+  | { type: 'friction'; heritage: Heritage; delta: number }
   /** Grow/shrink the Concession or the herd (TULA_SETTLEMENT_SPEC.md §6). */
   | { type: 'addClaim'; delta: number }
   | { type: 'setLandAllocation'; allocation: Record<LandUse, number> }

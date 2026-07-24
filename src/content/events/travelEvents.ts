@@ -449,4 +449,66 @@ export const TRAVEL_EVENTS: GameEvent[] = [
       },
     ],
   },
+  {
+    id: 'travel_beastfolk_toll',
+    category: 'travel',
+    illustration: 'gnawback_toll',
+    title: 'The Gnawback Toll',
+    text: 'They don\'t wait at a narrow place the way the hill folk do — an orc and two goblins simply fall in alongside the party out of the scrub, matching pace, unhurried, until the orc names a price for the rest of the walk unmolested. No chief sent them and none will answer for them; this toll is theirs alone to keep or break.',
+    conditions: [{ type: 'destinationTag', tag: 'beastfolk' }],
+    weight: 10,
+    cooldownTurns: 8,
+    binding: { type: 'highestSkill', skill: 'bargain' },
+    factions: ['BEASTFOLK'],
+    peoples: ['orc', 'goblin'],
+    choices: [
+      {
+        label: 'Pay it and keep walking.',
+        outcomes: {
+          success: {
+            text: 'You count it out without breaking stride. The goblins take it, the orc grunts something that might be thanks, and all three peel off back into the scrub as suddenly as they appeared.',
+            outcomes: [
+              { type: 'expeditionSilver', delta: -8 },
+              { type: 'standing', faction: 'BEASTFOLK', delta: 1 },
+            ],
+          },
+        },
+      },
+      {
+        label: 'Haggle — three isn\'t a war-band, and they know it.',
+        check: { skill: 'bargain', stat: 'wits', difficulty: 10, tags: ['BEASTFOLK'] },
+        outcomes: {
+          success: {
+            text: '{hero} points out, mildly, that three of them against a whole party is a bad bet even before anyone reaches for a weapon. The orc considers this, shrugs, and settles for half of what he asked.',
+            outcomes: [{ type: 'expeditionSilver', delta: -4 }],
+          },
+          failure: {
+            text: 'The math doesn\'t land the way {hero} meant it to — the orc takes it as a threat rather than an argument, and the price goes up rather than down.',
+            outcomes: [
+              { type: 'expeditionSilver', delta: -16 },
+              { type: 'stress', delta: 1 },
+            ],
+          },
+        },
+      },
+      {
+        label: 'Refuse outright and keep moving.',
+        check: { skill: 'combat', stat: 'might', difficulty: 11, tags: ['intimidation', 'BEASTFOLK'] },
+        outcomes: {
+          success: {
+            text: 'The party doesn\'t slow down, and after a few tense strides alongside, the three of them peel off rather than force the issue. Word of the refusal will reach the wilds before you do.',
+            outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: -3 }],
+          },
+          failure: {
+            text: 'They force the issue after all — not a real fight, just enough of one to make the point, and the point costs more than the toll would have.',
+            outcomes: [
+              { type: 'health', delta: -2 },
+              { type: 'expeditionSilver', delta: -16 },
+              { type: 'standing', faction: 'BEASTFOLK', delta: -4 },
+            ],
+          },
+        },
+      },
+    ],
+  },
 ];

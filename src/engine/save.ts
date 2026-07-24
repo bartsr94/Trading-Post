@@ -141,6 +141,9 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
       case 22:
         current = migrateV22toV23(current);
         break;
+      case 23:
+        current = migrateV23toV24(current);
+        break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
     }
@@ -585,6 +588,20 @@ function migrateV22toV23(save: GameState): GameState {
   return {
     ...save,
     saveVersion: 23,
+  };
+}
+
+/** v24 adds per-heritage integration friction (BEASTFOLK_SPEC.md's
+ *  integration-friction pass) — no old save ever had a settled group under
+ *  tension, so every existing resident pool backfills empty. */
+function migrateV23toV24(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 24,
+    residents: {
+      ...save.residents,
+      friction: {},
+    },
   };
 }
 

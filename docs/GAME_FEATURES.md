@@ -239,9 +239,26 @@ still count for upkeep while away, and rejoin on homecoming.
 **Transients** (`GameState.transients`) are outsiders the post neither feeds
 nor pays: `companyAgents` (indefinite, spawned on a missed Charter quota,
 cleared on a met one), `visitorGuards` (on a successful envoy arrival),
-`supplierCrew` (via a content event). `transientEffect` sums their
+`supplierCrew` (via a content event), `beastfolkVisitors` (a "testing the
+waters" content beat, §10). `transientEffect` sums their
 defense/contentment-pressure/cargo effects purely into `postDefense`/
 `updateContentment`/caravan cargo.
+
+**Integration friction** (`ResidentState.friction`, distinct from pool-wide
+`contentment`): a 0–10 value per settled `Heritage`, tracking how much
+lasting tension a specific newcomer group still carries with the rest of the
+pool. `frictionFor`/`frictionBand`/`adjustFriction` are the selector/
+mutator; `frictionContentmentPressure` folds any heritage currently in the
+`'volatile'` band into `updateContentment` (mirrors `transientEffect`'s
+pattern, but per group rather than per head); `driftFriction` settles it
+passively toward 0 each turn absent event intervention. Generic — any
+heritage could carry a value — but only Beastfolk settlement content sets
+one today (§10). Two new event primitives read/write it:
+`frictionAtLeast`/`frictionAtMost` conditions, a `friction` outcome; a
+`residentTagAtLeast` condition (reading `ResidentState.tags`) gates the
+arc's closing event on the group actually being present. **Save shape: v24**
+(`migrateV23toV24`, backfills `residents.friction = {}` — no old save ever
+had a settled group under tension).
 
 **Craftsfolk build-crews.** `applyCraftsfolkConstruction` adds build
 progress to any active construction project *passively* each turn
@@ -406,8 +423,10 @@ non-violent, in silver/goods/standing/stress); voluntary union at rising
 standing (reuses `formUnion(source: 'alliance')` verbatim, plus `wed_orc`/
 `wed_goblin` traits); settlement at high standing (reuses `addResidents`,
 split into two calls so orc/goblin counts stay distinct in the Origins tag
-breakdown). Mixed orc/goblin × human children fall out of the existing
-`Ancestry.peoples`/`bloodline` logic with no new code.
+breakdown) in two flavors — guards (`beastfolk_settlement`) or craftsfolk/
+porters (`beastfolk_settlement_workers`). Mixed orc/goblin × human children
+fall out of the existing `Ancestry.peoples`/`bloodline` logic with no new
+code.
 
 **Raiding intersection** (raiding shipped separately, after this content):
 `BEASTFOLK` is one of several possible incoming-raid aggressors, with a
@@ -418,9 +437,59 @@ raiders"). A Beastfolk-flavored raid-threat event exists in
 explicitly deferred; it arrived later as part of the general raiding system,
 not a revision to the Beastfolk events above.
 
-**Save shape:** v10 (the only backfill needed was seeding
-`factions.BEASTFOLK` — new `Heritage`/`TransientKind` literals need no
-migration).
+**Integration friction** (a second content pass, 2026-07-24 — see §7 for the
+mechanism itself): either settlement event now sets `friction` to 7 for
+`orc`/`goblin`. While a heritage sits in the volatile band (≥7), recurring
+mediation events (`beastfolk_integration_orc`/`_goblin`) let a hero step in
+(a check that moves friction down hard on success, up on failure) or leave
+it to fester (guaranteed small rise); once friction settles to ≤2, a
+once-only closing event (`beastfolk_integration_settled_orc`/`_goblin`)
+marks the group as fully integrated with a small permanent standing/
+contentment reward. Passive `driftFriction` means even an ignored arc
+eventually resolves on its own, just slower and with more contentment cost
+paid along the way.
+
+**General mischief** — a lower-stakes, higher-frequency tier than the
+standing-gated tribute events, deliberately not gated on hostile standing
+alone (`standingAtMost 40`, a much looser band than tribute's −20): a
+livestock raid (`beastfolk_livestock_raid`, track-them-down or write off the
+loss), storehouse pilfering (`beastfolk_pilfering`, set a watch or absorb
+it), and a shouted contest-of-strength dare from an orc youth
+(`beastfolk_dare`, no standing gate at all — bravado, not policy). None of
+these use a new mechanism; all are ordinary weighted-pool events on the
+existing outcome vocabulary (`loseHerd`/`good`/`silver`/`standing`/
+`stress`/`health`).
+
+**Sharper abduction identity** (`TUNING.abduction`, `engine/captivity.ts`/
+`raids.ts` — see §17 for the shared mechanism): BEASTFOLK now rolls captures
+more readily than RIVER_CLANS on both triggers —
+`incomingCaptureChanceByFaction`/`expeditionCaptureChanceBaseByFaction` are
+per-faction override maps (falling back to the shared base for any faction
+absent from them) set higher for BEASTFOLK (0.45 incoming / 0.12 expedition,
+vs. shared bases of 0.35 / 0.08) — read alongside the pre-existing
+`quickReleaseChance` asymmetry (0.1 for BEASTFOLK vs. 0.55 for RIVER_CLANS,
+already meant they held captives far less predictably). A pure TUNING
+change; no new engine mechanism, no captive-event content touched.
+
+**A "testing the waters" visitor beat** (`beastfolk_visitors`, mid-standing
+band 0–25, between the tribute and settlement thresholds): spawns a
+`beastfolkVisitors` transient (a small ongoing `contentmentPressure`, no
+defense/cargo effect) instead of settling anyone — flavor + a light
+systemic cost for a faction still deciding whether to trust the post.
+
+**A travel-toll variant** (`travel_beastfolk_toll` in `content/events/
+travelEvents.ts`, gated on `destinationTag: 'beastfolk'`): mirrors
+`travel_hill_toll`'s pay/haggle/push-through shape against the `beast_wilds`
+tag rather than a hill-tribes seat.
+
+**Save shape:** v10 seeded `factions.BEASTFOLK` (the only backfill a new
+`Heritage`/`TransientKind` literal ever needs); v24 added `residents.friction`
+(§7).
+
+**Still open** (`docs/TODO_FEATURES.md`): a named Beastfolk recruit (orc
+smith/goblin scout) and sub-clan/war-band depth (named war-bands under
+`subPeople`) — both deferred, since either needs an invented character/name
+concept rather than a mechanical decision.
 
 ## 11. Raiding — two-way warfare
 
@@ -605,12 +674,13 @@ mechanism as originally specced.
 
 `saveVersion` + migrations live in `engine/save.ts`; any `GameState` shape
 change bumps `TUNING.save.version` and adds a migration case (tests enforce
-unknown versions throw). Current version: **v23**. Rough history: v5 roster/
+unknown versions throw). Current version: **v24**. Rough history: v5 roster/
 reserve split; v6 buildings; v7 heritage/culture; v8 gender/family; v9
 peoples restructure (Hanjoda/Weri, KNIGHTS_EIRWEN); v10 Beastfolk; v11
 resident tag counts fixed; v13→v16 raiding; v19→v20 diplomacy discovery;
 v20→v21 the Concession (claim/herd, hard cap removed); v22 hero-to-hero
-marriage (`spouseIds`/`temperament`); v23 captivity (§17).
+marriage (`spouseIds`/`temperament`); v23 captivity (§17); v24 resident
+integration friction (§7, §10).
 
 ## 17. Captivity — abduction & ransom
 

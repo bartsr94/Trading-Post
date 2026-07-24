@@ -210,7 +210,12 @@ export interface HerdState {
 }
 
 /** Transient outsiders we neither feed nor pay (RESIDENTS_SPEC.md §3, Phase B). */
-export const TRANSIENT_KINDS = ['visitorGuards', 'companyAgents', 'supplierCrew'] as const;
+export const TRANSIENT_KINDS = [
+  'visitorGuards',
+  'companyAgents',
+  'supplierCrew',
+  'beastfolkVisitors',
+] as const;
 export type TransientKind = (typeof TRANSIENT_KINDS)[number];
 
 export const DISCOVERY_STATES = ['unknown', 'rumored', 'visited', 'known'] as const;
@@ -541,6 +546,14 @@ export interface ResidentState {
    * Kiswani/Dustwalker/Bejasi combined. Specific peoples ride `tags`.
    */
   heritage: Record<HeritageGroup, number>;
+  /**
+   * Integration friction, 0–10, per `Heritage` — how much lasting tension a
+   * settled group of newcomers still carries with the rest of the pool
+   * (distinct from pool-wide `contentment`). Absent entries mean no friction
+   * ever accrued for that heritage. Generic: any heritage could carry a value,
+   * but in practice only Beastfolk settlement content sets one today.
+   */
+  friction: Partial<Record<Heritage, number>>;
 }
 
 /** A transient group of outsiders present at the post (Phase B). */

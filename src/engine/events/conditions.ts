@@ -4,7 +4,7 @@ import { isOverClaim } from '../claim';
 import { cargoUnits } from '../expeditions';
 import { eligiblePartners, isMarried } from '../family';
 import { diplomacySeatStateById } from '../diplomacy';
-import { heritageCount, nativeShare, postDefense, residentCount } from '../residents';
+import { frictionFor, heritageCount, nativeShare, postDefense, residentCount } from '../residents';
 import { raidThreatActive } from '../raids';
 import type { ChainVars, GameState } from '../types';
 import type { Condition, TravelContext } from './types';
@@ -99,6 +99,12 @@ export function evalCondition(
       return state.residents.contentment >= cond.value;
     case 'contentmentAtMost':
       return state.residents.contentment <= cond.value;
+    case 'frictionAtLeast':
+      return frictionFor(state, cond.heritage) >= cond.value;
+    case 'frictionAtMost':
+      return frictionFor(state, cond.heritage) <= cond.value;
+    case 'residentTagAtLeast':
+      return (state.residents.tags[cond.tag] ?? 0) >= cond.value;
     case 'nativeShareAtLeast':
       return nativeShare(state) >= cond.value;
     case 'nativeShareAtMost':

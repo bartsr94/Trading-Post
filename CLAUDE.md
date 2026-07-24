@@ -22,7 +22,8 @@ checkout before making design/lore calls):
   shipped-vs-open status; don't duplicate that bookkeeping here.
 - `docs/*_SPEC.md` (a handful remain, e.g. `FAMILY_PHASE_D_SPEC.md`) — hold
   **only** still-open design for their area, not full specs to cross-check
-  shipped behavior against.
+  shipped behavior against (see **Feature workflow** below for how a spec
+  starts full and ends up trimmed to this).
 - `docs/lore/` — pure Ashmark-region worldbuilding reference (`Ashmark.md`,
   `Ansberry Company.md`, `World of Palusteria.md`, `Sauromatia.md`, etc.),
   never a feature spec. Fully consumed into `src/content/` already.
@@ -36,6 +37,24 @@ lists everything shipped; `docs/TODO_FEATURES.md` lists everything still
 open (including the unwired `charterRevoked` ending and the buildings/
 Beastfolk/Family backlogs). For a live event count, run `npm run catalog`
 rather than trusting a hand-tracked number.
+
+## Feature workflow
+
+For any non-trivial new feature, **spec first, then implement.** Write
+`docs/<FEATURE>_SPEC.md` describing the design — mechanism, content shape,
+open questions — before writing engine/content/UI code. Implement against
+that spec, not around it (if reality diverges from the spec as you build,
+update the spec to match rather than letting them drift apart silently).
+
+Once the feature ships, fold what was actually built into
+`docs/GAME_FEATURES.md` (and close the matching `docs/TODO_FEATURES.md`
+backlog item, if any). The spec file then either gets deleted or trimmed
+down to only whatever design is still genuinely open for that area — this
+is why the `docs/*_SPEC.md` files that remain (e.g. `FAMILY_PHASE_D_SPEC.md`)
+hold open questions only, not full specs. The spec is the durable record of
+*why* a feature looks the way it does and what was considered along the
+way; `GAME_FEATURES.md` stays the always-current record of *what's true
+now* — don't let the two duplicate each other once the spec is trimmed.
 
 ## Hard rules (from the spec, §14)
 

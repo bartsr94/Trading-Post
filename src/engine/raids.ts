@@ -836,7 +836,9 @@ export function resolveIncomingRaid(
       if (
         hero.gender === 'male' &&
         isAbductionRiskyFaction(raid.faction) &&
-        rng.next() < TUNING.abduction.incomingCaptureChance
+        rng.next() <
+          (TUNING.abduction.incomingCaptureChanceByFaction[raid.faction] ??
+            TUNING.abduction.incomingCaptureChance)
       ) {
         log.push(captureHero(state, hero, raid.faction, 'raid', rng));
         continue;
