@@ -22,6 +22,7 @@ npm run dev      # play at http://localhost:5173
 npm test         # engine test suite (Vitest)
 npm run build    # type-check + production build
 npm run test:e2e # browser UI smoke tests (Playwright)
+npm run catalog  # regenerates docs/EVENT_CATALOG.md (also runs as part of `npm test`)
 ```
 
 Progress autosaves to localStorage each turn; saves can also be exported and imported as JSON files.
