@@ -27,6 +27,8 @@ const EFFECT_LABELS: Record<string, (v: number) => string> = {
   upkeepSilver: (v) => `${v} silver upkeep/turn`,
   contentmentBonus: (v) => `+${v} contentment`,
   healingBonus: (v) => `+${v} healing`,
+  cargoCapacityBonus: (v) => `+${v} cargo capacity`,
+  travelCheckBonus: (v) => `+${v} travel check`,
 };
 
 const CATEGORY_LABELS: Record<string, string> = {

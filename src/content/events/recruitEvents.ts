@@ -87,6 +87,9 @@ export const RECRUIT_EVENTS: GameEvent[] = [
     once: true,
     cooldownTurns: 6,
     binding: { type: 'highestSkill', skill: 'diplomacy' },
+    factions: ['RIVER_CLANS'],
+    peoples: ['kiswani'],
+    loreRef: ['Northern Tributary Settlements.md'],
     choices: [
       {
         label: 'Welcome her — an honest broker between two worlds.',

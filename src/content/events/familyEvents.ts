@@ -22,6 +22,14 @@ export const FAMILY_EVENTS: GameEvent[] = [
     once: true,
     cooldownTurns: 8,
     binding: { type: 'highestStat', stat: 'charm' },
+    factions: ['RIVER_CLANS'],
+    peoples: ['kiswani'],
+    loreRef: ['Sauromatian Marriage and Household Structure.md'],
+    // 2026-07-24 lore audit: Sauromatian Marriage and Household Structure.md has
+    // men relocating to the wife's clan territory on marriage, the reverse of
+    // "takes a partner ... into the household" below when the bound hero is
+    // male — a known gap, tracked alongside the matrilineal marry-out fork
+    // already on the Family Phase C backlog (CLAUDE.md). Not yet rewritten.
     choices: [
       {
         label: 'Accept the match — bind the two peoples together.',
@@ -63,6 +71,9 @@ export const FAMILY_EVENTS: GameEvent[] = [
     once: true,
     cooldownTurns: 10,
     binding: { type: 'highestStat', stat: 'charm' },
+    factions: ['RIVER_CLANS'],
+    peoples: ['kiswani'],
+    loreRef: ['Sauromatian Marriage and Household Structure.md'],
     choices: [
       {
         label: 'Let it be — a household made without asking anyone’s leave.',

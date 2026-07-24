@@ -153,6 +153,26 @@ describe('Phase B requirement gates', () => {
     expect(constructionError(s, 'goblin_warren')).toBeNull();
   });
 
+  it('gates the Dock/Stables trade-route pair on porter/guard headcount', () => {
+    const s = testState();
+    s.silver = 500;
+    s.goods.timber = 100;
+    s.goods.tools = 100;
+    s.buildings.push('trade_hall', 'storehouse');
+    s.postTier = 2;
+
+    expect(constructionError(s, 'dock')).toMatch(/porters/i);
+    s.residents.roles.porters = 3;
+    expect(constructionError(s, 'dock')).toBeNull();
+
+    // A fresh post already seeds 2 starting guards (TUNING.residents.startingRoles) —
+    // zero them out to exercise the still-unmet gate before satisfying it.
+    s.residents.roles.guards = 0;
+    expect(constructionError(s, 'stables')).toMatch(/guards/i);
+    s.residents.roles.guards = 2;
+    expect(constructionError(s, 'stables')).toBeNull();
+  });
+
   it('gates on silver held — a wealth threshold distinct from cost', () => {
     const s = testState();
     s.goods.tools = 100;
@@ -283,6 +303,22 @@ describe('building effects feed derived selectors', () => {
 
     expect(withB.residents.contentment - base.residents.contentment).toBe(
       TUNING.building.defs.river_shrine.effects.contentmentBonus,
+    );
+  });
+});
+
+describe('the Dock/Stables trade-route effects', () => {
+  it('sums cargoCapacityBonus and travelCheckBonus across the completed set', () => {
+    const s = testState();
+    expect(buildingEffect(s, 'cargoCapacityBonus')).toBe(0);
+    expect(buildingEffect(s, 'travelCheckBonus')).toBe(0);
+
+    s.buildings.push('dock');
+    expect(buildingEffect(s, 'cargoCapacityBonus')).toBe(TUNING.building.defs.dock.effects.cargoCapacityBonus);
+
+    s.buildings.push('stables');
+    expect(buildingEffect(s, 'travelCheckBonus')).toBe(
+      TUNING.building.defs.stables.effects.travelCheckBonus,
     );
   });
 });

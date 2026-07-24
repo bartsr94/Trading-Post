@@ -116,6 +116,21 @@ export const BUILDINGS: BuildingInfo[] = [
       "A vault, a ledger-room, and a clerk who trusts no one's arithmetic but his own. Only a post already flush with silver has any real use for one.",
     category: 'prestige',
   },
+  // -------------------------------------------------------------- Phase B: trade-route pair
+  {
+    id: 'dock',
+    name: 'Dock',
+    blurb:
+      'Pilings driven into the bank and a landing wide enough for two barges abreast. A caravan that used to wade its cargo ashore now simply walks it off.',
+    category: 'core',
+  },
+  {
+    id: 'stables',
+    name: 'Stables',
+    blurb:
+      'Stalls, feed, and a farrier who keeps every shoe sound. A party riding out on fresh, well-shod mounts makes better time and a better impression than one that walked.',
+    category: 'core',
+  },
 ];
 
 export const BUILDING_INFO: ReadonlyMap<BuildingId, BuildingInfo> = uniqueIdMap(

@@ -269,4 +269,17 @@ export interface GameEvent {
   cooldownTurns?: number;
   binding?: HeroBinding;
   choices: Choice[];
+  /** Cataloging metadata only — read by `npm run catalog` (see
+   *  docs/EVENT_CATALOG.md and docs/ADDING_EVENTS.md), never by the engine.
+   *  Which peoples this event is centrally about (not just any hero who
+   *  happens to be bound to it). */
+  peoples?: Heritage[];
+  /** Cataloging metadata only. Which factions this event is centrally
+   *  about — beyond whatever a `standing`/`communityStanding` outcome
+   *  already implies mechanically. */
+  factions?: FactionId[];
+  /** Cataloging metadata only. Pointers into docs/lore/ this event's
+   *  content was grounded in, e.g. ['Sauromatia.md']. Omit if invented
+   *  without a specific lore source. */
+  loreRef?: string[];
 }

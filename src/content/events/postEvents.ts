@@ -67,6 +67,7 @@ export const POST_EVENTS: GameEvent[] = [
     weight: 40,
     cooldownTurns: 4,
     binding: { type: 'highestSkill', skill: 'leadership' },
+    factions: ['CHARTER_COMPANY'],
     choices: [
       {
         label: 'Petition the Company yourself — put your name on the charter.',
@@ -178,6 +179,9 @@ export const POST_EVENTS: GameEvent[] = [
     weight: 12,
     cooldownTurns: 5,
     binding: { type: 'highestSkill', skill: 'bargain' },
+    factions: ['RIVER_CLANS'],
+    peoples: ['kiswani'],
+    loreRef: ['Northern Tributary Settlements.md'],
     choices: [
       {
         label: 'Send {hero} to haggle hard for the furs.',
@@ -306,6 +310,8 @@ export const POST_EVENTS: GameEvent[] = [
     weight: 10,
     cooldownTurns: 7,
     binding: { type: 'highestSkill', skill: 'diplomacy' },
+    factions: ['CHARTER_COMPANY'],
+    loreRef: ['Ansberry Company.md'],
     choices: [
       {
         label: 'Send silver with the returning boat — an early token of profits.',
@@ -420,6 +426,9 @@ export const POST_EVENTS: GameEvent[] = [
     weight: 8,
     once: true,
     binding: { type: 'highestSkill', skill: 'lore' },
+    factions: ['OLD_PEOPLE'],
+    peoples: ['kiswani'],
+    loreRef: ['Bejasi Hills Settlements.md'],
     choices: [
       {
         label: 'Buy the map.',
@@ -454,6 +463,9 @@ export const POST_EVENTS: GameEvent[] = [
     weight: 0,
     once: true,
     binding: { type: 'highestSkill', skill: 'lore' },
+    factions: ['OLD_PEOPLE'],
+    peoples: ['kiswani'],
+    loreRef: ['Bejasi Hills Settlements.md'],
     choices: [
       {
         label: 'Read the cords before touching anything.',
@@ -517,6 +529,9 @@ export const POST_EVENTS: GameEvent[] = [
     weight: 7,
     cooldownTurns: 10,
     binding: { type: 'highestSkill', skill: 'lore' },
+    factions: ['RIVER_CLANS'],
+    peoples: ['kiswani'],
+    loreRef: ['Northern Tributary Settlements.md'],
     choices: [
       {
         label: 'Send {hero} to the marsh for the herb the rivermen chew.',

@@ -2,9 +2,9 @@ node_modules
 dist
 *.local
 .DS_Store
-docs/
+docs/*
+!docs/GAME_FEATURES.md
 *.tsbuildinfo
-CLAUDE.md
 .serena/
 test-results/
 playwright-report/

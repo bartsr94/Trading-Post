@@ -74,6 +74,9 @@ export const SEASON_EVENTS: GameEvent[] = [
     weight: 12,
     cooldownTurns: 12,
     binding: { type: 'highestSkill', skill: 'diplomacy' },
+    factions: ['RIVER_CLANS'],
+    peoples: ['kiswani'],
+    loreRef: ['Sauromatian Clan and Tribal Organization.md'],
     choices: [
       {
         label: 'Go with gifts and open hands. Let {hero} speak for the post.',

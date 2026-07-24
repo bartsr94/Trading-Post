@@ -467,6 +467,23 @@ export const TUNING = {
         minSilverHeld: 400,
         effects: { tradeIncomeBonus: 0.1, prosperityBonus: 2, upkeepSilver: 2 },
       },
+      // -------------------------------------------------- Phase B (trade-route pair)
+      dock: {
+        cost: { silver: 110, goods: { timber: 20, tools: 5 } },
+        buildProgress: 7,
+        prerequisites: ['trade_hall'],
+        minTier: 2,
+        requiresResidents: { role: 'porters', value: 3 },
+        effects: { cargoCapacityBonus: 8, upkeepSilver: 1 },
+      },
+      stables: {
+        cost: { silver: 100, goods: { timber: 15, tools: 5 } },
+        buildProgress: 6,
+        prerequisites: ['storehouse'],
+        minTier: 2,
+        requiresResidents: { role: 'guards', value: 2 },
+        effects: { travelCheckBonus: 1, upkeepSilver: 1 },
+      },
     } as Record<string, BuildingDefData>,
     /** Tier-advancement recipes; canAdvanceTier reads the entry for postTier+1. */
     tierLadder: [

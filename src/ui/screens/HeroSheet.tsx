@@ -10,7 +10,7 @@ import type { Dependant, Hero, Heritage } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from '../components/ConditionBars';
 import { Portrait } from '../components/Portrait';
-import { pickPortraitKey, portraitUrl } from '../portraits';
+import { pickDependantPortraitKey, portraitUrl } from '../portraits';
 
 const DEPENDANT_LABEL: Record<Dependant['kind'], string> = {
   spouse: 'Spouse',
@@ -57,7 +57,9 @@ function hueOf(key: string): number {
 /** A small family portrait tile: real art from the person's people+gender pool
  *  where one exists, else the hash-hue initial tile. */
 function DependantTile({ dep }: { dep: Dependant }) {
-  const key = dep.portraitKey ?? pickPortraitKey(`${dominantHeritage(dep)}_${dep.gender}`, dep.id);
+  const key =
+    dep.portraitKey ??
+    pickDependantPortraitKey(`${dominantHeritage(dep)}_${dep.gender}`, dep.id, dep.kind === 'child');
   const url = portraitUrl(key);
   return (
     <div className="fam-tile" title={`${DEPENDANT_LABEL[dep.kind]} — fed, does no work`}>

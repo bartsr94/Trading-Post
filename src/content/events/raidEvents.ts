@@ -21,6 +21,8 @@ export const RAID_EVENTS: GameEvent[] = [
     weight: 8,
     cooldownTurns: 10,
     binding: { type: 'highestSkill', skill: 'leadership' },
+    factions: ['BEASTFOLK'],
+    peoples: ['orc'],
     choices: [
       {
         label: 'Send them silver and grain to forestall it.',

@@ -67,6 +67,9 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     weight: 12,
     cooldownTurns: 8,
     binding: { type: 'highestSkill', skill: 'diplomacy' },
+    factions: ['HILL_TRIBES'],
+    peoples: ['hanjoda'],
+    loreRef: ['Western Nomadic Tribes.md'],
     choices: [
       {
         label: 'Pay what they ask, with good grace.',
@@ -364,6 +367,9 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     weight: 8,
     cooldownTurns: 12,
     binding: { type: 'highestSkill', skill: 'lore' },
+    factions: ['OLD_PEOPLE'],
+    peoples: ['kiswani'],
+    loreRef: ['Bejasi Hills Settlements.md'],
     choices: [
       {
         label: 'Take an hour. Let {hero} study the carvings.',
