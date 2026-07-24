@@ -5,7 +5,7 @@ import type { BuildingDefData, FactionId, Heritage, TierRequirement } from '../e
 
 export const TUNING = {
   save: {
-    version: 21,
+    version: 23,
     autosaveKey: 'trading-post-save',
     /** Manual import guard; current saves are far smaller than five MiB. */
     maxImportBytes: 5 * 1024 * 1024,
@@ -577,8 +577,10 @@ export const TUNING = {
     informalUnionCost: 20,
     /** Multiple partners allowed (compound/polygyny lore); a building raises this later. */
     maxSpousesPerHero: 3,
-    /** Culture axis move per union, signed toward the pole. */
-    unionCultureNudge: { homeland: -2, alliance: 2, informal: 1 } as Record<string, number>,
+    /** Culture axis move per union, signed toward the pole. A 'party' union
+     *  (two heroes already at the post marrying each other) draws no one new
+     *  in, so it nudges nothing. */
+    unionCultureNudge: { homeland: -2, alliance: 2, informal: 1, party: 0 } as Record<string, number>,
 
     // Children & the line (Phase B)
     /** Turns from bornTurn to coming of age (2 years at 24 turns/yr). */
@@ -737,6 +739,17 @@ export const TUNING = {
         companyStandingLoss: 3,
         tributeSilver: 18,
       },
+      /** Only dispatchable against a faction holding one of our captives
+       *  (`dispatchErrorRaid`) — the point is the hero, not the haul. */
+      rescue: {
+        forceMod: 0,
+        casualtyMult: 1,
+        lootSilverMult: 0,
+        lootGoodsMult: 0,
+        factionStandingLoss: 5,
+        companyStandingLoss: 2,
+        tributeSilver: 0,
+      },
     } as Record<
       string,
       {
@@ -808,5 +821,56 @@ export const TUNING = {
       /** A prior sack within this many turns makes the next sack fatal. */
       cascadeWindow: 6,
     },
+  },
+
+  // Abduction/captivity: only male heroes, only from peoples whose lore gives
+  // them a reason to want outsider men (docs/lore/Sauromatia.md — RIVER_CLANS
+  // is the in-game Sauromatians, matriarchal, 6:1 female:male birth ratio;
+  // BEASTFOLK is the other named captor group). Escort guards lower the
+  // expedition-side chance; severity/escalation is derived from turns held,
+  // not stored on the hero.
+  abduction: {
+    /** Factions whose raids/territory can take a captive. A one-line addition
+     *  (e.g. OLD_PEOPLE) to widen, never a code fork. */
+    riskyFactions: ['RIVER_CLANS', 'BEASTFOLK'] as FactionId[],
+    // The captor's-family-arrival heritage roll (RIVER_CLANS → kiswani;
+    // BEASTFOLK → an even orc/goblin split) lives in code
+    // (`captorHeritageFor` in `engine/captivity.ts`), not here — BEASTFOLK
+    // covers two distinct species, so a single per-faction value can't
+    // represent it.
+
+    /** Chance a qualifying hero is captured instead of wounded/killed when a
+     *  raid sacks the post (resolveIncomingRaid). */
+    incomingCaptureChance: 0.35,
+
+    /** Chance a qualifying hero is captured on arrival at a risky-faction
+     *  destination, before guard-escort reduction. */
+    expeditionCaptureChanceBase: 0.08,
+    /** Subtracted per guard seconded onto the expedition. */
+    expeditionCaptureChancePerGuard: 0.02,
+    /** Floor so an escort can reduce but never fully eliminate the risk. */
+    expeditionCaptureChanceFloor: 0.01,
+
+    /** Chance of a short, no-action-needed release, rolled once at capture,
+     *  by captor faction. Everyone else falls into the "held" bucket. */
+    quickReleaseChance: { RIVER_CLANS: 0.55, BEASTFOLK: 0.1 } as Record<string, number>,
+    quickReleaseMinTurns: 1,
+    quickReleaseMaxTurns: 4,
+
+    /** Turns held before the one-time grim-warning check-in fires. */
+    grimWarningThresholdTurns: 10,
+    /** A single further passive check this long after the warning, giving a
+     *  long-odds chance of release even if the player never acts. */
+    passiveFollowUpTurns: 40,
+    passiveReleaseChance: 0.15,
+
+    /** ~1 in-game year (24 turns/yr). Past this, a ransom/rescue attempt
+     *  risks the hero refusing to return instead of freeing them. */
+    refuseReturnThresholdTurns: 24,
+    refusesReturnChance: 0.25,
+
+    /** Rolled once on a successful recovery of a long-held captive
+     *  (>= grimWarningThresholdTurns) — a rare captor's-family arrival. */
+    familyArrivalChance: 0.12,
   },
 } as const;

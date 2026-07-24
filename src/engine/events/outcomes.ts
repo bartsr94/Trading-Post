@@ -15,6 +15,8 @@ import {
   addDependant,
   comeOfAge,
   dominantHeritage,
+  eligiblePartners,
+  formHeroUnion,
   formUnion,
   graphNode,
   removeDependant,
@@ -316,10 +318,20 @@ export function applyOutcomes(
         break;
       }
       case 'heroDeparts': {
-        if (hero.status === 'active') {
+        if (hero.status === 'active' || hero.status === 'captive') {
           hero.status = 'departed';
+          delete hero.captivity;
           hero.history.push(`Left the company in turn ${state.turn}.`);
           log.push(`${hero.name} leaves the company.`);
+        }
+        break;
+      }
+      case 'freeCaptive': {
+        const target = outcome.heroId ? getHero(state, outcome.heroId) : hero;
+        if (target.status === 'captive') {
+          target.status = 'active';
+          delete target.captivity;
+          log.push(`${target.name} returns to the post.`);
         }
         break;
       }
@@ -409,13 +421,39 @@ export function applyOutcomes(
         if (spouse && subject) log.push(`${subject.name} weds ${spouse.name}.`);
         break;
       }
+      case 'pickPartner': {
+        const candidates = eligiblePartners(state, ctx.heroId);
+        if (candidates.length > 0) {
+          const rng = ctx.rng ?? new Rng(state.rngState);
+          const partner = rng.pick(candidates);
+          const current = state.pendingEvents[0];
+          if (current) current.vars = { ...(current.vars ?? {}), [outcome.key ?? 'partnerId']: partner.id };
+          if (!ctx.rng) state.rngState = rng.getState();
+        }
+        break;
+      }
+      case 'formHeroUnion': {
+        const subjectId = outcome.subjectId ?? ctx.heroId;
+        const partnerId = outcome.partnerId ?? (state.pendingEvents[0]?.vars?.partnerId as string | undefined);
+        if (partnerId && formHeroUnion(state, subjectId, partnerId)) {
+          const subject = getHero(state, subjectId);
+          const partner = getHero(state, partnerId);
+          log.push(`${subject.name} weds ${partner.name}.`);
+        }
+        break;
+      }
       case 'comeOfAge': {
         const grown = comeOfAge(state, outcome.dependantId);
         if (grown) log.push(`${grown.name} comes of age at the post.`);
         break;
       }
       case 'history': {
-        hero.history.push(outcome.text.replaceAll('{hero}', hero.name));
+        const partnerId = state.pendingEvents[0]?.vars?.partnerId;
+        const partnerName =
+          typeof partnerId === 'string' ? state.heroes.find((h) => h.id === partnerId)?.name : undefined;
+        hero.history.push(
+          outcome.text.replaceAll('{hero}', hero.name).replaceAll('{partner}', partnerName ?? 'them'),
+        );
         break;
       }
       case 'discover': {

@@ -56,7 +56,7 @@ export type FactionId = (typeof FACTION_IDS)[number];
 export const DIPLOMACY_PACTS = ['none', 'alliance', 'truce'] as const;
 export type DiplomacyPact = (typeof DIPLOMACY_PACTS)[number];
 
-export const DIPLOMACY_MISSION_TYPES = ['talks', 'gift', 'alliance', 'peace', 'tribute'] as const;
+export const DIPLOMACY_MISSION_TYPES = ['talks', 'gift', 'alliance', 'peace', 'tribute', 'ransom'] as const;
 export type DiplomacyMissionType = (typeof DIPLOMACY_MISSION_TYPES)[number];
 
 export const DIPLOMACY_TRIBUTE_MODES = ['offer', 'demand_end', 'demand_continue'] as const;
@@ -100,6 +100,13 @@ export function isNativeHeritage(h: Heritage): boolean {
   return h !== 'imanian';
 }
 
+/** Orcs and goblins don't hybridize with other peoples — any union involving
+ *  one always produces pure offspring of that people (`childAncestry`/
+ *  `childGender` in `family.ts` special-case this). */
+export function isMatrilinealPure(h: Heritage): boolean {
+  return h === 'orc' || h === 'goblin';
+}
+
 /** The per-people default tribe/region when a `subPeople` is unset (PEOPLES_SPEC.md §2). */
 export function defaultSubPeople(h: Heritage): string {
   switch (h) {
@@ -131,8 +138,11 @@ export function oppositeGender(g: Gender): Gender {
   return g === 'male' ? 'female' : 'male';
 }
 
-/** How a union was formed (FAMILY_SPEC.md §2.2). Set on the spouse record. */
-export type UnionSource = 'homeland' | 'alliance' | 'informal';
+/** How a union was formed (FAMILY_SPEC.md §2.2). Set on the spouse record.
+ *  'party' is two heroes already at the post marrying each other
+ *  (FAMILY_PHASE_D_SPEC.md §2) — no new Dependant is created for it, so it
+ *  never actually appears on a spouse *record*, only in `unionCultureNudge`. */
+export type UnionSource = 'homeland' | 'alliance' | 'informal' | 'party';
 
 /** A named person's descent (FAMILY_SPEC.md §3.3). One people = a pure line;
  *  two or more = mixed. Only dependants carry this; heroes stay single-heritage. */
@@ -357,8 +367,10 @@ export interface ExpeditionState {
 
 export type FactionStance = 'Hostile' | 'Wary' | 'Neutral' | 'Friendly' | 'Allied';
 
-/** Life state of a named character (NOT party membership — see `activePartyIds`). */
-export const HERO_STATUSES = ['active', 'dead', 'departed'] as const;
+/** Life state of a named character (NOT party membership — see `activePartyIds`).
+ *  `captive` is a 4th, orthogonal state (like `dead`/`departed`, not party
+ *  membership): a hero held by a captor faction, see `Hero.captivity`. */
+export const HERO_STATUSES = ['active', 'dead', 'departed', 'captive'] as const;
 export type HeroStatus = (typeof HERO_STATUSES)[number];
 
 /** Named, non-working family attached to a character (CHARACTERS_SPEC.md). */
@@ -451,6 +463,26 @@ export interface Hero {
    *  homeland blood under the roof; 'mixed' = any native partner/descendant.
    *  Absent = unwed. The lean marker the Company reads — not a floating meter. */
   bloodline?: Bloodline;
+  /**
+   * Other heroes this hero is married to (FAMILY_PHASE_D_SPEC.md §2.3) — the
+   * only place a hero-to-hero union is recorded; no Dependant is created for
+   * it, since neither party stops working or starts eating an extra ration.
+   * A hero's spouses who are *outsiders* still live entirely on `Dependant`
+   * (`spouseId` back-link), untouched by this field. Symmetric: forming the
+   * union pushes each hero's id into the other's `spouseIds`.
+   */
+  spouseIds?: string[];
+  /**
+   * Free-form personality flavor tags (FAMILY_PHASE_D_SPEC.md §2.2), e.g.
+   * 'warm', 'aloof', 'ambitious' — content-authored, like `subPeople`. The
+   * engine never branches on specific values; it exists so event content can
+   * write a hero-to-hero courtship that feels like it fits these two people.
+   */
+  temperament?: string[];
+  /** Set while `status === 'captive'`: who holds them and since when. Severity/
+   *  escalation is derived from `state.turn - capturedTurn` against
+   *  `TUNING.abduction`, not stored redundantly. Cleared on release/departure. */
+  captivity?: { faction: FactionId; capturedTurn: number; source?: 'raid' | 'expedition' };
   /** Auto-appended log of notable events for the Hero Sheet. */
   history: string[];
 }
@@ -642,8 +674,9 @@ export type RaidManeuver = (typeof RAID_MANEUVERS)[number];
 export const RAID_DEFEND_GOALS = ['driveoff', 'stand', 'sally', 'hold'] as const;
 export type RaidDefendGoal = (typeof RAID_DEFEND_GOALS)[number];
 
-/** Attacker battle goals (outgoing raids, Phase B). */
-export const RAID_ATTACK_GOALS = ['plunder', 'burn', 'bloody', 'cow'] as const;
+/** Attacker battle goals (outgoing raids, Phase B). `rescue` only dispatchable
+ *  against a faction currently holding one of our captives. */
+export const RAID_ATTACK_GOALS = ['plunder', 'burn', 'bloody', 'cow', 'rescue'] as const;
 export type RaidAttackGoal = (typeof RAID_ATTACK_GOALS)[number];
 
 export type RaidGoal = RaidDefendGoal | RaidAttackGoal;
@@ -827,6 +860,11 @@ export function partyHeritageShare(state: GameState, group: HeritageGroup): numb
 export function reserveHeroes(state: GameState): Hero[] {
   const active = new Set(state.activePartyIds);
   return livingHeroes(state).filter((h) => !active.has(h.id));
+}
+
+/** Named characters currently held captive by a faction. */
+export function captiveHeroes(state: GameState): Hero[] {
+  return state.heroes.filter((h) => h.status === 'captive');
 }
 
 /** Hero ids currently away on an expedition. */

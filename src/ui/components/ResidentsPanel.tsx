@@ -14,11 +14,11 @@ import {
   pastureCapacity,
   wildlandCapacity,
 } from '../../engine/claim';
+import { dependantHeritageBreakdown, dependantHeritageGroupCounts } from '../../engine/family';
 import {
   claimCapacity,
   contentmentBand,
   heritageCount,
-  nativeShare,
   residentTagCounts,
   residentTotal,
 } from '../../engine/residents';
@@ -80,10 +80,18 @@ export function PeopleOverviewColumn({ game }: { game: GameState }) {
   const cap = claimCapacity(game);
   const band = contentmentBand(game);
   const bandInfo = BAND_LABEL[band];
-  const homeland = heritageCount(game, 'homeland');
-  const native = heritageCount(game, 'native');
-  const nativePct = Math.round(nativeShare(game) * 100);
+  const dependantGroups = dependantHeritageGroupCounts(game);
+  // The Makeup row reads as "the makeup of the outpost" — named family counts
+  // toward it too, alongside the unnamed resident pool (Bartosz, 2026-07-24).
+  // Population/cap above stays resident-only; dependants are food-only and
+  // uncapped, a different axis (see claimCapacity/residentTotal).
+  const homeland = heritageCount(game, 'homeland') + dependantGroups.homeland;
+  const native = heritageCount(game, 'native') + dependantGroups.native;
+  const makeupTotal = homeland + native;
+  const nativePct = makeupTotal === 0 ? 0 : Math.round((native / makeupTotal) * 100);
   const tagCounts = residentTagCounts(game);
+  const dependants = dependantHeritageBreakdown(game);
+  const dependantCounts = Object.entries(dependants.counts).sort((a, b) => b[1] - a[1]);
 
   const grainPerTurn = total * TUNING.residents.grainPerResidentPerTurn;
   const wagePerSeason = total * TUNING.residents.seasonWagePerResident;
@@ -116,7 +124,7 @@ export function PeopleOverviewColumn({ game }: { game: GameState }) {
               {bandInfo.text} <span className="dim">({r.contentment}/10)</span>
             </span>
           </div>
-          <div className="faction-row">
+          <div className="faction-row" title="Residents and named family together.">
             <span className="dim">Makeup</span>
             <span className="dim">
               {homeland} Imanian · {native} native{' '}
@@ -124,12 +132,27 @@ export function PeopleOverviewColumn({ game }: { game: GameState }) {
             </span>
           </div>
           {tagCounts.length > 0 && (
-            <div className="faction-row" title="Specific origins within the makeup above.">
+            <div className="faction-row" title="Specific origins among the resident pool, within the makeup above.">
               <span className="dim" style={{ fontSize: '0.78rem' }}>
                 Origins
               </span>
               <span className="dim" style={{ fontSize: '0.78rem', textAlign: 'right' }}>
                 {tagCounts.map(([tag, count]) => `${formatTag(tag)} ${count}`).join(' · ')}
+              </span>
+            </div>
+          )}
+          {dependants.total > 0 && (
+            <div
+              className="faction-row"
+              title="Named family — wives and children of heroes. Fed, never worked; counted in the makeup above, not in Population."
+            >
+              <span className="dim" style={{ fontSize: '0.78rem' }}>
+                Dependants
+              </span>
+              <span className="dim" style={{ fontSize: '0.78rem', textAlign: 'right' }}>
+                {dependants.total} (
+                {dependantCounts.map(([label, count]) => `${formatTag(label)} ${count}`).join(' · ')}
+                )
               </span>
             </div>
           )}

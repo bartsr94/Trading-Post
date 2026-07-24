@@ -72,8 +72,13 @@ export function selectEvents(
     if (queued.fireOnTurn > state.turn || selected.length >= max) continue;
     const event = allEvents.get(queued.eventId);
     if (!event) continue;
+    // A captive hero is never "at post" but a pinned captivity-chain event
+    // still needs to reach them — check that case first, then fall back to
+    // the normal at-post lookup for every other pinned event.
     const hero = queued.heroId
-      ? heroesAtPost(state).find((h) => h.id === queued.heroId) ?? null
+      ? (state.heroes.find((h) => h.id === queued.heroId && h.status === 'captive') ??
+          heroesAtPost(state).find((h) => h.id === queued.heroId) ??
+          null)
       : bindHero(state, event, rng);
     if (!hero) continue;
     selected.push({

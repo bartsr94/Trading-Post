@@ -13,7 +13,7 @@ import { GOOD_NAMES } from '../../content/goods';
 import { LOCATION_NAMES } from '../../content/locations';
 import { RECRUITS } from '../../content/recruits';
 import { TRAIT_NAMES } from '../../content/traits';
-import { canWed, graphNode, isMarried, marriageableKin } from '../../engine/family';
+import { canWed, graphNode, isMarried, marriageableKin, spousesOf } from '../../engine/family';
 import {
   DISCOVERY_STATES,
   FACTION_IDS,
@@ -434,10 +434,18 @@ function FamilySection({ apply, game }: { apply: (o: Outcome[]) => void; game: G
   ];
   const children = game.dependants.filter((d) => d.kind === 'child' && !d.comeOfAge);
 
+  const heroMarriageCandidates = livingHeroes(game).filter((h) => canWed(game, h.id));
+
   const [subjectId, setSubjectId] = useState(marriageCandidates[0]?.id ?? '');
   const [source, setSource] = useState<UnionSource>('informal');
   const [heritage, setHeritage] = useState<Heritage>(HERITAGES[0]);
+  const [heroAId, setHeroAId] = useState(heroMarriageCandidates[0]?.id ?? '');
+  const [heroBId, setHeroBId] = useState(
+    heroMarriageCandidates[1]?.id ?? heroMarriageCandidates[0]?.id ?? '',
+  );
   const [birthSubjectId, setBirthSubjectId] = useState(birthCandidates[0]?.id ?? '');
+  const spouseCandidates = birthSubjectId ? spousesOf(game, birthSubjectId) : [];
+  const [otherParentId, setOtherParentId] = useState(spouseCandidates[0]?.id ?? '');
   const [childId, setChildId] = useState(children[0]?.id ?? '');
 
   return (
@@ -470,16 +478,58 @@ function FamilySection({ apply, game }: { apply: (o: Outcome[]) => void; game: G
       ) : (
         <p className="dim" style={{ fontSize: '0.78rem' }}>No one eligible to wed right now.</p>
       )}
-      {birthCandidates.length > 0 ? (
+      {heroMarriageCandidates.length > 1 ? (
         <div className="cc-row">
-          <select value={birthSubjectId} onChange={(e) => setBirthSubjectId(e.target.value)}>
-            {birthCandidates.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+          <select value={heroAId} onChange={(e) => setHeroAId(e.target.value)}>
+            {heroMarriageCandidates.map((h) => (
+              <option key={h.id} value={h.id}>{h.name}</option>
+            ))}
+          </select>
+          <select value={heroBId} onChange={(e) => setHeroBId(e.target.value)}>
+            {heroMarriageCandidates.map((h) => (
+              <option key={h.id} value={h.id}>{h.name}</option>
             ))}
           </select>
           <button
             className="small"
-            onClick={() => apply([{ type: 'addDependant', kind: 'child', parentId: birthSubjectId }])}
+            disabled={heroAId === heroBId}
+            title={heroAId === heroBId ? 'Pick two different heroes' : undefined}
+            onClick={() => apply([{ type: 'formHeroUnion', subjectId: heroAId, partnerId: heroBId }])}
+          >
+            Force Hero-Hero Marriage
+          </button>
+        </div>
+      ) : (
+        <p className="dim" style={{ fontSize: '0.78rem' }}>Need two eligible heroes to wed each other.</p>
+      )}
+      {birthCandidates.length > 0 ? (
+        <div className="cc-row">
+          <select
+            value={birthSubjectId}
+            onChange={(e) => {
+              const nextId = e.target.value;
+              setBirthSubjectId(nextId);
+              setOtherParentId(spousesOf(game, nextId)[0]?.id ?? '');
+            }}
+          >
+            {birthCandidates.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          {spouseCandidates.length > 1 && (
+            <select value={otherParentId} onChange={(e) => setOtherParentId(e.target.value)}>
+              {spouseCandidates.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          )}
+          <button
+            className="small"
+            onClick={() =>
+              apply([
+                { type: 'addDependant', kind: 'child', parentId: birthSubjectId, otherParentId },
+              ])
+            }
           >
             Force Birth
           </button>

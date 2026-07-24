@@ -91,6 +91,17 @@ many porters came to haul the loot home. Results can bring back silver and
 goods, force tribute, sour faction standing, wound or kill named heroes, burn
 buildings, or in the worst case help push a hollowed post toward destruction.
 
+A raid from the river towns or the wilds carries one more risk: a sacked post
+can have a man **taken captive** instead of hurt or killed. Most captivities
+resolve themselves — a quiet release within a turn or two, or word eventually
+reaching the post that he's been let go — but a captor slow to release him
+calls for the player to act: send an envoy to **ransom** him, or send an
+outbound raid with **rescue**, rather than plunder, as its goal. Wait too
+long — the better part of a year — and a recovery attempt can instead learn
+he's chosen to stay with the family he's since made among his captors. Rarely,
+a hero recovered after a long captivity is followed home by that family
+wanting to join the post outright.
+
 ## Whose post is it becoming
 
 Everyone at the post belongs to a **people** of the Ashmark — your Imanian countrymen from the homeland, or the native Kiswani and Hanjoda, each with their own tribes and river-towns — and the balance of them becomes the post's **cultural character**, a third settlement dial running from *Imanian* to *Sauromatian*. It's set by who you settle: every discovered neighbour, homeland or native, is a destination for an **Invite Settlers** run, and every native hire tilts the post toward the frontier while every homeland one holds it Imanian. Lean hard toward the frontier and the Ansberry Company starts to see a foothold gone native — *dangerously compromised* rather than *loyal countrymen bringing civilization*. (The teeth behind that judgment — standing pressure that reads your own party's makeup, and a charter that can be **revoked** outright — are the next layer; see the roadmap.)
@@ -137,6 +148,7 @@ src/
     family.ts      # the family graph: unions, children, ancestry, coming of age
     buildings.ts   # construction projects, building effects, tier advancement
     raids.ts       # incoming/outgoing raid battle math, tribute
+    captivity.ts   # abduction risk, capture, ransom/rescue resolution
     events/        # event selection, conditions, hero binding, outcomes
     rng.ts         # seeded PRNG (runs are reproducible)
     save.ts        # versioned JSON saves + migrations
@@ -164,7 +176,7 @@ The engine never hardcodes content: new events, heroes, traits, or locations are
 ## Roadmap
 
 - **MVP 1 — the loop works** *(complete)*: core turn loop, heroes, visible checks, event engine, post market, saves.
-- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅, with discovery-gated first contact ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅, with its transient outsiders & craftsfolk build-crews ✅; the active-party ↔ reserve character roster ✅ and recruitment chains ✅; buildings, construction & tier 1→2 advancement ✅; the peoples of the Ashmark & the post's cultural character — heritage, the culture axis, the Weri and the Knights of Saint Eirwen ✅; marriage, partners, children & the multi-generational family tree ✅; Orcs and Goblins as the Ashmark's first non-human peoples ✅; two-way raiding with tribute, destruction cascade, and encounter screens ✅; same-sitting chain events ✅; **the Concession** — uncapped population, land allocation, herds, and settlers/land won through travel expeditions rather than an instant hire menu ✅; still open — the rest of the buildings & post tiers 2→4, the Company's reaction to a compromised post (standing pressure, the charter-revoked ending, and its read of a household's bloodline), and event count to ~60 (~47 so far).
+- **MVP 2 — the world exists** *(current)*: map, caravans & exploration ✅, with discovery-gated first contact ✅; faction diplomacy & the Charter quota ✅; the unnamed resident population ✅, with its transient outsiders & craftsfolk build-crews ✅; the active-party ↔ reserve character roster ✅ and recruitment chains ✅; buildings, construction & tier 1→2 advancement ✅; the peoples of the Ashmark & the post's cultural character — heritage, the culture axis, the Weri and the Knights of Saint Eirwen ✅; marriage, partners, children & the multi-generational family tree ✅; Orcs and Goblins as the Ashmark's first non-human peoples ✅; two-way raiding with tribute, destruction cascade, and encounter screens ✅, including abduction/captivity with ransom and rescue ✅; same-sitting chain events ✅; **the Concession** — uncapped population, land allocation, herds, and settlers/land won through travel expeditions rather than an instant hire menu ✅; still open — the rest of the buildings & post tiers 2→4, the Company's reaction to a compromised post (standing pressure, the charter-revoked ending, and its read of a household's bloodline), and event count to ~60 (~47 so far).
 - **MVP 3 — it's a game**: balance pass, seasonal content, endgame variants, art, audio, onboarding.
 
 Hero names, cultures, faction identities, and location names are grounded in the Ashmark region of Palusteria; a handful of minor wilderness-node names and one trait name are still open.

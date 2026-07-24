@@ -410,4 +410,11 @@ describe('text interpolation', () => {
     );
     expect(interpolate('the {faction} watch', { heroName: 'Sela' })).toBe('the this people watch');
   });
+
+  it('replaces {partner}, falling back when absent', () => {
+    expect(interpolate('Ask {partner}.', { heroName: 'Sela', partnerName: 'Berrin' })).toBe(
+      'Ask Berrin.',
+    );
+    expect(interpolate('Ask {partner}.', { heroName: 'Sela' })).toBe('Ask them.');
+  });
 });

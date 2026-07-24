@@ -91,7 +91,19 @@ function PersonTile({ node }: { node: FamilyNode }) {
 }
 
 /** One person, their spouse(s), and the branch beneath them. Recurses into any
- *  grown child who has married and had children of their own. */
+ *  grown child who has married and had children of their own.
+ *
+ *  `seen` is read-only here — it must never be mutated in place. React 19's
+ *  StrictMode (see main.tsx) double-invokes a component's render function in
+ *  development specifically to catch exactly this kind of impurity: mutating
+ *  a shared object referenced by props means the second invocation sees the
+ *  first invocation's mutations already applied (e.g. `seen.has(id)` already
+ *  true), silently returning `null` instead of the real tree — this
+ *  previously left the whole Family Tree modal blank in dev, for every
+ *  household, not just a hero-to-hero one; only StrictMode's double-render
+ *  ever exposed it, so it went unnoticed until an e2e test finally asserted
+ *  on the modal's actual content. Each call instead builds its own extended
+ *  copy to pass to any recursive children, leaving the caller's set intact. */
 function Branch({
   game,
   id,
@@ -99,15 +111,16 @@ function Branch({
 }: {
   game: GameState;
   id: string;
-  seen: Set<string>;
+  seen: ReadonlySet<string>;
 }) {
   if (seen.has(id)) return null;
-  seen.add(id);
   const node = graphNode(game, id);
   if (!node) return null;
 
   const spouses = spousesOf(game, id).filter((s) => !seen.has(s.id));
-  spouses.forEach((s) => seen.add(s.id));
+  const nextSeen = new Set(seen);
+  nextSeen.add(id);
+  for (const s of spouses) nextSeen.add(s.id);
 
   // Children of this person (and its spouses), deduped by id.
   const kids = new Map<string, FamilyNode>();
@@ -136,7 +149,7 @@ function Branch({
               child.comeOfAge === true &&
               spousesOf(game, child.id).length > 0;
             return grownMarried ? (
-              <Branch key={child.id} game={game} id={child.id} seen={seen} />
+              <Branch key={child.id} game={game} id={child.id} seen={nextSeen} />
             ) : (
               <PersonTile key={child.id} node={child} />
             );

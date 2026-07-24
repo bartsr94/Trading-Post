@@ -37,10 +37,13 @@ export function EventPanel({ game }: { game: GameState }) {
   const hero = getHero(game, active.heroId);
   const travel = travelContextOf(game, active);
   const contactSeat = !travel && active.locationId ? LOCATION_DEFS.get(active.locationId) : undefined;
+  const partnerId = active.vars?.partnerId;
+  const partner = typeof partnerId === 'string' ? game.heroes.find((h) => h.id === partnerId) : undefined;
   const ctx = {
     heroName: hero.name,
     destinationName: travel?.destination.name ?? contactSeat?.name,
     factionName: contactSeat?.faction ? FACTION_DEFS.get(contactSeat.faction)?.name : undefined,
+    partnerName: partner?.name,
   };
   const showResult = resolution !== null && (resolution.check === null || diceSettled);
 

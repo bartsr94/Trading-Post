@@ -89,7 +89,7 @@ describe('Beastfolk unions — reuses formUnion/Ancestry/bloodline as-is', () =>
     expect(getHero(s, 'p1').bloodline).toBe('mixed');
   });
 
-  it('a mixed human×orc child descends from both peoples (childAncestry generalizes for free)', () => {
+  it('a human×orc child is always female and pure orc — orcs never hybridize', () => {
     const s = testState(); // p1 is Imanian
     formUnion(s, 'p1', { source: 'alliance', heritage: 'orc', name: 'Agra' });
     const rng = new Rng(3);
@@ -98,8 +98,44 @@ describe('Beastfolk unions — reuses formUnion/Ancestry/bloodline as-is', () =>
       rand: () => rng.next(),
     });
     expect(child).not.toBeNull();
-    expect(new Set(nodePeoples(child!))).toEqual(new Set(['imanian', 'orc']));
-    expect(isMixed(child!)).toBe(true);
+    expect(nodePeoples(child!)).toEqual(['orc']);
+    expect(isMixed(child!)).toBe(false);
+    expect(child!.gender).toBe('female');
+  });
+
+  it('a human×goblin child is always female and pure goblin, even across many rolls', () => {
+    const s = testState();
+    formUnion(s, 'p1', { source: 'alliance', heritage: 'goblin', name: 'Nettla' });
+    const rng = new Rng(11);
+    for (let i = 0; i < 20; i++) {
+      const child = addChild(s, 'p1', {
+        nameFor: (g, h) => TEST_CONTENT.dependantName(h, g, s.nextDependantId),
+        rand: () => rng.next(),
+      });
+      expect(child).not.toBeNull();
+      expect(nodePeoples(child!)).toEqual(['goblin']);
+      expect(child!.gender).toBe('female');
+    }
+  });
+});
+
+describe('the beastfolk match events require a male hero', () => {
+  it('an unmarried female hero is not eligible for either match event', () => {
+    const s = testState();
+    s.locations.beast_wilds.discovery = 'visited';
+    s.factions.BEASTFOLK.standing = 50;
+    for (const hero of s.heroes) hero.gender = 'female';
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(false);
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(false);
+  });
+
+  it('an unmarried male hero is still eligible', () => {
+    const s = testState();
+    s.locations.beast_wilds.discovery = 'visited';
+    s.factions.BEASTFOLK.standing = 50;
+    getHero(s, 'p1').gender = 'male';
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(true);
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(true);
   });
 });
 
@@ -114,7 +150,7 @@ describe('save migration v9 -> v10', () => {
     preV10.factions = factions as GameState['factions'];
 
     const migrated = migrate(preV10);
-    expect(migrated.saveVersion).toBe(21); // migrate() chains all the way to current
+    expect(migrated.saveVersion).toBe(23); // migrate() chains all the way to current
     expect(migrated.factions.BEASTFOLK).toBeDefined();
     expect(migrated.factions.BEASTFOLK.standing).toBe(-60);
   });

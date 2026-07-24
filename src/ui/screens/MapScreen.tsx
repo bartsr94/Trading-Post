@@ -19,6 +19,7 @@ import {
   regionAt,
   rumorArea,
 } from '../../engine/map';
+import { hasCaptiveHeldBy } from '../../engine/captivity';
 import { canCallRaidAlly, raidTargetFaction } from '../../engine/raids';
 import { residentsAvailable } from '../../engine/residents';
 import { discoveryAtLeast, heroesAtPost, stanceOf } from '../../engine/types';
@@ -150,6 +151,7 @@ export function MapScreen({ game }: { game: GameState }) {
   const activeRegion = activeTarget ? regionAt(activeTarget, MAP_REGIONS) : undefined;
   const oneWay = activeTarget ? journeyTurns(home.mapPoint, activeTarget, pace) : null;
   const raidFaction = selected ? raidTargetFaction(selected) : null;
+  const canRescue = raidFaction ? hasCaptiveHeldBy(game, raidFaction) : false;
   const allyOptions = [...FACTION_DEFS.values()].filter((faction) =>
     canCallRaidAlly(game, faction.id, raidFaction),
   );
@@ -714,6 +716,7 @@ export function MapScreen({ game }: { game: GameState }) {
                         <option value="burn">Burn</option>
                         <option value="bloody">Bloody them</option>
                         <option value="cow">Cow them</option>
+                        {canRescue && <option value="rescue">Rescue</option>}
                       </select>
                     </label>
                     <label className="compact-field">

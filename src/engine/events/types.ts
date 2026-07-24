@@ -74,6 +74,10 @@ export type Condition =
   | { type: 'rosterBelow'; scope: 'active' | 'reserve' | 'living'; value: number }
   | { type: 'heroHasSpouse'; heroId?: string }
   | { type: 'heroUnmarried'; heroId?: string }
+  | { type: 'heroGender'; gender: Gender; heroId?: string }
+  /** True when at least one other active, present hero could marry the bound
+   *  hero right now (FAMILY_PHASE_D_SPEC.md §2.4). */
+  | { type: 'partnerAvailable'; heroId?: string }
   | { type: 'residentsAtLeast'; role?: ResidentRole; value: number }
   | { type: 'residentsBelow'; role?: ResidentRole; value: number }
   | { type: 'contentmentAtLeast'; value: number }
@@ -181,6 +185,8 @@ export type Outcome =
       goods?: Partial<Record<GoodId, number>>;
     }
   | { type: 'heroDeparts' }
+  /** Clears captivity and returns a hero to 'active'; defaults to the bound hero. */
+  | { type: 'freeCaptive'; heroId?: string }
   /** Recruit a named character from a template (CHARACTERS_SPEC.md §6). */
   | { type: 'recruitCharacter'; templateId: string; toActive?: boolean }
   /** A named character leaves the frontier; defaults to the bound hero. */
@@ -200,6 +206,19 @@ export type Outcome =
   /** Form a union for a subject (defaults to the bound hero): spouse + bloodline
    *  + culture nudge (FAMILY_SPEC.md §9). */
   | { type: 'formUnion'; subjectId?: string; source: UnionSource; heritage?: Heritage }
+  /** Randomly picks another eligible active hero (`eligiblePartners`) to marry
+   *  the bound hero and stashes their id as a chain var (default key
+   *  'partnerId') for a later stage to read — e.g. via `{partner}` in text or
+   *  the `formHeroUnion` outcome (FAMILY_PHASE_D_SPEC.md §2.4). No-ops if no
+   *  one qualifies. */
+  | { type: 'pickPartner'; key?: string }
+  /** Marries a hero (defaults to the bound hero) to another hero already at
+   *  the post (FAMILY_PHASE_D_SPEC.md §2.3) — no Dependant is created.
+   *  `partnerId` defaults to the chain var `pickPartner` set (key
+   *  'partnerId'). `subjectId` override mirrors `formUnion`'s, mainly for
+   *  callers (the cheat console) that want to name both sides explicitly
+   *  rather than relying on whichever hero is bound/acting. */
+  | { type: 'formHeroUnion'; subjectId?: string; partnerId?: string }
   /** A child comes of age (FAMILY_SPEC.md §7) and remains named grown kin. */
   | { type: 'comeOfAge'; dependantId: string }
   | { type: 'history'; text: string }

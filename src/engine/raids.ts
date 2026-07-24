@@ -7,6 +7,7 @@
 import { TUNING } from '../content/tuning';
 import { bestGoverningStat, checkBreakdown, isSuccess, resolveCheck } from './checks';
 import { buildingEffect } from './buildings';
+import { captureHero, isAbductionRiskyFaction, maybeQueueKinArrival } from './captivity';
 import {
   applyDiplomacyShiftById,
   diplomacySeatStateById,
@@ -78,7 +79,15 @@ export interface RaidAttackParams {
 
 export interface RaidResolution {
   direction: 'incoming' | 'outgoing';
-  outcome: 'repelled' | 'held' | 'sacked' | 'drivenOff' | 'plundered' | 'bloodied' | 'cowed';
+  outcome:
+    | 'repelled'
+    | 'held'
+    | 'sacked'
+    | 'drivenOff'
+    | 'plundered'
+    | 'bloodied'
+    | 'cowed'
+    | 'rescued';
   log: string[];
   /** True when this raid triggered the `destroyed` cascade game-over. */
   gameOver: boolean;
@@ -645,7 +654,13 @@ export function resolveOutgoingRaid(
   const goodsLine = lootSummary(goodsLoot, ctx.goodNames);
 
   let outcome: RaidResolution['outcome'] =
-    goalId === 'cow' ? 'cowed' : goalId === 'bloody' ? 'bloodied' : 'plundered';
+    goalId === 'cow'
+      ? 'cowed'
+      : goalId === 'bloody'
+        ? 'bloodied'
+        : goalId === 'rescue'
+          ? 'rescued'
+          : 'plundered';
   if (goalId === 'cow') {
     setTribute(state, {
       faction: targetFaction,
@@ -656,6 +671,22 @@ export function resolveOutgoingRaid(
     log.push(`The people of ${raid.targetName} yield and agree to send ${goal.tributeSilver} silver each season.`);
   } else if (goalId === 'burn') {
     log.push(`Fires are left behind in ${raid.targetName}.`);
+  } else if (goalId === 'rescue') {
+    const freed = state.heroes.filter(
+      (h) => h.status === 'captive' && h.captivity?.faction === targetFaction,
+    );
+    for (const h of freed) {
+      const capturedTurn = h.captivity?.capturedTurn ?? state.turn;
+      h.status = 'active';
+      delete h.captivity;
+      h.history.push(`Rescued from ${raid.targetName} in turn ${state.turn}.`);
+      maybeQueueKinArrival(state, h, targetFaction, capturedTurn, rng);
+    }
+    if (freed.length > 0) {
+      log.push(
+        `${freed.map((h) => h.name).join(', ')} ${freed.length === 1 ? 'is' : 'are'} freed from ${raid.targetName}.`,
+      );
+    }
   }
 
   const haul = [
@@ -800,6 +831,14 @@ export function resolveIncomingRaid(
     const extra = loseResidents(state, undefined, Math.max(1, Math.round(deficit * 0.2)));
     if (extra > 0) log.push(`${extra} of the post's people are lost in the sack.`);
     for (const hero of heroesAtPost(state)) {
+      if (
+        hero.gender === 'male' &&
+        isAbductionRiskyFaction(raid.faction) &&
+        rng.next() < TUNING.abduction.incomingCaptureChance
+      ) {
+        log.push(captureHero(state, hero, raid.faction, 'raid', rng));
+        continue;
+      }
       if (rng.next() < r.heroWoundChance) {
         hero.health = clamp(hero.health - r.heroWoundHealth, 0, TUNING.condition.maxHealth);
         hero.stress = clamp(hero.stress + r.heroWoundStress, 0, TUNING.condition.maxStress);
