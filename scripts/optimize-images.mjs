@@ -13,9 +13,9 @@ const ROOT = path.join(import.meta.dirname, '..');
 const PORTRAITS_DIR = path.join(ROOT, 'src/assets/portraits');
 const MAP_FILE = path.join(ROOT, 'src/assets/ui/ashmark_map.jpg');
 
-// Largest portrait box in the UI is .hero-sheet-portrait at 125x156 (styles.css).
+// Largest portrait box in the UI is .hero-sheet-portrait at 164x205 (styles.css).
 // 2x that for retina headroom, then let object-fit: cover crop to the box.
-const PORTRAIT_HEIGHT = 320;
+const PORTRAIT_HEIGHT = 410;
 const PORTRAIT_QUALITY = 82;
 
 // The map SVG <image> is stretched to a fixed 1000x750 viewBox with

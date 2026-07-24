@@ -54,9 +54,11 @@ import {
 import {
   awayHeroIds,
   clamp,
+  clampStanding,
   discoveryAtLeast,
   getHero,
   heritageGroup,
+  isActiveHeroId,
   oppositeGender,
   RESIDENT_ROLES,
   stanceOf,
@@ -64,6 +66,7 @@ import {
 import type {
   DiplomacyMissionType,
   DiplomacyTributeMode,
+  DiscoveryState,
   ExpeditionKind,
   ExpeditionPace,
   ExpeditionState,
@@ -201,6 +204,167 @@ function expeditionTarget(
   return { def, point: def?.mapPoint ?? params.target };
 }
 
+/** One expedition kind's destination-specific dispatch validation. Shared
+ *  target/route/party/escort/cargo checks live in `dispatchError` itself;
+ *  each of these only covers what's particular to that kind. */
+type DispatchKindError = (
+  state: GameState,
+  params: DispatchParams,
+  def: LocationDef | undefined,
+  discovery: DiscoveryState,
+  heroIds: string[],
+) => string | null;
+
+function dispatchErrorExplore(
+  _state: GameState,
+  _params: DispatchParams,
+  def: LocationDef | undefined,
+  discovery: DiscoveryState,
+): string | null {
+  if (def && def.id !== TUNING.map.homeLocationId && !discoveryAtLeast(discovery, 'rumored')) {
+    return 'You have heard of no such place.';
+  }
+  return null;
+}
+
+function dispatchErrorDiplomacy(
+  _state: GameState,
+  params: DispatchParams,
+  def: LocationDef | undefined,
+  discovery: DiscoveryState,
+): string | null {
+  if (!def) return 'Choose a known destination.';
+  if (!def.faction) return 'There is no one there to treat with.';
+  if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way there yet.';
+  const mission = params.diplomacyMission?.type ?? 'talks';
+  const giftValue = cargoUnits(params.cargo ?? {}) + (params.silver ?? 0);
+  if ((mission === 'gift' || mission === 'peace') && giftValue <= 0) {
+    return mission === 'gift'
+      ? 'Bring silver or goods worth presenting.'
+      : 'Peace talks need terms to offer.';
+  }
+  if (mission === 'tribute') {
+    return 'Tribute negotiations are not ready yet.';
+  }
+  return null;
+}
+
+function dispatchErrorInvite(
+  state: GameState,
+  params: DispatchParams,
+  def: LocationDef | undefined,
+  discovery: DiscoveryState,
+): string | null {
+  if (!def) return 'Choose a known destination.';
+  if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to their people yet.';
+  const source = params.inviteSource;
+  const src = source ? TUNING.heritage.hireSources[source] : undefined;
+  if (!src) return 'Choose a people to invite.';
+  if (src.seat !== def.id) return 'That is not where their people are.';
+  if (stanceOf(state.factions[src.faction].standing) === 'Hostile') {
+    return 'They will not answer an invitation from you.';
+  }
+  const offer = params.inviteOffer ?? 'generous';
+  const count = params.inviteCount ?? 0;
+  if (!Number.isFinite(count) || !Number.isInteger(count) || count < 1) {
+    return 'Invite at least one household.';
+  }
+  if (state.silver < inviteRunCost(count, offer)) return 'Not enough silver for the invitation.';
+  return null;
+}
+
+function dispatchErrorConcession(
+  state: GameState,
+  params: DispatchParams,
+  def: LocationDef | undefined,
+  discovery: DiscoveryState,
+): string | null {
+  if (!def) return 'Choose a known destination.';
+  if (!def.faction) return 'There is no one there to grant you land.';
+  if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to their people yet.';
+  if (stanceOf(state.factions[def.faction].standing) === 'Hostile') {
+    return 'They will cede you no land while hostile.';
+  }
+  const ask = params.concessionAsk ?? 0;
+  if (!Number.isFinite(ask) || !Number.isInteger(ask) || ask < 1) {
+    return 'Ask for at least one chain of land.';
+  }
+  if (ask > TUNING.claim.negotiateLand.maxAsk) {
+    return `They will not consider more than ${TUNING.claim.negotiateLand.maxAsk} chains at once.`;
+  }
+  if (state.silver < negotiateLandSilverCost(ask)) return 'Not enough silver for the land-price.';
+  for (const [good, qty] of Object.entries(negotiateLandGoodsCost(ask)) as [GoodId, number][]) {
+    if ((state.goods[good] ?? 0) < qty) return `Not enough ${good} for the land-gift.`;
+  }
+  return null;
+}
+
+function dispatchErrorCourtship(
+  state: GameState,
+  params: DispatchParams,
+  def: LocationDef | undefined,
+  discovery: DiscoveryState,
+  heroIds: string[],
+): string | null {
+  if (!def) return 'Choose a known destination.';
+  if (def.faction !== 'CHARTER_COMPANY') {
+    return 'Homeland matches are arranged only through the Company landing.';
+  }
+  if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to the garrison yet.';
+  const subjectId = params.courtshipFor ?? heroIds[0];
+  const err = unionError(state, subjectId);
+  if (err) return err;
+  if (state.silver < TUNING.family.homelandBridePrice) return 'Not enough silver for the bride-price.';
+  return null;
+}
+
+function dispatchErrorRaid(
+  state: GameState,
+  params: DispatchParams,
+  def: LocationDef | undefined,
+  discovery: DiscoveryState,
+): string | null {
+  if (!def) return 'Choose a known destination.';
+  if (!discoveryAtLeast(discovery, 'rumored')) return 'You have no lead worth raiding yet.';
+  const targetFaction = raidTargetFaction(def);
+  if (!targetFaction) return 'There is no camp or rival there worth raiding.';
+  if (params.silver && params.silver > 0) return 'A raid does not march out carrying silver.';
+  if (cargoUnits(params.cargo ?? {}) > 0) {
+    return 'A raid leaves with empty packs and hopes to fill them later.';
+  }
+  if (Object.values(params.buyOrders ?? {}).some((qty) => (qty ?? 0) > 0)) {
+    return 'A raid cannot leave standing buy orders behind it.';
+  }
+  if (params.raidAlly && !canCallRaidAlly(state, params.raidAlly, targetFaction)) {
+    return 'That ally will not ride on this raid.';
+  }
+  return null;
+}
+
+function dispatchErrorCaravan(
+  _state: GameState,
+  _params: DispatchParams,
+  def: LocationDef | undefined,
+  discovery: DiscoveryState,
+): string | null {
+  if (!def) return 'Choose a known destination.';
+  if (!def.hasMarket) return 'There is no market there.';
+  if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to that market yet.';
+  return null;
+}
+
+// 'caravan' doubles as the default branch for any kind without its own entry
+// (matches the original if/else-if chain's trailing `else`).
+const DISPATCH_KIND_ERRORS: Partial<Record<ExpeditionKind, DispatchKindError>> = {
+  explore: dispatchErrorExplore,
+  diplomacy: dispatchErrorDiplomacy,
+  invite: dispatchErrorInvite,
+  concession: dispatchErrorConcession,
+  courtship: dispatchErrorCourtship,
+  raid: dispatchErrorRaid,
+  caravan: dispatchErrorCaravan,
+};
+
 /** Why this dispatch is invalid, or null when it may proceed. */
 export function dispatchError(
   state: GameState,
@@ -244,84 +408,9 @@ export function dispatchError(
     if (away.has(heroId)) return `${hero.name} is already away.`;
   }
 
-  if (params.kind === 'explore') {
-    if (def && def.id !== TUNING.map.homeLocationId && !discoveryAtLeast(discovery, 'rumored')) {
-      return 'You have heard of no such place.';
-    }
-  } else if (params.kind === 'diplomacy') {
-    if (!def) return 'Choose a known destination.';
-    if (!def.faction) return 'There is no one there to treat with.';
-    if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way there yet.';
-    const mission = params.diplomacyMission?.type ?? 'talks';
-    const giftValue = cargoUnits(params.cargo ?? {}) + (params.silver ?? 0);
-    if ((mission === 'gift' || mission === 'peace') && giftValue <= 0) {
-      return mission === 'gift'
-        ? 'Bring silver or goods worth presenting.'
-        : 'Peace talks need terms to offer.';
-    }
-    if (mission === 'tribute') {
-      return 'Tribute negotiations are not ready yet.';
-    }
-  } else if (params.kind === 'invite') {
-    if (!def) return 'Choose a known destination.';
-    if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to their people yet.';
-    const source = params.inviteSource;
-    const src = source ? TUNING.heritage.hireSources[source] : undefined;
-    if (!src) return 'Choose a people to invite.';
-    if (src.seat !== def.id) return 'That is not where their people are.';
-    if (stanceOf(state.factions[src.faction].standing) === 'Hostile') {
-      return 'They will not answer an invitation from you.';
-    }
-    const offer = params.inviteOffer ?? 'generous';
-    const count = params.inviteCount ?? 0;
-    if (!Number.isFinite(count) || !Number.isInteger(count) || count < 1) {
-      return 'Invite at least one household.';
-    }
-    if (state.silver < inviteRunCost(count, offer)) return 'Not enough silver for the invitation.';
-  } else if (params.kind === 'concession') {
-    if (!def) return 'Choose a known destination.';
-    if (!def.faction) return 'There is no one there to grant you land.';
-    if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to their people yet.';
-    if (stanceOf(state.factions[def.faction].standing) === 'Hostile') {
-      return 'They will cede you no land while hostile.';
-    }
-    const ask = params.concessionAsk ?? 0;
-    if (!Number.isFinite(ask) || !Number.isInteger(ask) || ask < 1) {
-      return 'Ask for at least one chain of land.';
-    }
-    if (ask > TUNING.claim.negotiateLand.maxAsk) {
-      return `They will not consider more than ${TUNING.claim.negotiateLand.maxAsk} chains at once.`;
-    }
-    if (state.silver < negotiateLandSilverCost(ask)) return 'Not enough silver for the land-price.';
-    for (const [good, qty] of Object.entries(negotiateLandGoodsCost(ask)) as [GoodId, number][]) {
-      if ((state.goods[good] ?? 0) < qty) return `Not enough ${good} for the land-gift.`;
-    }
-  } else if (params.kind === 'courtship') {
-    if (!def) return 'Choose a known destination.';
-    if (def.faction !== 'CHARTER_COMPANY') return 'Homeland matches are arranged only through the Company landing.';
-    if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to the garrison yet.';
-    const subjectId = params.courtshipFor ?? heroIds[0];
-    const err = unionError(state, subjectId);
-    if (err) return err;
-    if (state.silver < TUNING.family.homelandBridePrice) return 'Not enough silver for the bride-price.';
-  } else if (params.kind === 'raid') {
-    if (!def) return 'Choose a known destination.';
-    if (!discoveryAtLeast(discovery, 'rumored')) return 'You have no lead worth raiding yet.';
-    const targetFaction = raidTargetFaction(def);
-    if (!targetFaction) return 'There is no camp or rival there worth raiding.';
-    if (params.silver && params.silver > 0) return 'A raid does not march out carrying silver.';
-    if (cargoUnits(params.cargo ?? {}) > 0) return 'A raid leaves with empty packs and hopes to fill them later.';
-    if (Object.values(params.buyOrders ?? {}).some((qty) => (qty ?? 0) > 0)) {
-      return 'A raid cannot leave standing buy orders behind it.';
-    }
-    if (params.raidAlly && !canCallRaidAlly(state, params.raidAlly, targetFaction)) {
-      return 'That ally will not ride on this raid.';
-    }
-  } else {
-    if (!def) return 'Choose a known destination.';
-    if (!def.hasMarket) return 'There is no market there.';
-    if (!discoveryAtLeast(discovery, 'visited')) return 'No one knows the way to that market yet.';
-  }
+  const kindError = DISPATCH_KIND_ERRORS[params.kind] ?? dispatchErrorCaravan;
+  const kindErrorMsg = kindError(state, params, def, discovery, heroIds);
+  if (kindErrorMsg) return kindErrorMsg;
 
   const escort = params.residents ?? {};
   for (const role of Object.keys(escort)) {
@@ -400,7 +489,7 @@ export function dispatchExpedition(
   }
   if (params.kind === 'raid' && params.raidAlly) {
     const ally = state.factions[params.raidAlly];
-    ally.standing = clamp(ally.standing - TUNING.raid.allyStandingCost, -100, 100);
+    ally.standing = clampStanding(ally.standing - TUNING.raid.allyStandingCost);
   }
 
   // Second residents onto the party: they leave the post pool until homecoming.
@@ -481,10 +570,7 @@ export function advanceExpeditions(
       def?.name ?? regionAt(target, ctx.mapRegionDefs ?? [])?.name ?? 'the frontier';
 
     // A party with no one left standing never comes home.
-    exp.heroIds = exp.heroIds.filter((id) => {
-      const hero = state.heroes.find((h) => h.id === id);
-      return hero !== undefined && hero.status === 'active';
-    });
+    exp.heroIds = exp.heroIds.filter((id) => isActiveHeroId(state, id));
     if (exp.heroIds.length === 0) {
       report('🕯️', `No one returns from ${destinationName}. The cargo is lost with them.`);
       loseResidentEscort(state, exp.residentEscort);
@@ -614,7 +700,7 @@ function resolveCaravanArrival(
 
   if (def.faction && isSuccess(check.tier)) {
     const faction = state.factions[def.faction];
-    faction.standing = clamp(faction.standing + TUNING.map.caravanStandingGain, -100, 100);
+    faction.standing = clampStanding(faction.standing + TUNING.map.caravanStandingGain);
   }
 
   const deals: string[] = [];
@@ -708,66 +794,10 @@ function resolveExploreArrival(
   );
 }
 
+/** An envoy reaches a faction seat: resolves the chosen mission (talks/gift/
+ *  alliance/peace) against that seat's standing, applying the diplomacy check
+ *  result to standing/grievances and, on success, an escort transient. */
 function resolveDiplomacyArrival(
-  state: GameState,
-  ctx: ExpeditionContext,
-  exp: ExpeditionState,
-  def: LocationDef,
-  rng: Rng,
-  report: (icon: string, text: string) => void,
-): void {
-  return resolveDiplomacyMissionArrival(state, ctx, exp, def, rng, report);
-  const dip = TUNING.diplomacy;
-  const hero = leadHero(state, exp, 'diplomacy');
-  const legacyFactionTags: string[] = [];
-  if (def.faction) legacyFactionTags.push(def.faction as FactionId);
-  const tags = ['diplomacy', ...def.tags, ...legacyFactionTags];
-  const mods = [
-    ...traitModifiers(hero, ctx.traitDefs, 'diplomacy', tags),
-    ...escortMods(exp),
-    ...paceMods(exp),
-  ];
-  const stat = bestGoverningStat(hero, 'diplomacy');
-  const check = resolveCheck(rng, hero, 'diplomacy', stat, dip.expeditionCheckDifficulty, mods);
-  if (isSuccess(check.tier)) markSkill(hero, 'diplomacy');
-
-  let delta = 0;
-  if (check.tier === 'critSuccess') delta = dip.expeditionStandingGainCrit;
-  else if (check.tier === 'success') delta = dip.expeditionStandingGainSuccess;
-  else if (check.tier === 'failure') delta = -dip.expeditionStandingLossFailure;
-  else delta = -dip.expeditionStandingLossCritFailure;
-
-  const legacyFactionId = def.faction;
-  if (legacyFactionId) {
-    const faction = state.factions[legacyFactionId as FactionId];
-    faction.standing = clamp(faction.standing + delta, -100, 100);
-  }
-
-  let escortLine = '';
-  if (isSuccess(check.tier)) {
-    // A pleased faction sends an honour-guard back with the envoy for a time.
-    const tr = TUNING.residents.transients;
-    addTransientGroup(state, 'visitorGuards', tr.visitorGuardCount, tr.visitorGuardTurns);
-    escortLine = ` A ${def.name} honour-guard rides back with the party.`;
-  } else {
-    const stressGain =
-      check.tier === 'critFailure' ? dip.expeditionCritFailureStress : dip.expeditionFailureStress;
-    for (const id of exp.heroIds) {
-      const h = getHero(state, id);
-      h.stress = clamp(h.stress + stressGain, 0, TUNING.condition.maxStress);
-    }
-  }
-
-  report(
-    '🤝',
-    `${hero.name} treats with ${def.name}: ${checkBreakdown(check)}. ` +
-      `Standing ${delta >= 0 ? '+' : ''}${delta}.${escortLine}`,
-  );
-}
-
-/** A labor run reaches Thornwatch: the Company notes your investment in homeland
- *  hands (HERITAGE_SPEC.md §5.2). The hands themselves are added on homecoming. */
-function resolveDiplomacyMissionArrival(
   state: GameState,
   ctx: ExpeditionContext,
   exp: ExpeditionState,
@@ -904,7 +934,7 @@ function resolveDiplomacyMissionArrival(
           ? 'seeks peace with'
           : 'treats with';
   report(
-    'ðŸ¤',
+    '🤝',
     `${hero.name} ${verb} ${def.name}: ${checkBreakdown(check)}. ` +
       `Standing ${delta >= 0 ? '+' : ''}${delta}.${missionLine}${pactLine}${escortLine}`,
   );
@@ -965,7 +995,7 @@ function resolveInviteArrival(
 
   if (isSuccess(check.tier) && src) {
     const faction = state.factions[src.faction];
-    faction.standing = clamp(faction.standing + inv.arrivalStandingGain, -100, 100);
+    faction.standing = clampStanding(faction.standing + inv.arrivalStandingGain);
   }
 
   report(
@@ -1032,7 +1062,7 @@ function resolveCourtshipArrival(
 ): void {
   if (def.faction) {
     const faction = state.factions[def.faction];
-    faction.standing = clamp(faction.standing + TUNING.family.homelandMatchStanding, -100, 100);
+    faction.standing = clampStanding(faction.standing + TUNING.family.homelandMatchStanding);
   }
   report(
     '💍',

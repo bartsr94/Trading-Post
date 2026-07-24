@@ -192,10 +192,6 @@ export const TUNING = {
     grievanceOnCritFailure: 2,
     /** When grievances reach this, UI begins warning that slights are remembered. */
     grievanceWarningThreshold: 3,
-    /** Alliances make a community more willing to send local hands. */
-    allianceHiringBonus: 10,
-    /** Old grudges erode practical trust even after standing recovers. */
-    grievanceHiringPenaltyPerPoint: 3,
     /** Each remembered slight adds weight to that community's raid appetite. */
     raidThreatPerGrievance: 4,
     /** Truces and alliances sharply suppress a community's local raid threat. */
@@ -532,8 +528,6 @@ export const TUNING = {
 
     /** Culture nudge per settler who arrives (Frontier for native, Homeland for imanian). */
     hireAxisNudge: 0.4,
-    /** Source-faction standing bump when an Invite Settlers run succeeds. */
-    homelandArrivalStanding: 1,
 
     // Axis drift (season end)
     /** Max culture step toward the tally-implied target each season. */

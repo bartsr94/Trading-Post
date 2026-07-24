@@ -1,5 +1,5 @@
 import { TUNING } from '../content/tuning';
-import { clamp, stanceOf } from './types';
+import { clampStanding, stanceOf } from './types';
 import type {
   DiplomacySeatState,
   DiscoveryState,
@@ -83,7 +83,9 @@ export function ensureDiplomacySeat(
   return created;
 }
 
-export function diplomacySeatState(
+/** Read-only: synthesizes a default seat state when none is persisted yet
+ *  (unlike `ensureDiplomacySeat`, this never writes it to `state.diplomacySeats`). */
+export function diplomacySeatStateOrDefault(
   state: GameState,
   def: Pick<LocationDef, 'id' | 'faction'>,
 ): DiplomacySeatState {
@@ -122,11 +124,9 @@ export function effectiveDiplomacyStanding(
   state: GameState,
   seat: Pick<DiplomacySeatState, 'faction' | 'standing'>,
 ): number {
-  return clamp(
+  return clampStanding(
     seat.standing +
       scaledDelta(state.factions[seat.faction]?.standing ?? 0, TUNING.diplomacy.factionSentimentShare),
-    -100,
-    100,
   );
 }
 
@@ -138,16 +138,14 @@ export function applyDiplomacyShiftById(
 ): void {
   const seat = state.diplomacySeats[seatId];
   if (!seat) return;
-  seat.standing = clamp(seat.standing + delta, -100, 100);
+  seat.standing = clampStanding(seat.standing + delta);
   seat.grievances = Math.max(0, seat.grievances + grievanceDelta);
   seat.lastContactTurn = state.turn;
 
   const factionDelta = scaledDelta(delta, TUNING.diplomacy.factionSentimentShare);
   if (factionDelta !== 0) {
-    state.factions[seat.faction].standing = clamp(
+    state.factions[seat.faction].standing = clampStanding(
       state.factions[seat.faction].standing + factionDelta,
-      -100,
-      100,
     );
   }
 
@@ -158,7 +156,7 @@ export function applyDiplomacyShiftById(
       DiplomacySeatState,
     ][]) {
       if (siblingId === seatId || siblingSeat.faction !== seat.faction) continue;
-      siblingSeat.standing = clamp(siblingSeat.standing + siblingDelta, -100, 100);
+      siblingSeat.standing = clampStanding(siblingSeat.standing + siblingDelta);
     }
   }
 }
@@ -212,7 +210,7 @@ export function diplomacyReasons(
   state: GameState,
   def: Pick<LocationDef, 'id' | 'faction' | 'name'>,
 ): string[] {
-  const seat = diplomacySeatState(state, def);
+  const seat = diplomacySeatStateOrDefault(state, def);
   const reasons: string[] = [];
   if (seat.pact === 'alliance') reasons.push('Bound by an alliance.');
   else if (seat.pact === 'truce') reasons.push('A truce is currently holding.');

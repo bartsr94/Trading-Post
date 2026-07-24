@@ -5,7 +5,7 @@
 import { TUNING } from '../../content/tuning';
 import { paceEventChance } from '../map';
 import { travelContextFor } from '../expeditions';
-import { heroesAtPost } from '../types';
+import { activeHeroesById, heroesAtPost } from '../types';
 import type { ActiveEvent, GameState, Hero, LocationDef, LocationId, MapFeatureDef, MapRegionDef } from '../types';
 import type { Rng } from '../rng';
 import { bindHero, bindingCandidates } from './binding';
@@ -39,11 +39,8 @@ function eligibleHeroes(
   poolOverride?: Hero[],
 ): Hero[] {
   if (!passesWorldGates(state, event)) return [];
-  const basePool = poolOverride ?? (travel
-    ? travel.expedition.heroIds
-        .map((id) => state.heroes.find((hero) => hero.id === id))
-        .filter((hero): hero is Hero => hero !== undefined && hero.status === 'active')
-    : undefined);
+  const basePool =
+    poolOverride ?? (travel ? activeHeroesById(state, travel.expedition.heroIds) : undefined);
   return bindingCandidates(state, event, basePool).filter((hero) =>
     evalConditions(state, event.conditions, { heroId: hero.id, travel }),
   );
@@ -126,9 +123,7 @@ export function selectEvents(
     if (rng.next() >= paceEventChance(expedition.pace)) continue;
     const travel = travelContextFor(expedition, { locationDefs, mapRegionDefs, mapFeatureDefs });
     if (!travel) continue;
-    const party = travel.expedition.heroIds
-      .map((id) => state.heroes.find((hero) => hero.id === id))
-      .filter((hero): hero is Hero => hero !== undefined && hero.status === 'active');
+    const party = activeHeroesById(state, travel.expedition.heroIds);
     const candidates: EligibleEvent[] = travelPool
       .filter((event) => !usedIds.has(event.id))
       .map((event) => ({ event, heroes: eligibleHeroes(state, event, travel, party) }))

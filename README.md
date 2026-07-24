@@ -66,7 +66,7 @@ Marriages bear **children** on a Communal, contented post — each a person of *
 
 ## The post's people
 
-Beyond the named company, the post gathers an **unnamed population** — farmers, herders, hunters, porters, guards, and craftsfolk you feed, pay, and put to work. It's a pool you shape rather than a roster you command: farmers work the cropland, herders tend the pasture herd, hunters bring in food from the wildland, porters haul more cargo when seconded to a caravan, guards steady a party on the road and hold the palisade, craftsfolk keep the place mended. A new post doesn't start from bare tents — a handful of founding hands come with you. Grow the population further by sending a party to **Invite Settlers** at any neighbouring town you've discovered, native or homeland alike, and assign idle newcomers to a trade. They eat every turn and draw wages every season; let either run short and **contentment** slides from content to grumbling to open unrest — output falls, then people desert. Manage them from the **People** screen.
+Beyond the named company, the post gathers an **unnamed population** — farmers, herders, hunters, porters, guards, and craftsfolk you feed, pay, and put to work. It's a pool you shape rather than a roster you command: farmers work the cropland, herders tend the pasture herd, hunters bring in food from the wildland, porters haul more cargo when seconded to a caravan, guards steady a party on the road and hold the palisade, craftsfolk keep the place mended. A new post doesn't start from bare tents — a handful of founding hands come with you. Grow the population further by sending a party to **Invite Settlers** at any neighbouring town you've discovered, native or homeland alike, and assign idle newcomers to a trade. They eat every turn and draw wages every season; let either run short and **contentment** slides from content to grumbling to open unrest — output falls, then people desert. Manage them from the **Outpost Overview**, the landing screen.
 
 The post also draws **outsiders** it neither feeds nor pays, passing through for a time: a faction honour-guard that rides home with a successful envoy and helps hold the walls, a supplier crew that lends its backs to your caravans for a few nights, or Company inspectors who post themselves at the gate when a profit shipment goes unpaid — and quietly sour the mood until the debt is settled. Those same residents now matter directly in war: guards strengthen the post against incoming raids, guard escorts add force to outbound strikes, and porters raise how much loot a raiding party can carry home.
 
@@ -111,13 +111,15 @@ status, click to open their sheet. Portraits are painted art where it exists
 and fall back to a deterministic placeholder tile otherwise, so new heroes
 never render blank.
 
-The home screen is the **Outpost Overview** — a read-at-a-glance dashboard
-(the outpost's character, its trade and standing, and its settlement) laid out
-in three columns beneath a painted banner. A guiding rule: **a screen should
-never scroll**, because a scrollbar hides information — so where a view has more
-than fits, it becomes its own screen rather than a scrolling one. That's why the
-hands-on management lives on dedicated **Buildings** and **People** screens,
-linked from the overview, instead of piling onto it.
+The home screen is the **Outpost Overview** — a dashboard of the outpost's
+character, its trade and standing, its settlement, and its people, laid out in
+four columns beneath a painted banner, with the Concession's land and herd
+controls in a strip below. A guiding rule: **a screen should never scroll**,
+because a scrollbar hides information — so where a view has more than fits, it
+becomes its own screen rather than a scrolling one. That's why construction
+still lives on its own dedicated **Buildings** screen, while day-to-day people
+management (hands, idle reassignment, land allocation) is folded directly into
+the landing screen rather than requiring a trip elsewhere.
 
 ## Project layout
 

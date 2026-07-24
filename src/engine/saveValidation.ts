@@ -1,15 +1,30 @@
 import { TUNING } from '../content/tuning';
 import { residentTotal } from './residents';
+import { CHECK_TIERS } from './checks';
 import {
   ACTIVITY_IDS,
+  AXIS_IDS,
+  BLOODLINES,
   DEPENDANT_KINDS,
   DISCOVERY_STATES,
   DIPLOMACY_MISSION_TYPES,
   DIPLOMACY_PACTS,
   DIPLOMACY_TRIBUTE_MODES,
+  EXPEDITION_KINDS as LIVE_EXPEDITION_KINDS,
+  EXPEDITION_LEGS,
+  EXPEDITION_PACES,
   FACTION_IDS,
+  GAME_OVER_KINDS,
+  GENDERS,
   GOOD_IDS,
   HERITAGES,
+  HERO_STATUSES,
+  INVITE_OFFERS,
+  LAND_USES,
+  PHASES,
+  RAID_ATTACK_GOALS,
+  RAID_MANEUVERS,
+  RAID_SEVERITIES,
   RESIDENT_ROLES,
   SKILL_IDS,
   STAT_IDS,
@@ -20,31 +35,9 @@ import type { GameState } from './types';
 
 type UnknownRecord = Record<string, unknown>;
 
-const PHASES = ['assignment', 'event', 'report', 'gameover'] as const;
-const HERO_STATUSES = ['active', 'dead', 'departed'] as const;
-const GENDERS = ['male', 'female'] as const;
-const BLOODLINES = ['pure', 'mixed'] as const;
-// 'labor' retained so a pre-TULA save with an in-flight labor run still validates.
-const EXPEDITION_KINDS = [
-  'caravan',
-  'explore',
-  'diplomacy',
-  'labor',
-  'courtship',
-  'raid',
-  'invite',
-  'concession',
-] as const;
-const INVITE_OFFERS = ['modest', 'generous', 'lavish'] as const;
-const LAND_USES = ['cropland', 'pasture', 'wildland'] as const;
-const EXPEDITION_PACES = ['fast', 'normal', 'slow'] as const;
-const EXPEDITION_LEGS = ['outbound', 'returning'] as const;
-const CHECK_TIERS = ['critSuccess', 'success', 'failure', 'critFailure'] as const;
-const AXIS_IDS = ['integration', 'communal', 'culture'] as const;
-const GAME_OVER_KINDS = ['bankrupt', 'brokenCompany', 'charterRevoked', 'destroyed'] as const;
-const RAID_SEVERITIES = ['probe', 'raid', 'warband'] as const;
-const RAID_MANEUVERS = ['skirmish', 'charge', 'evade'] as const;
-const RAID_ATTACK_GOALS = ['plunder', 'burn', 'bloody', 'cow'] as const;
+// 'labor' retained so a pre-TULA save with an in-flight labor run still validates
+// — the current live ExpeditionKind (types.ts) no longer includes it.
+const EXPEDITION_KINDS = [...LIVE_EXPEDITION_KINDS, 'labor'] as const;
 
 function invalid(path: string, detail = 'is invalid'): never {
   throw new Error(`Not a valid Trading Post save: ${path} ${detail}.`);

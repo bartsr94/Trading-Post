@@ -667,27 +667,34 @@ h4 {
 .outpost-overview {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
-/* Denser rows inside the read-only dashboard columns so three stacked
+/* Denser rows inside the read-only dashboard columns so four stacked
    sections still clear the fold on short viewports (no-scroll rule). */
 .outpost-overview .faction-row {
   padding: 0;
   border-bottom: none;
   font-size: 0.82rem;
 }
-.outpost-overview h4 { margin-top: 8px !important; }
+.outpost-overview h4 { margin: 6px 0 3px !important; }
 .outpost-overview .panel { padding: 10px 14px; }
+/* The Stores table (Trade & Standing) is the tallest column by a wide margin
+   once it's sharing a quarter of the grid rather than a third — tighten its
+   rows specifically rather than the global table.market used elsewhere. */
+.outpost-overview table.market td { padding: 2px 4px; font-size: 0.8rem; }
+.outpost-overview .manage-link { margin-top: 4px; padding: 3px 8px; }
+/* Shrunk (2026-07-23 merge with the People screen) to buy back vertical room
+   for the new People column + Concession strip below the grid. */
 .post-banner {
   position: relative;
   overflow: hidden;
-  min-height: 108px;
-  max-height: 18vh;
+  min-height: 54px;
+  max-height: 8vh;
   border-radius: 8px;
   border: 1px solid var(--border);
   display: flex;
   align-items: flex-end;
-  padding: 12px 18px;
+  padding: 8px 16px;
   /* Fallback tint behind the photo (set via inline background-image). */
   background-color: #232c26;
   background-size: cover;
@@ -713,18 +720,22 @@ h4 {
 }
 .post-banner-text h2 {
   color: #fff6e0;
-  margin: 2px 0;
+  margin: 1px 0;
+  font-size: 1.15rem;
 }
 .post-banner .eyebrow {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: #d8c8a4;
 }
 .post-banner .banner-flavor {
   color: #cbbfa4;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
+/* Still used by MarketScreen.tsx (Post Market / Caravan two-up layout) — the
+   Outpost Overview dashboard moved to its own .overview-grid-4 below rather
+   than reusing this one, since the two screens' column counts diverged. */
 .overview-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -733,6 +744,25 @@ h4 {
 }
 @media (max-width: 900px) {
   .overview-grid-3 { grid-template-columns: 1fr; }
+}
+.overview-grid-4 {
+  display: grid;
+  /* minmax(0, ...) so a column can't blow out past its fr share to fit a long
+     line (grid tracks default to a content min-width otherwise) — Trade &
+     Standing gets a touch more of that share since the longest faction name
+     ("The Knights of Saint Eirwen") needs it. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+/* Below the 1280px no-scroll floor (narrower windows only — the floor itself
+   must stay 4-across, or the two-row fallback doubles the grid's height and
+   blows the vertical budget). */
+@media (max-width: 1180px) {
+  .overview-grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 700px) {
+  .overview-grid-4 { grid-template-columns: 1fr; }
 }
 /* A full-width link out to a dedicated management screen. */
 .manage-link {
@@ -749,10 +779,6 @@ h4 {
 .manage-link:hover:not(:disabled) {
   border-color: var(--accent);
   background: var(--panel-2);
-}
-/* Wrapper for the dedicated Buildings / People management screens. */
-.manage-screen {
-  max-width: 860px;
 }
 /* Buildings gets the full content width — a status rail + a wide project menu
    (BUILDINGS_SPEC.md §9), rather than the single narrow column the other
@@ -857,15 +883,6 @@ table.market td.num { text-align: right; font-variant-numeric: tabular-nums; fon
   font-size: 0.9rem;
 }
 
-.hands-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin: 6px 0 2px;
-}
-@media (max-width: 480px) {
-  .hands-grid { grid-template-columns: 1fr; }
-}
 .hand-cell {
   background: var(--panel-2);
   border: 1px solid var(--border);
@@ -873,22 +890,68 @@ table.market td.num { text-align: right; font-variant-numeric: tabular-nums; fon
   padding: 8px 10px;
   font-size: 0.9rem;
 }
-.hand-cell-actions {
+/* The People dashboard column (PeopleOverviewColumn, in the Outpost Overview
+   grid): a single-column list of role rows instead of a two-up grid,
+   since it now shares a quarter of the grid with three other columns rather
+   than a whole screen to itself. */
+.hand-list { margin: 2px 0 2px; }
+.hand-row {
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 6px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1px 0;
+  border-bottom: 1px solid rgba(61, 52, 42, 0.5);
+  font-size: 0.78rem;
 }
+.hand-row:last-child { border-bottom: none; }
+.hand-row button { flex-shrink: 0; padding: 1px 5px; font-size: 0.7rem; }
+.idle-hands-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 3px;
+}
+.idle-hands-actions button { font-size: 0.68rem; padding: 2px 4px; }
 
-/* The People screen packs a population summary + hands grid + the Concession's
-   land controls into two columns — tightened to hold the no-scroll floor now
-   that a fresh post always has founding hands (never the shorter "empty pool"
-   placeholder). */
-.people-panel .faction-row { padding: 2px 0; font-size: 0.84rem; }
-.people-panel h4 { margin-top: 8px !important; margin-bottom: 4px; }
-.people-panel .hand-cell { padding: 5px 8px; font-size: 0.84rem; }
-.people-panel .hands-grid { gap: 6px; margin: 4px 0 2px; }
-.people-panel .axis-track { margin: 3px 0 6px !important; }
+/* The Concession strip (ConcessionStrip): land allocation + herd + visitors
+   laid out horizontally below the four-column grid, full content width. */
+.concession-strip { margin-top: 2px; }
+.concession-strip-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.concession-strip-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 150px;
+}
+.concession-strip-head h3 { margin: 0; }
+.concession-strip-alloc { display: flex; gap: 8px; }
+.concession-strip-alloc .hand-cell {
+  width: 96px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+}
+.concession-strip-alloc input { width: 100%; margin-top: 2px; }
+.concession-strip-apply {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  min-width: 110px;
+  padding-top: 2px;
+}
+.concession-strip-herd,
+.concession-strip-visitors {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.84rem;
+  padding-top: 2px;
+}
 
 /* ---------- map ---------- */
 .map-layout {
@@ -1115,8 +1178,8 @@ select:focus {
 .hero-sheet-head > div:last-child { min-width: 0; }
 .hero-sheet-portrait {
   flex: none;
-  width: 125px;
-  height: 156px;
+  width: 164px;
+  height: 205px;
   border: 1px solid var(--accent-dim);
   border-radius: 8px;
   overflow: hidden;

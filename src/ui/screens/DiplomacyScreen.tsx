@@ -6,7 +6,7 @@ import { TUNING } from '../../content/tuning';
 import {
   diplomacyReasons,
   diplomacySeatDefs,
-  diplomacySeatState,
+  diplomacySeatStateOrDefault,
   tributeForCommunity,
 } from '../../engine/diplomacy';
 import { dispatchError } from '../../engine/expeditions';
@@ -54,7 +54,7 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
 
   const selected = selectedId ? LOCATION_DEFS.get(selectedId) ?? null : null;
   const selectedLoc = selected ? game.locations[selected.id] : undefined;
-  const selectedSeat = selected ? diplomacySeatState(game, selected) : null;
+  const selectedSeat = selected ? diplomacySeatStateOrDefault(game, selected) : null;
   const available = heroesAtPost(game);
   const activeMissions = game.expeditions.filter((expedition) => expedition.kind === 'diplomacy');
   const home = LOCATION_DEFS.get(TUNING.map.homeLocationId)!;
@@ -131,7 +131,7 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
               <div key={faction.id} className="diplomacy-group">
                 <div className="diplomacy-group-title">{faction.name}</div>
                 {seats.map((seat) => {
-                  const seatState = diplomacySeatState(game, seat);
+                  const seatState = diplomacySeatStateOrDefault(game, seat);
                   const tribute = tributeForCommunity(game, seat);
                   return (
                     <button

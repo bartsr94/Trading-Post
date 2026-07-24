@@ -55,7 +55,6 @@ export type Screen =
   | 'diplomacy'
   | 'characters'
   | 'buildings'
-  | 'people'
   | 'map'
   | 'market';
 
@@ -162,7 +161,10 @@ const AUTOSAVE_DEBOUNCE_MS = 400;
 let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingAutosave: GameState | null = null;
 
-function flushAutosave(): void {
+/** Forces a pending debounced autosave to write immediately (used by the
+ *  beforeunload flush, and by tests that need a deterministic write instead
+ *  of racing the debounce timer). */
+export function flushAutosave(): void {
   if (autosaveTimer !== null) {
     clearTimeout(autosaveTimer);
     autosaveTimer = null;
@@ -187,7 +189,26 @@ if (typeof window !== 'undefined') {
   window.addEventListener('beforeunload', flushAutosave);
 }
 
-export const useGameStore = create<GameStore>((set, get) => ({
+export const useGameStore = create<GameStore>((set, get) => {
+  // Shared shape for assignment-phase actions that run a boolean-returning
+  // engine mutator against a cloned draft and debounce-autosave on success.
+  // Phase transitions (confirmTurn, event resolution, report finish) stay
+  // explicit below since they commit additional UI state beyond `game`.
+  function assignmentAction<Args extends unknown[]>(
+    fn: (state: GameState, ...args: Args) => boolean,
+  ): (...args: Args) => boolean {
+    return (...args: Args) => {
+      const { game } = get();
+      if (!game || game.phase !== 'assignment') return false;
+      const next = draft(game);
+      if (!fn(next, ...args)) return false;
+      scheduleAutosave(next);
+      set({ game: next });
+      return true;
+    };
+  }
+
+  return {
   game: null,
   screen: 'post',
   selectedHeroId: null,
@@ -258,6 +279,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!game || game.phase !== 'assignment') return;
     const next = draft(game);
     next.assignments[heroId] = activity;
+    scheduleAutosave(next);
     set({ game: next });
   },
 
@@ -286,6 +308,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       active.expeditionId,
       active.locationId,
     );
+    autosave(next);
     set({ game: next, lastResolution: resolution });
   },
 
@@ -340,69 +363,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   continueRaid: () => set({ lastRaidResolution: null }),
 
-  buy: (good, qty) => {
-    const { game } = get();
-    if (!game || game.phase !== 'assignment') return;
+  buy: assignmentAction((state, good: GoodId, qty: number) => {
     const def = CONTENT.goodDefs.get(good);
-    if (!def) return;
-    const next = draft(game);
-    if (buyGood(next, def, qty)) {
-      scheduleAutosave(next);
-      set({ game: next });
-    }
-  },
+    return def !== undefined && buyGood(state, def, qty);
+  }),
 
-  sell: (good, qty) => {
-    const { game } = get();
-    if (!game || game.phase !== 'assignment') return;
+  sell: assignmentAction((state, good: GoodId, qty: number) => {
     const def = CONTENT.goodDefs.get(good);
-    if (!def) return;
-    const next = draft(game);
-    if (sellGood(next, def, qty)) {
-      scheduleAutosave(next);
-      set({ game: next });
-    }
-  },
+    return def !== undefined && sellGood(state, def, qty);
+  }),
 
-  dispatch: (params) => {
-    const { game } = get();
-    if (!game || game.phase !== 'assignment') return false;
-    const next = draft(game);
-    if (!dispatchExpedition(next, params, CONTENT.locationDefs, CONTENT.mapRegionDefs)) return false;
-    scheduleAutosave(next);
-    set({ game: next });
-    return true;
-  },
+  dispatch: assignmentAction((state, params: DispatchParams) =>
+    dispatchExpedition(state, params, CONTENT.locationDefs, CONTENT.mapRegionDefs),
+  ),
 
-  activate: (heroId) => {
-    const { game } = get();
-    if (!game || game.phase !== 'assignment') return false;
-    const next = draft(game);
-    if (!activateHero(next, heroId)) return false;
-    scheduleAutosave(next);
-    set({ game: next });
-    return true;
-  },
+  activate: assignmentAction(activateHero),
 
-  bench: (heroId) => {
-    const { game } = get();
-    if (!game || game.phase !== 'assignment') return false;
-    const next = draft(game);
-    if (!benchHero(next, heroId)) return false;
-    scheduleAutosave(next);
-    set({ game: next });
-    return true;
-  },
+  bench: assignmentAction(benchHero),
 
-  startConstruction: (buildingId) => {
-    const { game } = get();
-    if (!game || game.phase !== 'assignment') return false;
-    const next = draft(game);
-    if (!startConstructionFn(next, buildingId)) return false;
-    scheduleAutosave(next);
-    set({ game: next });
-    return true;
-  },
+  startConstruction: assignmentAction(startConstructionFn),
 
   cancelConstruction: () => {
     const { game } = get();
@@ -413,28 +392,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ game: next });
   },
 
-  setLandAllocation: (allocation) => {
-    const { game } = get();
-    if (!game || game.phase !== 'assignment') return false;
-    const next = draft(game);
-    if (!setLandAllocationFn(next, allocation)) return false;
-    scheduleAutosave(next);
-    set({ game: next });
-    return true;
-  },
+  setLandAllocation: assignmentAction(setLandAllocationFn),
 
-  reallocateResidents: (from, to, count) => {
-    const { game } = get();
-    if (!game || game.phase !== 'assignment') return false;
-    const next = draft(game);
-    if (!reallocate(next, from, to, count)) return false;
-    scheduleAutosave(next);
-    set({ game: next });
-    return true;
-  },
+  reallocateResidents: assignmentAction(reallocate),
 
   setCheatMode: (enabled) => {
-    localStorage.setItem(CHEAT_MODE_KEY, enabled ? 'true' : 'false');
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(CHEAT_MODE_KEY, enabled ? 'true' : 'false');
+    }
     set({ cheatModeEnabled: enabled, cheatConsoleOpen: enabled ? get().cheatConsoleOpen : false });
   },
 
@@ -463,7 +428,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ game: next, lastResolution: null });
     return true;
   },
-}));
+  };
+});
 
 /** Travel context for the active event, so travel conditions can evaluate. */
 export function travelContextOf(game: GameState, active: ActiveEvent): TravelContext | undefined {

@@ -4,7 +4,7 @@ import { FACTION_DEFS } from '../../content/factions';
 import { LOCATIONS, LOCATION_DEFS } from '../../content/locations';
 import { MAP_REGIONS } from '../../content/map';
 import { TUNING } from '../../content/tuning';
-import { diplomacySeatState } from '../../engine/diplomacy';
+import { diplomacySeatStateOrDefault } from '../../engine/diplomacy';
 import {
   cargoCapacity,
   dispatchError,
@@ -144,7 +144,7 @@ export function MapScreen({ game }: { game: GameState }) {
   const available = heroesAtPost(game);
   const selected = selectedId ? LOCATION_DEFS.get(selectedId) ?? null : null;
   const selectedLoc = selected ? game.locations[selected.id] : undefined;
-  const selectedSeat = selected && selected.faction ? diplomacySeatState(game, selected) : null;
+  const selectedSeat = selected && selected.faction ? diplomacySeatStateOrDefault(game, selected) : null;
   const home = LOCATION_DEFS.get(TUNING.map.homeLocationId)!;
   const activeTarget = selected?.mapPoint ?? target;
   const activeRegion = activeTarget ? regionAt(activeTarget, MAP_REGIONS) : undefined;

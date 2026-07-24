@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TUNING } from '../content/tuning';
 import { testState } from '../engine/__tests__/helpers';
 import type { ChoiceResolution } from '../engine/turn';
-import { useGameStore } from './gameStore';
+import { flushAutosave, useGameStore } from './gameStore';
 
 function makeLocalStorage() {
   const data = new Map<string, string>();
@@ -29,6 +29,7 @@ beforeEach(() => {
 
 describe('gameStore', () => {
   it('setAssignment edits assignments only during assignment phase', () => {
+    vi.stubGlobal('localStorage', makeLocalStorage());
     const s = testState(101, ['p1']);
     const heroId = s.heroes[0].id;
     s.phase = 'assignment';
@@ -40,6 +41,10 @@ describe('gameStore', () => {
     useGameStore.setState({ game: { ...useGameStore.getState().game!, phase: 'event' as const } });
     useGameStore.getState().setAssignment(heroId, 'trade');
     expect(useGameStore.getState().game!.assignments[heroId]).toBe('rest');
+
+    // Settle the debounced autosave scheduled above so its timer doesn't
+    // linger into a later test.
+    flushAutosave();
   });
 
   it('newGame seeds + sets initial screen and assignments', () => {
@@ -88,6 +93,7 @@ describe('gameStore', () => {
   });
 
   it('startConstruction and cancelConstruction mutate the game only during assignment phase', () => {
+    vi.stubGlobal('localStorage', makeLocalStorage());
     const s = testState(7, ['p1']);
     s.phase = 'assignment';
     s.silver = 200;
@@ -106,6 +112,8 @@ describe('gameStore', () => {
 
     useGameStore.setState({ game: { ...afterStart, phase: 'event' as const, construction: null } });
     expect(useGameStore.getState().startConstruction('storehouse')).toBe(false);
+
+    flushAutosave();
   });
 
   it('confirmTurn advances the game and clears transient UI fields', () => {
@@ -142,6 +150,37 @@ describe('gameStore', () => {
 
     useGameStore.getState().continueEvent();
     expect(useGameStore.getState().lastResolution).toBeNull();
+  });
+
+  it('chooseOption autosaves immediately, like the other turn-phase-boundary actions', () => {
+    const localStorage = makeLocalStorage();
+    vi.stubGlobal('localStorage', localStorage);
+    const s = testState(203, ['p1']);
+    const heroId = s.heroes[0].id;
+    useGameStore.setState({ game: s });
+
+    useGameStore.getState().forceFireEvent('post_drifter', heroId);
+    // Isolate chooseOption's own save from forceFireEvent's.
+    localStorage.removeItem(TUNING.save.autosaveKey);
+
+    useGameStore.getState().chooseOption(0);
+    expect(localStorage.getItem(TUNING.save.autosaveKey)).toBeTruthy();
+  });
+
+  it('setAssignment schedules a debounced autosave', () => {
+    const localStorage = makeLocalStorage();
+    vi.stubGlobal('localStorage', localStorage);
+    const s = testState(204, ['p1']);
+    const heroId = s.heroes[0].id;
+    s.phase = 'assignment';
+    useGameStore.setState({ game: s });
+
+    useGameStore.getState().setAssignment(heroId, 'rest');
+    // Debounced: nothing written until the timer (or a flush) fires.
+    expect(localStorage.getItem(TUNING.save.autosaveKey)).toBeNull();
+
+    flushAutosave();
+    expect(localStorage.getItem(TUNING.save.autosaveKey)).toBeTruthy();
   });
 
   it('setCheatMode persists and disables the overlay when locked', () => {

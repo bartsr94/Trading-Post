@@ -14,7 +14,6 @@ const NAV_ITEMS: { screen: Screen; icon: IconName; label: string }[] = [
   { screen: 'diplomacy', icon: 'diplomacy', label: 'Diplomacy' },
   { screen: 'characters', icon: 'characters', label: 'Characters' },
   { screen: 'buildings', icon: 'build', label: 'Buildings' },
-  { screen: 'people', icon: 'people', label: 'People' },
   { screen: 'map', icon: 'map', label: 'Map' },
   { screen: 'market', icon: 'market', label: 'Market' },
 ];

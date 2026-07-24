@@ -74,7 +74,8 @@ export const SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const;
 export type Season = (typeof SEASONS)[number];
 
 // Aloof(−)↔Integrated(+), Mercantile(−)↔Communal(+), Homeland/Imanian(−)↔Frontier/Sauromatian(+)
-export type AxisId = 'integration' | 'communal' | 'culture';
+export const AXIS_IDS = ['integration', 'communal', 'culture'] as const;
+export type AxisId = (typeof AXIS_IDS)[number];
 
 /** Peoples of the Ashmark (PEOPLES_SPEC.md §2) — the two-tier "people" level.
  *  Promoted to a mechanical type carried by named people & the resident tally.
@@ -120,7 +121,11 @@ export function defaultSubPeople(h: Heritage): string {
 /** A named person's gender (FAMILY_SPEC.md §3.1). Drives marriage, child gender,
  *  and the bloodline read — mechanical, so it rides the runtime Hero (like
  *  heritage), not just the content-only portraitKey. */
-export type Gender = 'male' | 'female';
+export const GENDERS = ['male', 'female'] as const;
+export type Gender = (typeof GENDERS)[number];
+
+export const BLOODLINES = ['pure', 'mixed'] as const;
+export type Bloodline = (typeof BLOODLINES)[number];
 
 export function oppositeGender(g: Gender): Gender {
   return g === 'male' ? 'female' : 'male';
@@ -264,15 +269,20 @@ export interface LocationState {
   market?: Record<GoodId, MarketGoodState>;
 }
 
-export type ExpeditionKind =
-  | 'caravan'
-  | 'explore'
-  | 'diplomacy'
-  | 'courtship'
-  | 'raid'
-  | 'invite'
-  | 'concession';
-export type ExpeditionPace = 'fast' | 'normal' | 'slow';
+export const EXPEDITION_KINDS = [
+  'caravan',
+  'explore',
+  'diplomacy',
+  'courtship',
+  'raid',
+  'invite',
+  'concession',
+] as const;
+export type ExpeditionKind = (typeof EXPEDITION_KINDS)[number];
+export const EXPEDITION_PACES = ['fast', 'normal', 'slow'] as const;
+export type ExpeditionPace = (typeof EXPEDITION_PACES)[number];
+export const EXPEDITION_LEGS = ['outbound', 'returning'] as const;
+export type ExpeditionLeg = (typeof EXPEDITION_LEGS)[number];
 
 export interface SurveyResult {
   tier: 'critSuccess' | 'success' | 'failure' | 'critFailure';
@@ -293,7 +303,7 @@ export interface ExpeditionState {
   /** Planned turns per leg before delays. Optional only for pre-v12/test fixtures. */
   legTurns?: number;
   heroIds: string[]; // 1–2 heroes, away from the post while en route
-  leg: 'outbound' | 'returning';
+  leg: ExpeditionLeg;
   turnsLeft: number; // turns left in the current leg
   /** Goods carried (caravan cargo; explore finds ride home here too). */
   cargo: Partial<Record<GoodId, number>>;
@@ -348,7 +358,8 @@ export interface ExpeditionState {
 export type FactionStance = 'Hostile' | 'Wary' | 'Neutral' | 'Friendly' | 'Allied';
 
 /** Life state of a named character (NOT party membership — see `activePartyIds`). */
-export type HeroStatus = 'active' | 'dead' | 'departed';
+export const HERO_STATUSES = ['active', 'dead', 'departed'] as const;
+export type HeroStatus = (typeof HERO_STATUSES)[number];
 
 /** Named, non-working family attached to a character (CHARACTERS_SPEC.md). */
 export const DEPENDANT_KINDS = ['spouse', 'child', 'kin'] as const;
@@ -439,7 +450,7 @@ export interface Hero {
   /** Set when a hero heads a union household (FAMILY_SPEC.md §3.4): 'pure' = only
    *  homeland blood under the roof; 'mixed' = any native partner/descendant.
    *  Absent = unwed. The lean marker the Company reads — not a floating meter. */
-  bloodline?: 'pure' | 'mixed';
+  bloodline?: Bloodline;
   /** Auto-appended log of notable events for the Hero Sheet. */
   history: string[];
 }
@@ -607,10 +618,13 @@ export interface TurnReport {
   goodsDelta: Partial<Record<GoodId, number>>;
 }
 
-export type GamePhase = 'assignment' | 'event' | 'report' | 'gameover';
+export const PHASES = ['assignment', 'event', 'report', 'gameover'] as const;
+export type GamePhase = (typeof PHASES)[number];
+
+export const GAME_OVER_KINDS = ['bankrupt', 'brokenCompany', 'charterRevoked', 'destroyed'] as const;
 
 export interface GameOverInfo {
-  kind: 'bankrupt' | 'brokenCompany' | 'charterRevoked' | 'destroyed';
+  kind: (typeof GAME_OVER_KINDS)[number];
   title: string;
   text: string;
 }
@@ -843,6 +857,24 @@ export function getHero(state: GameState, heroId: string): Hero {
   return hero;
 }
 
+/** Resolves an id list (e.g. an expedition/raid party) to the living, active
+ *  heroes among them — dead/departed/reserve ids and unresolvable ids drop out. */
+export function activeHeroesById(state: GameState, heroIds: readonly string[]): Hero[] {
+  return heroIds
+    .map((id) => state.heroes.find((h) => h.id === id))
+    .filter((hero): hero is Hero => hero !== undefined && hero.status === 'active');
+}
+
+/** Whether a single hero id currently resolves to a living, active hero. */
+export function isActiveHeroId(state: GameState, heroId: string): boolean {
+  return activeHeroesById(state, [heroId]).length > 0;
+}
+
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+/** Standing (faction/diplomacy-seat) is always bounded to this range. */
+export function clampStanding(value: number): number {
+  return clamp(value, -100, 100);
 }

@@ -54,6 +54,7 @@ import { Rng } from './rng';
 import { paceCheckModifier } from './map';
 import {
   clamp,
+  clampStanding,
   getHero,
   heroesAtPost,
   isSeasonEnd,
@@ -336,6 +337,20 @@ function payUpkeep(
   return missedFood;
 }
 
+function tributeGoodsLine(
+  goods: [GoodId, number][],
+  goodNames: ReadonlyMap<GoodId, string>,
+): string {
+  return goods.map(([good, qty]) => `${qty} ${goodNames.get(good) ?? good}`).join(', ');
+}
+
+/** "120 silver and 4 hides"-style clause, either half optional. */
+function tributeSentence(silver: number, goodsLine: string): string {
+  const silverPart = silver > 0 ? `${silver} silver` : '';
+  const joiner = silver > 0 && goodsLine ? ' and ' : '';
+  return `${silverPart}${joiner}${goodsLine}`;
+}
+
 function settleTributes(
   state: GameState,
   ctx: Pick<TurnContext, 'goodNames' | 'factionNames'>,
@@ -351,10 +366,8 @@ function settleTributes(
       const shortSilver = state.silver < tribute.silver;
       if (shortGoods || shortSilver) {
         broken.push(tribute.faction);
-        state.factions[tribute.faction].standing = clamp(
-        state.factions[tribute.faction].standing - TUNING.raid.tributeBrokenStandingLoss,
-          -100,
-          100,
+        state.factions[tribute.faction].standing = clampStanding(
+          state.factions[tribute.faction].standing - TUNING.raid.tributeBrokenStandingLoss,
         );
         report(
           '⚠️',
@@ -366,32 +379,18 @@ function settleTributes(
       }
       state.silver -= tribute.silver;
       for (const [good, qty] of goods) state.goods[good] -= qty;
-      const goodsLine = goods
-        .map(([good, qty]) => `${qty} ${ctx.goodNames.get(good) ?? good}`)
-        .join(', ');
       report(
         '📦',
-        `Tribute goes out to ${ctx.factionNames.get(tribute.faction) ?? tribute.faction}: ${
-          tribute.silver > 0 ? `${tribute.silver} silver` : ''
-        }${
-          tribute.silver > 0 && goodsLine ? ' and ' : ''
-        }${goodsLine}.`,
+        `Tribute goes out to ${ctx.factionNames.get(tribute.faction) ?? tribute.faction}: ${tributeSentence(tribute.silver, tributeGoodsLine(goods, ctx.goodNames))}.`,
       );
       continue;
     }
 
     state.silver += tribute.silver;
     for (const [good, qty] of goods) state.goods[good] = (state.goods[good] ?? 0) + qty;
-    const goodsLine = goods
-      .map(([good, qty]) => `${qty} ${ctx.goodNames.get(good) ?? good}`)
-      .join(', ');
     report(
       '🪙',
-      `Tribute comes in from ${ctx.factionNames.get(tribute.faction) ?? tribute.faction}: ${
-        tribute.silver > 0 ? `${tribute.silver} silver` : ''
-      }${
-        tribute.silver > 0 && goodsLine ? ' and ' : ''
-      }${goodsLine}.`,
+      `Tribute comes in from ${ctx.factionNames.get(tribute.faction) ?? tribute.faction}: ${tributeSentence(tribute.silver, tributeGoodsLine(goods, ctx.goodNames))}.`,
     );
   }
 
@@ -507,7 +506,7 @@ function resolveOverClaimPressure(
   if (!target) return; // no neighbour discovered yet — no one to offend
   const faction = state.factions[target];
   const before = faction.standing;
-  faction.standing = clamp(faction.standing - TUNING.claim.overClaimStandingLossPerTurn, -100, 100);
+  faction.standing = clampStanding(faction.standing - TUNING.claim.overClaimStandingLossPerTurn);
   if (faction.standing !== before) {
     report(
       '⛺',
@@ -545,7 +544,7 @@ function payCharterQuota(
   if (state.silver >= c.quotaSilver) {
     state.silver -= c.quotaSilver;
     state.charterMissedStreak = 0;
-    faction.standing = clamp(faction.standing + c.metStandingGain, -100, 100);
+    faction.standing = clampStanding(faction.standing + c.metStandingGain);
     report('📦', `The season's profit shipment (${c.quotaSilver} silver) goes out to Thornwatch.`);
     if (removeTransients(state, 'companyAgents') > 0) {
       report('📜', 'The Company inspectors, satisfied, withdraw from the post.');
@@ -557,7 +556,7 @@ function payCharterQuota(
   const loss = Math.round(
     c.standingLossPerMiss * c.streakEscalation ** (state.charterMissedStreak - 1),
   );
-  faction.standing = clamp(faction.standing - loss, -100, 100);
+  faction.standing = clampStanding(faction.standing - loss);
   for (const hero of livingHeroes(state)) {
     hero.stress = clamp(hero.stress + c.missedQuotaStress, 0, TUNING.condition.maxStress);
   }
@@ -665,7 +664,7 @@ function resolveActivity(
       if (charterSeat) applyDiplomacyShift(state, ctx.locationDefs, charterSeat.id, delta);
       else {
         const faction = state.factions.CHARTER_COMPANY;
-        faction.standing = clamp(faction.standing + delta, -100, 100);
+        faction.standing = clampStanding(faction.standing + delta);
       }
       report(
         '🤝',
@@ -834,18 +833,32 @@ function checkBrokenCompany(state: GameState): void {
   }
 }
 
-function declareGameOver(state: GameState, kind: 'bankrupt' | 'brokenCompany'): void {
-  state.gameOver =
-    kind === 'bankrupt'
-      ? {
-          kind,
-          title: 'The Ledger Closes',
-          text: 'Three turns without pay or provisions. The laborers drift away first, then the heroes. One grey morning the post is simply empty — a clearing with tents rotting back into the frontier, and a debt entered in an Ansberry Company ledger far away.',
-        }
-      : {
-          kind,
-          title: 'The Broken Company',
-          text: 'No one is left to keep the fire. The goods sit in their crates until the natives, or the wolves, or the winter claims them. In the homeland, the venture becomes a cautionary tale told over wine.',
-        };
+export function declareGameOver(
+  state: GameState,
+  kind: 'bankrupt' | 'brokenCompany' | 'destroyed',
+): void {
+  switch (kind) {
+    case 'bankrupt':
+      state.gameOver = {
+        kind,
+        title: 'The Ledger Closes',
+        text: 'Three turns without pay or provisions. The laborers drift away first, then the heroes. One grey morning the post is simply empty — a clearing with tents rotting back into the frontier, and a debt entered in an Ansberry Company ledger far away.',
+      };
+      break;
+    case 'brokenCompany':
+      state.gameOver = {
+        kind,
+        title: 'The Broken Company',
+        text: 'No one is left to keep the fire. The goods sit in their crates until the natives, or the wolves, or the winter claims them. In the homeland, the venture becomes a cautionary tale told over wine.',
+      };
+      break;
+    case 'destroyed':
+      state.gameOver = {
+        kind,
+        title: 'The Post Falls',
+        text: 'They come through the broken palisade at dawn and there is no one left with the strength to hold them. What little the storehouse held goes onto their backs; the rest goes up in smoke. By the time word reaches Thornwatch, the frontier has already closed over the place as if it were never there.',
+      };
+      break;
+  }
   state.phase = 'gameover';
 }

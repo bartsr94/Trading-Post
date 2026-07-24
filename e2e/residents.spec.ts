@@ -9,25 +9,27 @@ async function foundPost(page: Page): Promise<void> {
   await expect(page.getByRole('button', { name: /Confirm Orders/ })).toBeVisible();
 }
 
-test('the People screen shows the Concession and re-apportions its land', async ({ page }) => {
+test('the Outpost Overview shows the Concession and re-apportions its land', async ({ page }) => {
   await foundPost(page);
-  await page.getByRole('button', { name: 'People', exact: true }).click();
+  await page.getByRole('button', { name: 'Outpost', exact: true }).click();
 
-  const panel = page.locator('.panel', { hasText: "The Post's People" });
+  const peopleColumn = page.locator('.panel', { hasText: 'The People' });
   // A fresh post starts with a founding handful of farmers/guards.
-  await expect(panel).toContainText('4 / 60');
-  await expect(panel).toContainText('The Concession');
-  await expect(panel).toContainText('10 chains'); // starting Concession size
-  await expect(panel).toContainText('supports 60');
+  await expect(peopleColumn).toContainText('4 / 60');
+
+  const concession = page.locator('.concession-strip');
+  await expect(concession).toContainText('The Concession');
+  await expect(concession).toContainText('10 chains'); // starting Concession size
+  await expect(concession).toContainText('supports 60');
 
   // Cropland starts at 50% of 10 chains = 5 chains.
-  await expect(panel).toContainText('5 chains');
+  await expect(concession).toContainText('5 chains');
 
   // Re-apportion to 60/20/20 and apply — cropland becomes 6 chains.
-  const landInputs = panel.locator('input[type="number"]');
+  const landInputs = concession.locator('input[type="number"]');
   await landInputs.nth(0).fill('60');
   await landInputs.nth(1).fill('20');
   await landInputs.nth(2).fill('20');
-  await panel.getByRole('button', { name: 'Apply' }).click();
-  await expect(panel).toContainText('6 chains');
+  await concession.getByRole('button', { name: 'Apply' }).click();
+  await expect(concession).toContainText('6 chains');
 });

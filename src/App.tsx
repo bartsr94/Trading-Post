@@ -11,7 +11,6 @@ import { HeroSheet } from './ui/screens/HeroSheet';
 import { MapScreen } from './ui/screens/MapScreen';
 import { MarketScreen } from './ui/screens/MarketScreen';
 import { PartySelect } from './ui/screens/PartySelect';
-import { PeopleScreen } from './ui/screens/PeopleScreen';
 import { PostOverview } from './ui/screens/PostOverview';
 import { TurnReport } from './ui/screens/TurnReport';
 import { HeroBar } from './ui/components/HeroBar';
@@ -66,13 +65,18 @@ export function App() {
       </header>
 
       <main className="content">
-        <div className={screen === 'map' ? 'content-inner content-inner--wide' : 'content-inner'}>
+        <div
+          className={
+            screen === 'map' || screen === 'post'
+              ? 'content-inner content-inner--wide'
+              : 'content-inner'
+          }
+        >
           {screen === 'post' && <PostOverview game={game} />}
           {screen === 'assignments' && <AssignmentBoard game={game} />}
           {screen === 'diplomacy' && <DiplomacyScreen game={game} />}
           {screen === 'characters' && <CharactersScreen game={game} />}
           {screen === 'buildings' && <BuildingsScreen game={game} />}
-          {screen === 'people' && <PeopleScreen game={game} />}
           {screen === 'map' && <MapScreen game={game} />}
           {screen === 'market' && <MarketScreen game={game} />}
         </div>

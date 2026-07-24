@@ -16,6 +16,7 @@ import {
 } from './diplomacy';
 import { stockValue } from './economy';
 import type { GoodDef } from './economy';
+import { cargoUnits } from './expeditions';
 import {
   loseResidentEscort,
   loseResidents,
@@ -25,7 +26,16 @@ import {
   transientEffect,
 } from './residents';
 import type { Rng } from './rng';
-import { clamp, FACTION_IDS, heroesAtPost, RAID_MANEUVERS } from './types';
+import { declareGameOver } from './turn';
+import {
+  activeHeroesById,
+  clamp,
+  clampStanding,
+  FACTION_IDS,
+  heroesAtPost,
+  isActiveHeroId,
+  RAID_MANEUVERS,
+} from './types';
 import type {
   BuildingId,
   DiplomacySeatState,
@@ -157,11 +167,13 @@ export function companyMuster(state: GameState): number {
 }
 
 export function defenderForceBreakdown(state: GameState): DefenderForceBreakdown {
+  // Sub-terms mirror postDefense's own formula, broken out for UI display;
+  // `post` itself is read from postDefense so the two can never drift apart.
   const guards =
     residentsAvailable(state, 'guards') * TUNING.residents.effects.postDefensePerGuard;
   const fortifications = buildingEffect(state, 'defenseBonus');
   const transients = transientEffect(state, 'defenseBonus');
-  const post = guards + fortifications + transients;
+  const post = postDefense(state);
   const heroes = heroesAtPost(state).reduce(
     (sum, hero) => sum + hero.skills.combat * TUNING.raid.heroCombatWeight,
     0,
@@ -226,7 +238,7 @@ function applyAggressorStandingShift(
     applyDiplomacyShiftById(state, seatId, delta);
     return;
   }
-  state.factions[faction].standing = clamp(state.factions[faction].standing + delta, -100, 100);
+  state.factions[faction].standing = clampStanding(state.factions[faction].standing + delta);
 }
 
 export function eligibleAggressors(state: GameState): FactionId[] {
@@ -304,9 +316,7 @@ function bestInParty(
   expedition: ExpeditionState,
   skill: 'combat' | 'leadership' | 'stealth',
 ): Hero | null {
-  const heroes = expedition.heroIds
-    .map((id) => state.heroes.find((hero) => hero.id === id))
-    .filter((hero): hero is Hero => hero !== undefined && hero.status === 'active');
+  const heroes = activeHeroesById(state, expedition.heroIds);
   if (heroes.length === 0) return null;
   return heroes.reduce((a, b) => (b.skills[skill] > a.skills[skill] ? b : a));
 }
@@ -317,10 +327,6 @@ function raidCargoCapacity(expedition: ExpeditionState): number {
     expedition.heroIds.length * TUNING.map.cargoCapacityPerHero +
     porters * TUNING.residents.effects.cargoPerPorter
   );
-}
-
-function cargoUnits(cargo: Partial<Record<GoodId, number>>): number {
-  return Object.values(cargo).reduce((sum, qty) => sum + (qty ?? 0), 0);
 }
 
 function fillRaidLoot(
@@ -366,9 +372,7 @@ export function raidingForceBreakdown(
   state: GameState,
   expedition: ExpeditionState,
 ): RaidingForceBreakdown {
-  const party = expedition.heroIds
-    .map((id) => state.heroes.find((hero) => hero.id === id))
-    .filter((hero): hero is Hero => hero !== undefined && hero.status === 'active');
+  const party = activeHeroesById(state, expedition.heroIds);
   const heroes = party.reduce(
     (sum, hero) => sum + hero.skills.combat * TUNING.raid.heroCombatWeight,
     0,
@@ -497,15 +501,6 @@ function bestAtPost(state: GameState, skill: 'combat' | 'leadership'): Hero | nu
   return heroes.reduce((a, b) => (b.skills[skill] > a.skills[skill] ? b : a));
 }
 
-function declareDestroyed(state: GameState): void {
-  state.gameOver = {
-    kind: 'destroyed',
-    title: 'The Post Falls',
-    text: 'They come through the broken palisade at dawn and there is no one left with the strength to hold them. What little the storehouse held goes onto their backs; the rest goes up in smoke. By the time word reaches Thornwatch, the frontier has already closed over the place as if it were never there.',
-  };
-  state.phase = 'gameover';
-}
-
 export function resolveOutgoingRaid(
   state: GameState,
   raid: PendingOutgoingRaid,
@@ -529,9 +524,7 @@ export function resolveOutgoingRaid(
   const maneuver = params.maneuver;
   const targetFaction = raid.faction;
   const log: string[] = [];
-  const party = expedition.heroIds
-    .map((id) => state.heroes.find((hero) => hero.id === id))
-    .filter((hero): hero is Hero => hero !== undefined && hero.status === 'active');
+  const party = activeHeroesById(state, expedition.heroIds);
   if (party.length === 0) {
     expedition.heroIds = [];
     log.push('No one is left to strike the raid.');
@@ -593,20 +586,16 @@ export function resolveOutgoingRaid(
     applyDiplomacyShiftById(state, targetSeatId, -diplomaticLoss);
     setDiplomacyPactById(state, targetSeatId, 'none');
   } else {
-    state.factions[targetFaction].standing = clamp(
+    state.factions[targetFaction].standing = clampStanding(
       state.factions[targetFaction].standing - diplomaticLoss,
-      -100,
-      100,
     );
   }
   if (tributeBroken) {
     log.push(`The old tribute oath with ${raid.targetName} is broken by blood.`);
   }
 
-  state.factions.CHARTER_COMPANY.standing = clamp(
+  state.factions.CHARTER_COMPANY.standing = clampStanding(
     state.factions.CHARTER_COMPANY.standing - goal.companyStandingLoss,
-    -100,
-    100,
   );
 
   if (margin < 0) {
@@ -690,10 +679,7 @@ function transitionRaidExpedition(
   expedition: ExpeditionState,
   log: string[],
 ): void {
-  expedition.heroIds = expedition.heroIds.filter((id) => {
-    const hero = state.heroes.find((candidate) => candidate.id === id);
-    return hero !== undefined && hero.status === 'active';
-  });
+  expedition.heroIds = expedition.heroIds.filter((id) => isActiveHeroId(state, id));
   if (expedition.heroIds.length === 0) {
     loseResidentEscort(state, expedition.residentEscort);
     expedition.residentEscort = {};
@@ -864,7 +850,7 @@ export function resolveIncomingRaid(
     const recentPriorSack = priorSack > 0 && state.turn - priorSack <= d.cascadeWindow;
     state.lastSackedTurn = state.turn;
     if (hollow && recentPriorSack) {
-      declareDestroyed(state);
+      declareGameOver(state, 'destroyed');
       gameOver = true;
     }
   }

@@ -30,7 +30,7 @@ async function clickMap(page: Page, x: number, y: number): Promise<void> {
   await page.mouse.click(box.x + box.width * x, box.y + box.height * y);
 }
 
-const SCREENS = ['Outpost', 'Assignments', 'Characters', 'Buildings', 'People', 'Map', 'Market'];
+const SCREENS = ['Outpost', 'Assignments', 'Characters', 'Buildings', 'Map', 'Market'];
 
 test('no in-shell screen scrolls at the 1280x720 floor', async ({ page }) => {
   await page.setViewportSize(FLOOR);
@@ -40,6 +40,17 @@ test('no in-shell screen scrolls at the 1280x720 floor', async ({ page }) => {
     await goto(page, name);
     expect(await overflow(page), `${name} screen scrolls`).toBeLessThanOrEqual(TOLERANCE);
   }
+
+  // Outpost with an Idle Hands section revealed (merged in from the old People
+  // screen) — releasing a hand grows the dashboard's People column.
+  await goto(page, 'Outpost');
+  await page
+    .locator('.hand-row', { hasText: 'Farmers' })
+    .getByRole('button', { name: 'Release' })
+    .click();
+  expect(await overflow(page), 'Outpost (idle hands revealed) scrolls').toBeLessThanOrEqual(
+    TOLERANCE,
+  );
 
   // Map with a node selected expands the detail column.
   await goto(page, 'Map');

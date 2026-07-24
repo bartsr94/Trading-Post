@@ -1,6 +1,8 @@
-// Outpost Overview: a read-at-a-glance dashboard (no controls) laid out in three
-// columns so it never scrolls. The interactive management lives on the dedicated
-// Buildings and People screens, linked from here.
+// Outpost Overview: the landing screen — a dashboard of the outpost's
+// character, trade & standing, the settlement, and its people, plus the
+// Concession's land controls in a strip below. The People screen it used to
+// link out to is gone; hands/land management live here now. Four columns
+// (plus the strip) so it still never scrolls at the 1280x720 floor.
 
 import outpostBg from '../../assets/ui/outpost_background.jpg';
 import { BUILDING_NAMES } from '../../content/buildings';
@@ -11,10 +13,11 @@ import { CONTENT } from '../../content/registry';
 import { TUNING } from '../../content/tuning';
 import { canAdvanceTier, tierRequirement } from '../../engine/buildings';
 import { prosperity } from '../../engine/economy';
-import { claimCapacity, contentmentBand, postDefense, residentTotal } from '../../engine/residents';
+import { postDefense } from '../../engine/residents';
 import { stanceOf } from '../../engine/types';
 import type { ExpeditionState, GameState } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
+import { ConcessionStrip, PeopleOverviewColumn } from '../components/ResidentsPanel';
 import { Icon } from '../components/Icon';
 import type { IconName } from '../components/Icon';
 
@@ -29,12 +32,6 @@ const EXPEDITION_KIND_ICONS: Record<ExpeditionState['kind'], IconName> = {
   invite: 'people',
   concession: 'map',
 };
-
-const BAND_LABEL = {
-  content: { text: 'Content', cls: 'good' },
-  grumbling: { text: 'Grumbling', cls: 'dim' },
-  unrest: { text: 'Unrest', cls: 'bad' },
-} as const;
 
 function AxisIndicator({ value, left, right }: { value: number; left: string; right: string }) {
   return (
@@ -51,9 +48,6 @@ function AxisIndicator({ value, left, right }: { value: number; left: string; ri
 export function PostOverview({ game }: { game: GameState }) {
   const setScreen = useGameStore((s) => s.setScreen);
 
-  const total = residentTotal(game);
-  const cap = claimCapacity(game);
-  const band = BAND_LABEL[contentmentBand(game)];
   const construction = game.construction;
   const activeDef = construction ? TUNING.building.defs[construction.building] : undefined;
   const nextTier = tierRequirement(game.postTier + 1);
@@ -64,7 +58,6 @@ export function PostOverview({ game }: { game: GameState }) {
     <div className="outpost-overview">
       <div className="post-banner" style={{ backgroundImage: `url(${outpostBg})` }}>
         <div className="post-banner-text">
-          <span className="eyebrow">Outpost Overview</span>
           <h2>{TIER_NAMES[game.postTier - 1]}</h2>
           <span className="dim banner-flavor">
             Tents, a firepit, a stock pile — and six people determined to make it more.
@@ -72,7 +65,7 @@ export function PostOverview({ game }: { game: GameState }) {
         </div>
       </div>
 
-      <div className="overview-grid-3">
+      <div className="overview-grid-4">
         {/* Column 1 — the character of the outpost */}
         <div className="panel">
           <h3>The Outpost</h3>
@@ -194,30 +187,6 @@ export function PostOverview({ game }: { game: GameState }) {
             Manage buildings →
           </button>
 
-          <h4 style={{ marginTop: 14 }}>People</h4>
-          <div className="faction-row">
-            <span>Population</span>
-            <span className={total > cap ? 'bad' : 'dim'}>
-              {total} / {cap} <span className="dim">supported</span>
-            </span>
-          </div>
-          <div className="faction-row">
-            <span>Mood</span>
-            <span className={band.cls}>
-              {band.text} <span className="dim">({game.residents.contentment}/10)</span>
-            </span>
-          </div>
-          <div className="faction-row">
-            <span className="dim">Upkeep</span>
-            <span className="dim">
-              {total * TUNING.residents.grainPerResidentPerTurn} grain/turn ·{' '}
-              {total * TUNING.residents.seasonWagePerResident} silver/season
-            </span>
-          </div>
-          <button className="manage-link" onClick={() => setScreen('people')}>
-            Manage people →
-          </button>
-
           <h4 style={{ marginTop: 14 }}>Comings &amp; Goings</h4>
           {game.expeditions.length === 0 ? (
             <p className="dim" style={{ fontSize: '0.84rem', margin: 0 }}>
@@ -249,7 +218,12 @@ export function PostOverview({ game }: { game: GameState }) {
             })
           )}
         </div>
+
+        {/* Column 4 — the people who make it up */}
+        <PeopleOverviewColumn game={game} />
       </div>
+
+      <ConcessionStrip game={game} />
     </div>
   );
 }

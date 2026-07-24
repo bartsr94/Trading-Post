@@ -7,7 +7,8 @@ import { SKILL_GOVERNING } from './types';
 import type { Hero, SkillId, StatId, TraitDef } from './types';
 import type { Rng } from './rng';
 
-export type CheckTier = 'critSuccess' | 'success' | 'failure' | 'critFailure';
+export const CHECK_TIERS = ['critSuccess', 'success', 'failure', 'critFailure'] as const;
+export type CheckTier = (typeof CHECK_TIERS)[number];
 
 export interface CheckModifier {
   label: string;
