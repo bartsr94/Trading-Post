@@ -75,6 +75,11 @@ export type Condition =
   | { type: 'heroHasSpouse'; heroId?: string }
   | { type: 'heroUnmarried'; heroId?: string }
   | { type: 'heroGender'; gender: Gender; heroId?: string }
+  /** True when any of the (candidate/bound) hero's spouses is of a given
+   *  heritage — heritage-weighted birth rates (e.g. orc/goblin fertility)
+   *  gate on this rather than a new engine mechanism. */
+  | { type: 'heroSpouseHeritage'; heritage: Heritage; heroId?: string }
+  | { type: 'heroSpouseNotHeritage'; heritage: Heritage; heroId?: string }
   /** True when at least one other active, present hero could marry the bound
    *  hero right now (FAMILY_PHASE_D_SPEC.md §2.4). */
   | { type: 'partnerAvailable'; heroId?: string }
@@ -120,6 +125,11 @@ export type Condition =
   | { type: 'constructionActive'; value: boolean }
   | { type: 'canAdvanceTier' }
   | { type: 'locationDiscovery'; location: LocationId; atLeast: DiscoveryState }
+  /** True once any of the given locations has reached the discovery tier
+   *  (BEASTFOLK_CAMPS_SPEC.md) — for content shared across several
+   *  locations where any one of them satisfies it, e.g. either beastfolk
+   *  camp. */
+  | { type: 'locationDiscoveryAny'; locations: LocationId[]; atLeast: DiscoveryState }
   // Travel-only conditions (false outside an expedition context):
   | { type: 'expeditionKind'; kind: ExpeditionKind }
   | { type: 'expeditionLeg'; leg: 'outbound' | 'returning' }

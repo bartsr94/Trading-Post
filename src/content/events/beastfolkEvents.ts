@@ -92,7 +92,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     title: 'The Clan at the Gate',
     text: 'A goblin clan-mother arrives with a handful of her sisters and a wagon to fill — cloth, tools, salt, whatever the post can spare, in exchange for a promise to trouble you no further this year. She is patient, businesslike, and utterly unbothered by the guards watching her from the wall. {hero} is left to haggle over what "no further trouble" is actually worth.',
     conditions: [
-      { type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' },
+      { type: 'locationDiscovery', location: 'goblin_wilds', atLeast: 'visited' },
       { type: 'standingAtMost', faction: 'BEASTFOLK', value: -20 },
     ],
     weight: 10,
@@ -207,7 +207,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     title: 'A Bargain of Her Own Making',
     text: 'She has clearly rehearsed this — a goblin, young by the look of her, who has slipped away from her clan on the strength of a rumor that {hero} is unwed and worth the gamble. She names no price and no clan; this errand is entirely her own, and if it fails she will simply go home and say nothing happened. She is watching {hero} more closely than she is letting on.',
     conditions: [
-      { type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' },
+      { type: 'locationDiscovery', location: 'goblin_wilds', atLeast: 'visited' },
       { type: 'standingAtLeast', faction: 'BEASTFOLK', value: 10 },
       { type: 'heroUnmarried' },
       { type: 'heroGender', gender: 'male' },
@@ -251,7 +251,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     title: 'A Band Asks to Stay',
     text: 'A dozen or so orcs and goblins arrive together, travel-worn, and ask through {hero} for a place inside the palisade rather than beyond it — tired, they say, of a life spent taking what a season\'s luck won\'t give freely. They offer their spears for the post\'s defense in exchange for a roof and a stake in what you\'re building. No war-band or clan will vouch for them; they vouch only for themselves.',
     conditions: [
-      { type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' },
+      { type: 'locationDiscoveryAny', locations: ['beast_wilds', 'goblin_wilds'], atLeast: 'visited' },
       { type: 'standingAtLeast', faction: 'BEASTFOLK', value: 25 },
     ],
     weight: 6,
@@ -302,7 +302,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     title: 'Hands, Not Spears',
     text: 'This time it is not warriors at the gate but a mixed handful of orcs and goblins who point at the storehouse and the half-finished palisade rather than the wall-walk — they have come to work, they say, tired of a life measured in raids that pay less each season. {hero} is the one they wait on for an answer, tools already slung over their shoulders like they expect to be put to use today.',
     conditions: [
-      { type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' },
+      { type: 'locationDiscoveryAny', locations: ['beast_wilds', 'goblin_wilds'], atLeast: 'visited' },
       { type: 'standingAtLeast', faction: 'BEASTFOLK', value: 25 },
     ],
     weight: 5,
@@ -351,7 +351,9 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     illustration: 'beastfolk_patrol',
     title: 'Eyes at the Treeline',
     text: 'The treeline breaks without warning: a mixed patrol, orc and goblin both, spears low but not raised, watching from twenty paces like they\'ve been watching longer than that. No war-band flag, no clan token — just eyes on {hero}, waiting to see what the post\'s people do with a moment like this. Whatever happens next, they\'ll carry the telling of it home.',
-    conditions: [{ type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' }],
+    conditions: [
+      { type: 'locationDiscoveryAny', locations: ['beast_wilds', 'goblin_wilds'], atLeast: 'visited' },
+    ],
     weight: 7,
     once: true,
     binding: { type: 'highestStat', stat: 'resolve' },
@@ -803,7 +805,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     title: 'Fewer Than There Should Be',
     text: 'The herders come in short at the morning count — no blood, no broken fence, just quieter tracks than a wolf leaves and the particular smell of a cook-fire that isn\'t yours. Orcs, or goblins, or both; whoever it was knew exactly how many they could take without the loss looking deliberate. {hero} is the one deciding whether that\'s worth chasing.',
     conditions: [
-      { type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' },
+      { type: 'locationDiscoveryAny', locations: ['beast_wilds', 'goblin_wilds'], atLeast: 'visited' },
       { type: 'herdAtLeast', value: 3 },
       { type: 'standingAtMost', faction: 'BEASTFOLK', value: 40 },
     ],
@@ -859,7 +861,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     title: 'Light Fingers in the Storehouse',
     text: 'Small things go missing in small amounts — tools, a coil of rope, a sack of salt that was definitely full yesterday — never enough at once to call it a raid, always enough to notice. {hero} has a good guess who: orcs and goblins drift close to the walls at night more than the guards would like, testing what they can get away with as much as what they can carry.',
     conditions: [
-      { type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' },
+      { type: 'locationDiscoveryAny', locations: ['beast_wilds', 'goblin_wilds'], atLeast: 'visited' },
       { type: 'standingAtMost', faction: 'BEASTFOLK', value: 40 },
     ],
     weight: 8,
@@ -975,7 +977,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     title: 'Testing the Waters',
     text: 'A handful of orcs and goblins start showing up at the market days, not to trade so much as to look — at the walls, at the residents, at how the post actually runs when no war-band is watching. They don\'t stay past dusk and they don\'t explain themselves, but they keep coming back, like they\'re deciding something none of them have said out loud yet.',
     conditions: [
-      { type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' },
+      { type: 'locationDiscoveryAny', locations: ['beast_wilds', 'goblin_wilds'], atLeast: 'visited' },
       { type: 'standingAtLeast', faction: 'BEASTFOLK', value: 0 },
       { type: 'standingAtMost', faction: 'BEASTFOLK', value: 25 },
     ],

@@ -218,10 +218,10 @@ export const MAP_FEATURES: readonly MapFeatureDef[] = [
   {
     id: 'beast_wilds',
     polygon: [
-      { x: 0.28, y: 0.35 },
-      { x: 0.43, y: 0.35 },
-      { x: 0.43, y: 0.54 },
-      { x: 0.28, y: 0.54 },
+      { x: 0.41, y: 0.12 },
+      { x: 0.49, y: 0.12 },
+      { x: 0.49, y: 0.29 },
+      { x: 0.41, y: 0.29 },
     ],
     tags: ['wilds', 'beastfolk', 'danger'],
   },

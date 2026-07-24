@@ -43,6 +43,14 @@ test('illustrated map exposes exact places, approximate rumors, and free targets
   await clickMap(page, 0.58, 0.39);
   await expect(page.getByText(/Target: the charter corridor/)).toBeVisible();
   await page.getByLabel('Pace').selectOption('fast');
+
+  // A fresh post starts with 2 guards free — the Explore dispatch panel
+  // should let a party second one along for the arrival-check bonus
+  // (escortMods in expeditions.ts), same as the Market/Raid planners already did.
+  const guardsField = page.getByLabel(/Guards \(of 2/);
+  await expect(guardsField).toBeVisible();
+  await guardsField.fill('1');
+
   await page.locator('.map-party-picks input[type="checkbox"]').first().check();
   await page.getByRole('button', { name: 'Send the Party ▸' }).click();
   await expect(page.getByRole('heading', { name: 'On the Road' })).toBeVisible();

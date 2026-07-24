@@ -40,6 +40,21 @@ export function thrallsAvailable(state: GameState, role: ResidentRole): number {
   return state.thralls.roles[role];
 }
 
+/** Heads of a given origin held as thralls — mirrors `heritageCount` in
+ *  residents.ts, one-directional import discipline still holds since this
+ *  reads `state.thralls` only. */
+export function thrallHeritageCount(state: GameState, group: HeritageGroup): number {
+  return state.thralls.heritage[group];
+}
+
+/** Non-zero flavor-tag head counts among thralls, largest first — mirrors
+ *  `residentTagCounts`. */
+export function thrallTagCounts(state: GameState): [string, number][] {
+  return Object.entries(state.thralls.tags)
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1]);
+}
+
 /** Count for conditions: a specific role's present count, or the whole pool. */
 export function thrallCount(state: GameState, role?: ResidentRole): number {
   return role ? thrallsAvailable(state, role) : thrallTotal(state);

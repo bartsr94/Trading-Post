@@ -25,7 +25,9 @@ import {
 } from '../../engine/residents';
 import {
   restivenessBand,
+  thrallHeritageCount,
   thrallOutputMultiplier,
+  thrallTagCounts,
   thrallTotal,
 } from '../../engine/thralls';
 import { RESIDENT_ROLES } from '../../engine/types';
@@ -273,6 +275,9 @@ export function PeopleOverviewColumn({ game }: { game: GameState }) {
         const band = restivenessBand(game);
         const bandInfo = RESTIVENESS_LABEL[band];
         const manumitCost = TUNING.thralls.manumission.silverPerHead;
+        const thrallHomeland = thrallHeritageCount(game, 'homeland');
+        const thrallNative = thrallHeritageCount(game, 'native');
+        const thrallTags = thrallTagCounts(game);
         return (
           <>
             <h4 title="Forced labor — thralls to the Sauromatians, 'indentured labor' to the Company. No wage, but held at real risk.">
@@ -287,6 +292,24 @@ export function PeopleOverviewColumn({ game }: { game: GameState }) {
                 {bandInfo.text} <span className="dim">({Math.round(t.restiveness)}/10)</span>
               </span>
             </div>
+            <div className="faction-row" title="Origins of the held thrall pool.">
+              <span className="dim" style={{ fontSize: '0.78rem' }}>
+                Makeup
+              </span>
+              <span className="dim" style={{ fontSize: '0.78rem', textAlign: 'right' }}>
+                {thrallHomeland} Imanian · {thrallNative} native
+              </span>
+            </div>
+            {thrallTags.length > 0 && (
+              <div className="faction-row" title="Specific origins among the held thrall pool, within the makeup above.">
+                <span className="dim" style={{ fontSize: '0.78rem' }}>
+                  Origins
+                </span>
+                <span className="dim" style={{ fontSize: '0.78rem', textAlign: 'right' }}>
+                  {thrallTags.map(([tag, count]) => `${formatTag(tag)} ${count}`).join(' · ')}
+                </span>
+              </div>
+            )}
             <div className="faction-row" title="Output vs. a free resident's, by the guard:thrall ratio.">
               <span className="dim" style={{ fontSize: '0.78rem' }}>
                 Output

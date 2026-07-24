@@ -170,6 +170,47 @@ describe('expedition lifecycle', () => {
     expect(mapped).toBeGreaterThan(0);
   });
 
+  // A guard escort feeds a flat +TUNING.residents.effects.guardEscortBonus
+  // into escortMods(), which every arrival check (caravan/explore/diplomacy/
+  // invite/concession) folds in — this covers the explore case end to end
+  // (dispatch -> escortMods -> resolveCheck -> surveyResult.tier). old_road
+  // carries no faction/beastfolk tag, so rollAbductionRisk is a no-op and
+  // never perturbs the dice sequence between the two runs, keeping the
+  // natural 2d6 roll identical for a given seed — isolating the escort bonus
+  // as the only thing that can move the tier.
+  it('a guard escort raises the exploration arrival check tier and never lowers it', () => {
+    const TIER_RANK: Record<string, number> = { critFailure: 0, failure: 1, success: 2, critSuccess: 3 };
+    const trials = 60;
+    let strictlyBetter = 0;
+    for (let seed = 1; seed <= trials; seed++) {
+      const unescorted = testState(seed);
+      dispatchExpedition(unescorted, { kind: 'explore', destination: 'old_road', heroIds: ['p1'] }, DEFS);
+      const rngUnescorted = new Rng(seed);
+      while (!unescorted.expeditions[0]?.surveyResult) {
+        advanceExpeditions(unescorted, TEST_CONTENT, rngUnescorted, () => undefined);
+      }
+      const unescortedTier = unescorted.expeditions[0].surveyResult!.tier;
+
+      const escorted = testState(seed);
+      escorted.residents.roles.guards = (escorted.residents.roles.guards ?? 0) + 3;
+      dispatchExpedition(
+        escorted,
+        { kind: 'explore', destination: 'old_road', heroIds: ['p1'], residents: { guards: 3 } },
+        DEFS,
+      );
+      expect(escorted.expeditions[0].residentEscort?.guards).toBe(3);
+      const rngEscorted = new Rng(seed);
+      while (!escorted.expeditions[0]?.surveyResult) {
+        advanceExpeditions(escorted, TEST_CONTENT, rngEscorted, () => undefined);
+      }
+      const escortedTier = escorted.expeditions[0].surveyResult!.tier;
+
+      expect(TIER_RANK[escortedTier]).toBeGreaterThanOrEqual(TIER_RANK[unescortedTier]);
+      if (TIER_RANK[escortedTier] > TIER_RANK[unescortedTier]) strictlyBetter++;
+    }
+    expect(strictlyBetter).toBeGreaterThan(0);
+  });
+
   it('loses the expedition when the whole party dies en route', () => {
     const s = testState();
     dispatchCaravan(s, { heroIds: ['p1'], cargo: { tools: 3 } });

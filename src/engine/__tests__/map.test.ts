@@ -145,4 +145,22 @@ describe('spatial Ashmark map', () => {
       expect(regionAt(location.mapPoint, MAP_REGIONS)?.id, location.id).toBe(location.mapRegion);
     }
   });
+
+  // BEASTFOLK_CAMPS_SPEC.md §5: the beast_wilds MapFeature was reshaped to
+  // bracket both camps' new coordinates (Gnawback Camp at 0.4488,0.1588 and
+  // The Tangle at 0.4572,0.2543) so free-coordinate exploring nearby still
+  // reads as beastfolk country, without leaking that flavor onto the
+  // nearby river-country locations.
+  it('the reshaped beast_wilds terrain feature covers ground near both camps but not the river towns', () => {
+    expect(tagsAt({ x: 0.45, y: 0.2 }, MAP_REGIONS, MAP_FEATURES)).toEqual(
+      expect.arrayContaining(['beastfolk', 'wilds', 'danger']),
+    );
+    for (const point of [
+      LOCATION_DEFS.get('post')!.mapPoint,
+      LOCATION_DEFS.get('river_meet')!.mapPoint,
+      LOCATION_DEFS.get('kalasha_tora')!.mapPoint,
+    ]) {
+      expect(tagsAt(point, MAP_REGIONS, MAP_FEATURES)).not.toContain('beastfolk');
+    }
+  });
 });

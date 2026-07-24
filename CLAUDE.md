@@ -189,8 +189,13 @@ cross-reference.
   `HeritageGroup` bucket without asking (a locked call — see §9).
 - **Beastfolk** (see `docs/GAME_FEATURES.md` §10): added as a near-total
   content-only extension of the existing Heritage/faction/family
-  machinery — no new engine mechanism. This is the pattern to follow for
-  any future non-human or non-seated people.
+  machinery. This is the pattern to follow for any future non-human or
+  non-seated people. A later pass split the single shared discovery node
+  into one camp per people (`beast_wilds`/`goblin_wilds`) and needed one
+  generic engine addition for it — `locationDiscoveryAny`, a `Condition`
+  true once any of several listed locations clears a discovery threshold —
+  the first "any of N locations" condition the engine has needed; reach for
+  it before inventing a second one.
 - **Chain events** (see `docs/GAME_FEATURES.md` §3): `EventPanel.tsx`/
   `advancePendingEvent` needed no change for `continueChain` since both
   already just operate on `pendingEvents[0]`. `ConditionContext` gained one

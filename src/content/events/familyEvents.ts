@@ -201,6 +201,10 @@ export const FAMILY_EVENTS: GameEvent[] = [
       { type: 'heroHasSpouse' },
       { type: 'axisAtLeast', axis: 'communal', value: 3 },
       { type: 'contentmentAtLeast', value: 5 },
+      // Orc/goblin unions run through the two events below instead, at their
+      // own higher weight — excluded here so the two don't stack.
+      { type: 'heroSpouseNotHeritage', heritage: 'orc' },
+      { type: 'heroSpouseNotHeritage', heritage: 'goblin' },
     ],
     weight: 8,
     cooldownTurns: 10,
@@ -211,6 +215,74 @@ export const FAMILY_EVENTS: GameEvent[] = [
         outcomes: {
           success: {
             text: 'The child comes in its own time, squalling and whole. The household makes room; the post, a little more of a home. There will be a lean winter or two more for the extra mouth — but a family has put down a root the frontier cannot easily pull up.',
+            outcomes: [
+              { type: 'addDependant', kind: 'child' },
+              { type: 'axis', axis: 'communal', delta: 1 },
+              { type: 'history', text: 'A child was born into the household.' },
+            ],
+          },
+        },
+      },
+    ],
+  },
+  // Heritage-weighted birth rate (Bartosz, 2026-07-24): orc/goblin unions
+  // never hybridize (childAncestry's matrilineal-pure rule already guarantees
+  // a daughter here), and breed noticeably faster than the baseline above —
+  // orc ~1.5x, goblin ~2x, via weight alone (same cooldown/gates otherwise).
+  {
+    id: 'family_first_child_orc',
+    category: 'post',
+    illustration: 'newborn',
+    title: 'Orc Blood Breeds True',
+    text: 'The word goes round the post before anyone announces it: {hero}’s household is to grow again. An orc mother carries easily and often, and the household has already learned not to be surprised by it. Another daughter, everyone already knows, since the blood runs only one way.',
+    conditions: [
+      { type: 'heroHasSpouse' },
+      { type: 'axisAtLeast', axis: 'communal', value: 3 },
+      { type: 'contentmentAtLeast', value: 5 },
+      { type: 'heroSpouseHeritage', heritage: 'orc' },
+    ],
+    weight: 12,
+    cooldownTurns: 10,
+    binding: { type: 'highestStat', stat: 'resolve' },
+    peoples: ['orc'],
+    choices: [
+      {
+        label: 'Welcome the child — and the years it promises.',
+        outcomes: {
+          success: {
+            text: 'The daughter comes in her own time, squalling and whole. The household makes room; the post, a little more of a home. There will be a lean winter or two more for the extra mouth — but a family has put down a root the frontier cannot easily pull up.',
+            outcomes: [
+              { type: 'addDependant', kind: 'child' },
+              { type: 'axis', axis: 'communal', delta: 1 },
+              { type: 'history', text: 'A child was born into the household.' },
+            ],
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: 'family_first_child_goblin',
+    category: 'post',
+    illustration: 'newborn',
+    title: 'A Goblin Household Grows',
+    text: 'The word goes round the post before anyone announces it: {hero}’s household is to grow again — and with a goblin mother in it, that word travels faster than most. Goblins breed quick and true, and the household has stopped counting the seasons between children. Another daughter, everyone already knows, since the blood runs only one way.',
+    conditions: [
+      { type: 'heroHasSpouse' },
+      { type: 'axisAtLeast', axis: 'communal', value: 3 },
+      { type: 'contentmentAtLeast', value: 5 },
+      { type: 'heroSpouseHeritage', heritage: 'goblin' },
+    ],
+    weight: 16,
+    cooldownTurns: 10,
+    binding: { type: 'highestStat', stat: 'resolve' },
+    peoples: ['goblin'],
+    choices: [
+      {
+        label: 'Welcome the child — and the years it promises.',
+        outcomes: {
+          success: {
+            text: 'The daughter comes in her own time, squalling and whole. The household makes room; the post, a little more of a home. There will be a lean winter or two more for the extra mouth — but a family has put down a root the frontier cannot easily pull up.',
             outcomes: [
               { type: 'addDependant', kind: 'child' },
               { type: 'axis', axis: 'communal', delta: 1 },

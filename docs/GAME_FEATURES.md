@@ -105,7 +105,7 @@ nothing needs it yet.
 
 Shipped example: "A Patrol at the Treeline" — `beastfolk_first_encounter` →
 `_talks` → `_close`, 3 stages, `content/events/beastfolkEvents.ts`, gated on
-`beast_wilds` discovery.
+either beastfolk camp's discovery (`locationDiscoveryAny`, §10).
 
 **Text interpolation & pronoun tokens** (`engine/events/text.ts`). Besides
 `{hero}`/`{post}`/`{destination}`/`{faction}`/`{partner}`, `interpolate` takes
@@ -250,8 +250,25 @@ are paid at season end (`payResidentWages`; residents draw a wage, reserve
 heroes a retainer, grown kin a lighter retainer).
 
 **Escorts.** Dispatching an expedition can second porters (raise cargo
-capacity) and guards (arrival-check bonus) — they leave `roles` at dispatch,
-still count for upkeep while away, and rejoin on homecoming.
+capacity) and guards (arrival-check bonus via `escortMods` — a flat
+`+2` per escorted guard, folded into every arrival check regardless of
+expedition kind) — they leave `roles` at dispatch, still count for upkeep
+while away, and rejoin on homecoming. `MapScreen.tsx`'s dispatch panel
+exposes the porter/guard quantity inputs for every non-`courtship` purpose
+(explore, invite, concession, raid) — only `raid` gets the fuller
+`raid-escort-planner` block (goal/maneuver context, loot capacity readout);
+the others get a compact single-row `.compact-field` per role to stay
+within the no-scroll budget (2026-07-24 — the inputs previously existed in
+the engine and on `MarketScreen.tsx`'s caravan planner but were never
+wired into the Explore/Invite/Concession paths of the Map dispatch panel).
+`expeditions.test.ts`'s "a guard escort raises the exploration arrival
+check tier and never lowers it" runs matched escorted/unescorted explore
+dispatches through `advanceExpeditions` off identical seeds (`old_road`
+carries no faction/beastfolk tag, so `rollAbductionRisk` never perturbs the
+shared dice sequence) and asserts the escort's tier is never lower, and
+strictly better in at least one seed — the general escort/check-bonus
+pattern this exercises applies the same way to invite/concession/caravan/
+diplomacy arrivals.
 
 **Transients** (`GameState.transients`) are outsiders the post neither feeds
 nor pays: `companyAgents` (indefinite, spawned on a missed Charter quota,
@@ -384,6 +401,18 @@ and a heritage-skewed gender roll. A season-end sweep
 adult — still named, marriageable, drawing a lighter retainer — which is
 what makes the family tree genuinely multi-generational.
 
+**Birth rate by heritage** (Bartosz, 2026-07-24): three parallel post-category
+events cover `family_first_child` — the baseline (weight 8) and two higher-
+weight variants, `family_first_child_orc` (weight 12, ~1.5x) and
+`family_first_child_goblin` (weight 16, ~2x), gated by the new
+`heroSpouseHeritage`/`heroSpouseNotHeritage` conditions (`engine/events/
+conditions.ts`, reading `spousesOf`/`nodePeoples` from `family.ts`) so the
+baseline event excludes orc/goblin spouses and the two variants require
+them — no double-firing for the same household. Pure content + one generic
+condition pair, no engine mechanism beyond that; the matrilineal-pure
+daughter-only rule (`childAncestry`) already applied regardless of which of
+the three events fires the birth.
+
 **UI:** `CharactersScreen.tsx` (active/reserve/dependant family strip) and
 `FamilyTree.tsx` (the multi-generational tree modal).
 
@@ -434,8 +463,24 @@ The Ashmark's first non-human peoples, built entirely as content on
 existing generic mechanisms. `Heritage` gains `orc`/`goblin`, both `native`.
 A seatless `BEASTFOLK` faction ("The Greenskins", starts at −60) has **no
 map seat** — no "Send Envoy" path, no local hire-menu entry; standing moves
-only through event outcomes. Discovery node `beast_wilds` ("The Gnawback
-Camp") is pure exploration/event territory.
+only through event outcomes. Two discovery nodes are pure exploration/event
+territory, one per people: `beast_wilds` ("The Gnawback Camp," orc) and
+`goblin_wilds` ("The Tangle," goblin) — split out from a single shared node
+in a later pass (BEASTFOLK_CAMPS_SPEC.md, since folded in here). Neither is
+a diplomacy seat; both carry `beastfolk` plus their own `orc`/`goblin` tag.
+Content written for one people alone (tribute/match/dare) gates on that
+people's own camp; content genuinely about both (settlement, the first-
+encounter chain, livestock raids, pilfering, the mid-standing visitor beat)
+gates on a new generic `locationDiscoveryAny` condition (`engine/events/
+conditions.ts`/`types.ts`) — true once *either* listed location clears the
+discovery threshold, the first "any of N locations" condition the engine
+has needed. The shared `beast_wilds` `MapFeatureDef` terrain overlay
+(`content/map.ts`, distinct from the locations) was reshaped to bracket
+both camps' new coordinates so free-coordinate exploring nearby still reads
+as beastfolk country. No new `FactionId`, no new diplomacy seat, no save
+migration — `LocationState` only ever stored `discovery`/`market`, and
+`goblin_wilds` needs no backfill for old saves, matching the precedent that
+`beast_wilds` itself was never backfilled when v10 shipped it.
 
 Content: demand/tribute events at low standing (pay, haggle, refuse — all
 non-violent, in silver/goods/standing/stress); voluntary union at rising
@@ -860,8 +905,11 @@ modules import from it instead), `content/tuning.ts` (`TUNING.thralls`),
 `thrallRestiveness` outcomes), `content/events/thrallEvents.ts`,
 `store/gameStore.ts` (`reallocateThralls`/`freeThralls`/
 `purchaseCompanyThralls`), UI (`ResidentsPanel.tsx`'s Thralls block on
-Outpost Overview, `DiplomacyScreen.tsx`, `RaidModal.tsx`/`MapScreen.tsx`'s
-`enslave` goal option, a `CheatConsole.tsx` Thralls section for testing).
+Outpost Overview — includes a Makeup row (`thrallHeritageCount`, homeland
+vs. native head count) and an Origins row (`thrallTagCounts`, finer
+flavor-tag breakdown) mirroring the free-resident pool's equivalent rows,
+`DiplomacyScreen.tsx`, `RaidModal.tsx`/`MapScreen.tsx`'s `enslave` goal
+option, a `CheatConsole.tsx` Thralls section for testing).
 **Save shape: v25** (`migrateV24toV25`, backfills `thralls: freshThralls()`
 — no old save ever had one).
 

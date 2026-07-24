@@ -123,7 +123,7 @@ export function MapScreen({ game }: { game: GameState }) {
   const [raidManeuver, setRaidManeuver] = useState<RaidManeuver>('skirmish');
   const [raidRally, setRaidRally] = useState(false);
   const [raidAlly, setRaidAlly] = useState<FactionId | ''>('');
-  const [raidEscort, setRaidEscort] = useState<Partial<Record<ResidentRole, number>>>({});
+  const [escort, setEscort] = useState<Partial<Record<ResidentRole, number>>>({});
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [center, setCenter] = useState({ x: 0.5, y: 0.5 });
@@ -157,7 +157,7 @@ export function MapScreen({ game }: { game: GameState }) {
   );
   const portersFree = residentsAvailable(game, 'porters');
   const guardsFree = residentsAvailable(game, 'guards');
-  const raidCapacity = cargoCapacity(Math.max(1, party.length), raidEscort);
+  const raidCapacity = cargoCapacity(Math.max(1, party.length), escort);
 
   const surveyed = useMemo(
     () => new Set(game.mapKnowledge?.surveyedCells ?? []),
@@ -295,7 +295,7 @@ export function MapScreen({ game }: { game: GameState }) {
   const setEscortQty = (role: ResidentRole, raw: string, max: number) => {
     setError(null);
     const qty = Math.max(0, Math.min(max, Math.floor(Number(raw) || 0)));
-    setRaidEscort((current) => ({ ...current, [role]: qty }));
+    setEscort((current) => ({ ...current, [role]: qty }));
   };
 
   const send = () => {
@@ -308,6 +308,7 @@ export function MapScreen({ game }: { game: GameState }) {
             ...(selected ? { destination: selected.id } : { target: activeTarget }),
             heroIds: party,
             pace,
+            residents: escort,
           }
         : action === 'invite' && selected
             ? {
@@ -315,6 +316,7 @@ export function MapScreen({ game }: { game: GameState }) {
                 destination: selected.id,
                 heroIds: party,
                 pace,
+                residents: escort,
                 inviteSource: inviteSourceForSeat(selected.id),
                 inviteOffer,
                 inviteCount,
@@ -325,6 +327,7 @@ export function MapScreen({ game }: { game: GameState }) {
                 destination: selected.id,
                 heroIds: party,
                 pace,
+                residents: escort,
                 concessionAsk,
               }
             : action === 'raid' && selected
@@ -333,7 +336,7 @@ export function MapScreen({ game }: { game: GameState }) {
                   destination: selected.id,
                   heroIds: party,
                   pace,
-                  residents: raidEscort,
+                  residents: escort,
                   raidGoal,
                   raidManeuver,
                   raidRally,
@@ -356,7 +359,7 @@ export function MapScreen({ game }: { game: GameState }) {
     }
     if (dispatch(params)) {
       setParty([]);
-      setRaidEscort({});
+      setEscort({});
       setError(null);
       setMode('road');
     }
@@ -380,6 +383,11 @@ export function MapScreen({ game }: { game: GameState }) {
           : []),
       ]
     : [];
+
+  /** The effective dispatch kind — mirrors `send()`'s own derivation, since a
+   *  free-coordinate target (mode 'explore') never shows the Purpose picker
+   *  and always dispatches as a plain explore regardless of `placeAction`. */
+  const currentAction: PlaceAction = mode === 'place' ? placeAction : 'explore';
 
   const targetLabel = selected
     ? selected.name
@@ -762,7 +770,7 @@ export function MapScreen({ game }: { game: GameState }) {
                                 type="number"
                                 min={0}
                                 max={guardsFree}
-                                value={raidEscort.guards ?? 0}
+                                value={escort.guards ?? 0}
                                 onChange={(event) => setEscortQty('guards', event.target.value, guardsFree)}
                               />
                             </label>
@@ -774,7 +782,7 @@ export function MapScreen({ game }: { game: GameState }) {
                                 type="number"
                                 min={0}
                                 max={portersFree}
-                                value={raidEscort.porters ?? 0}
+                                value={escort.porters ?? 0}
                                 onChange={(event) => setEscortQty('porters', event.target.value, portersFree)}
                               />
                             </label>
@@ -786,6 +794,30 @@ export function MapScreen({ game }: { game: GameState }) {
                       </div>
                     )}
                   </>
+                )}
+                {currentAction !== 'courtship' && currentAction !== 'raid' && guardsFree > 0 && (
+                  <label className="compact-field">
+                    <span>Guards <span className="dim" style={{ fontSize: '0.72rem' }}>(of {guardsFree}, +check bonus)</span></span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={guardsFree}
+                      value={escort.guards ?? 0}
+                      onChange={(event) => setEscortQty('guards', event.target.value, guardsFree)}
+                    />
+                  </label>
+                )}
+                {currentAction !== 'courtship' && currentAction !== 'raid' && portersFree > 0 && (
+                  <label className="compact-field">
+                    <span>Porters <span className="dim" style={{ fontSize: '0.72rem' }}>(of {portersFree}, +cargo)</span></span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={portersFree}
+                      value={escort.porters ?? 0}
+                      onChange={(event) => setEscortQty('porters', event.target.value, portersFree)}
+                    />
+                  </label>
                 )}
 
                 <h4>Party</h4>

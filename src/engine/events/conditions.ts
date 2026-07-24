@@ -2,7 +2,7 @@ import { activeHeroes, discoveryAtLeast, livingHeroes, reserveHeroes, seasonOfTu
 import { canAdvanceTier, hasBuilding } from '../buildings';
 import { isOverClaim } from '../claim';
 import { cargoUnits } from '../expeditions';
-import { eligiblePartners, isMarried } from '../family';
+import { eligiblePartners, isMarried, nodePeoples, spousesOf } from '../family';
 import { diplomacySeatStateById } from '../diplomacy';
 import { frictionFor, heritageCount, nativeShare, postDefense, residentCount } from '../residents';
 import { raidThreatActive } from '../raids';
@@ -88,6 +88,17 @@ export function evalCondition(
       const hero = state.heroes.find((h) => h.id === heroId);
       return hero !== undefined && hero.gender === cond.gender;
     }
+    case 'heroSpouseHeritage': {
+      const heroId = cond.heroId ?? ctx.heroId;
+      if (heroId === undefined) return false;
+      return spousesOf(state, heroId).some((spouse) => nodePeoples(spouse).includes(cond.heritage));
+    }
+    case 'heroSpouseNotHeritage': {
+      const heroId = cond.heroId ?? ctx.heroId;
+      if (heroId === undefined) return false;
+      const spouses = spousesOf(state, heroId);
+      return spouses.length > 0 && !spouses.some((spouse) => nodePeoples(spouse).includes(cond.heritage));
+    }
     case 'partnerAvailable': {
       const heroId = cond.heroId ?? ctx.heroId;
       return heroId !== undefined && eligiblePartners(state, heroId).length > 0;
@@ -154,6 +165,11 @@ export function evalCondition(
       const loc = state.locations[cond.location];
       return loc !== undefined && discoveryAtLeast(loc.discovery, cond.atLeast);
     }
+    case 'locationDiscoveryAny':
+      return cond.locations.some((id) => {
+        const loc = state.locations[id];
+        return loc !== undefined && discoveryAtLeast(loc.discovery, cond.atLeast);
+      });
     case 'chainVar':
       return ctx.chainVars?.[cond.key] === cond.value;
     case 'expeditionKind':
