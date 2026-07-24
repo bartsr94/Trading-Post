@@ -5,7 +5,7 @@ import type { BuildingDefData, FactionId, Heritage, TierRequirement } from '../e
 
 export const TUNING = {
   save: {
-    version: 24,
+    version: 25,
     autosaveKey: 'trading-post-save',
     /** Manual import guard; current saves are far smaller than five MiB. */
     maxImportBytes: 5 * 1024 * 1024,
@@ -312,6 +312,87 @@ export const TUNING = {
       passiveDecayPerTurn: 0.05,
       /** Contentment cost per turn, per heritage currently in the volatile band. */
       volatileContentmentPressure: 1,
+    },
+  },
+
+  // Forced labor — thralls to the Sauromatians, "indentured labor" to the
+  // Company, same mechanic either way (THRALLS_SPEC.md). A parallel pool to
+  // `residents`: no silver wage, but still fed, and held at real risk across
+  // four levers (output, escape/revolt, free-resident mood, standing/culture).
+  thralls: {
+    /** Grain eaten per thrall per turn — no wage, but still a mouth to feed. */
+    grainPerThrallPerTurn: 1,
+    output: {
+      /** Guards (free residents only — thralls can never be guards) per thrall
+       *  needed before the pool works at its better rate. */
+      guardRatioForFullOutput: 0.15,
+      /** Still short of a free resident's output even at full guard ratio —
+       *  forced labor is never quite as productive as a paid hand. */
+      guardedOutputMult: 0.9,
+      unguardedOutputMult: 0.5,
+    },
+    restiveness: {
+      start: 3,
+      min: 0,
+      max: 10,
+      /** ≤ this = settled. */
+      settledThreshold: 3,
+      /** ≥ this = restive: passive escape risk, revolt content eligible. */
+      restiveThreshold: 7,
+      /** Pressure per turn, scaled by thralls:free-residents ratio. */
+      ratioPressurePerRatioPoint: 4,
+      /** Shared hardship — a missed meal unsettles thralls same as residents. */
+      missedFoodPenalty: 1,
+      /** Free-resident guards suppress restiveness same as they suppress
+       *  desertion — one more reason guards do double duty. */
+      guardSuppressionPerGuard: 0.4,
+    },
+    escape: {
+      /** Fraction of the thrall pool that flees each turn while restive. */
+      restiveEscapeRate: 0.15,
+      guardSuppressionPerPoint: 0.03,
+    },
+    /** Ongoing drag on the free resident pool's contentment from living
+     *  alongside a forced-labor population, scaled by the thrall:free-resident
+     *  ratio (folded into `updateContentment` alongside friction pressure). */
+    contentmentPressure: {
+      perRatioPoint: 2,
+    },
+    /** Season-end standing/culture cost of holding thralls at all, regardless
+     *  of acquisition channel (THRALLS_SPEC.md's "Standing / Company judgment"
+     *  lever) — deliberately not tracked per-origin-faction. */
+    holding: {
+      nativeStandingLossPerSeason: 1,
+      cultureNudgePerSeason: 1,
+      nativeFactions: ['RIVER_CLANS', 'HILL_TRIBES', 'OLD_PEOPLE', 'BEASTFOLK'] as FactionId[],
+    },
+    /** Freeing thralls back into free residents — the counter-play to holding. */
+    manumission: {
+      silverPerHead: 20,
+      /** One-time standing gain per head freed, with every non-hostile native
+       *  faction — the mirror of the ongoing holding loss above. */
+      standingGainPerHead: 1,
+      /** Flat culture-axis nudge back toward Homeland, undoing part of the
+       *  drift `holding.cultureNudgePerSeason` accrues. */
+      cultureNudge: 1,
+    },
+    /** Purchase channels (THRALLS_SPEC.md Acquisition §3). */
+    purchase: {
+      /** Envoy mission to a native diplomacy seat (RIVER_CLANS, or any native
+       *  faction with a seat) — BEASTFOLK has none, so this naturally excludes it. */
+      nativeSilverPerHead: 25,
+      nativeMinStanding: 15, // Friendly+
+      /** Headcount actually delivered scales with the envoy's diplomacy
+       *  check, same pattern as Invite Settlers' turnout. */
+      baseFractionByCheckTier: {
+        critSuccess: 1,
+        success: 0.8,
+        failure: 0.3,
+        critFailure: 0,
+      } as Record<string, number>,
+      /** The Company's own "indentured labor" channel, via the at-post
+       *  diplomacy activity's Company-factor interaction. */
+      companySilverPerHead: 30,
     },
   },
 
@@ -783,6 +864,19 @@ export const TUNING = {
         companyStandingLoss: 2,
         tributeSilver: 0,
       },
+      /** Only dispatchable with at least one escort guard along
+       *  (`dispatchErrorRaid`) — you cannot march captives home unescorted.
+       *  Higher standing cost than plunder: enslaving people is graver than
+       *  looting goods (THRALLS_SPEC.md Acquisition §1). */
+      enslave: {
+        forceMod: 0,
+        casualtyMult: 1,
+        lootSilverMult: 0.2,
+        lootGoodsMult: 0.15,
+        factionStandingLoss: 7,
+        companyStandingLoss: 3,
+        tributeSilver: 0,
+      },
     } as Record<
       string,
       {
@@ -795,6 +889,10 @@ export const TUNING = {
         tributeSilver: number;
       }
     >,
+    /** Thralls taken on a winning `enslave` raid — scales with margin like
+     *  the goods haul. */
+    outgoingThrallsBase: 1,
+    outgoingThrallsPerMargin: 0.15,
 
     // --- Battle resolution (RAIDING_SPEC.md §3.3) ---
     /** ± force swing from winning the maneuver rock-paper-scissors. */

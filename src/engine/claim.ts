@@ -8,10 +8,11 @@ import { buildingEffect } from './buildings';
 import { journeyTurns } from './map';
 import {
   claimCapacity,
+  claimedPopulation,
   outputMultiplier,
   residentsAvailable,
-  residentTotal,
 } from './residents';
+import { thrallOutputMultiplier, thrallsAvailable } from './thralls';
 import { clamp, discoveryAtLeast, isNativeHeritage } from './types';
 import type {
   ClaimState,
@@ -69,9 +70,10 @@ export function herdCarryingCapacity(state: GameState): number {
   return landChains(state, 'pasture') * C.herdPerPastureChain;
 }
 
-/** True when the population has run past what the Concession supports (§2.1). */
+/** True when the population (free residents + held thralls) has run past
+ *  what the Concession supports (§2.1; THRALLS_SPEC.md decision #6). */
 export function isOverClaim(state: GameState): boolean {
-  return residentTotal(state) > claimCapacity(state);
+  return claimedPopulation(state) > claimCapacity(state);
 }
 
 /**
@@ -104,29 +106,49 @@ export function addHerd(state: GameState, delta: number): void {
 
 // ------------------------------------------------------------------ per turn
 
-/** Farmers add effort to the season's cropProgress (mood-scaled). Returns added. */
+/** Farmers add effort to the season's cropProgress (mood-scaled). Thralls fill
+ *  whatever cropland capacity free farmers leave spare, at their own output
+ *  rate (THRALLS_SPEC.md: thralls work the same land, just less productively).
+ *  Returns added. */
 export function accrueCropProgress(state: GameState): number {
-  const farmers = Math.min(residentsAvailable(state, 'farmers'), croplandCapacity(state));
-  const gain = Math.round(farmers * C.yieldPerFarmerPerTurn * outputMultiplier(state));
+  const cap = croplandCapacity(state);
+  const farmers = Math.min(residentsAvailable(state, 'farmers'), cap);
+  const thrallFarmers = Math.min(thrallsAvailable(state, 'farmers'), Math.max(0, cap - farmers));
+  const gain = Math.round(
+    farmers * C.yieldPerFarmerPerTurn * outputMultiplier(state) +
+      thrallFarmers * C.yieldPerFarmerPerTurn * thrallOutputMultiplier(state),
+  );
   if (gain > 0) state.claim.cropProgress += gain;
   return gain;
 }
 
-/** Hunters bring in a continuous small Food trickle (mood-scaled). Returns added. */
+/** Hunters bring in a continuous small Food trickle (mood-scaled), thralls
+ *  filling spare wildland capacity the same way farmers do. Returns added. */
 export function wildlandTrickle(state: GameState): number {
-  const hunters = Math.min(residentsAvailable(state, 'hunters'), wildlandCapacity(state));
-  const gain = Math.round(hunters * C.yieldPerHunterPerTurn * outputMultiplier(state));
+  const cap = wildlandCapacity(state);
+  const hunters = Math.min(residentsAvailable(state, 'hunters'), cap);
+  const thrallHunters = Math.min(thrallsAvailable(state, 'hunters'), Math.max(0, cap - hunters));
+  const gain = Math.round(
+    hunters * C.yieldPerHunterPerTurn * outputMultiplier(state) +
+      thrallHunters * C.yieldPerHunterPerTurn * thrallOutputMultiplier(state),
+  );
   if (gain > 0) state.goods.grain += gain;
   return gain;
 }
 
-/** Herders grow the herd toward its carrying capacity. Returns growth added. */
+/** Herders grow the herd toward its carrying capacity, thralls filling spare
+ *  pasture capacity the same way. Returns growth added. */
 export function growHerd(state: GameState): number {
   const cap = herdCarryingCapacity(state);
   if (state.herd.count >= cap) return 0;
-  const herders = Math.min(residentsAvailable(state, 'herders'), pastureCapacity(state));
-  if (herders <= 0) return 0;
-  const grown = Math.round(herders * C.herdGrowthPerHerder * outputMultiplier(state));
+  const pastureCap = pastureCapacity(state);
+  const herders = Math.min(residentsAvailable(state, 'herders'), pastureCap);
+  const thrallHerders = Math.min(thrallsAvailable(state, 'herders'), Math.max(0, pastureCap - herders));
+  if (herders <= 0 && thrallHerders <= 0) return 0;
+  const grown = Math.round(
+    herders * C.herdGrowthPerHerder * outputMultiplier(state) +
+      thrallHerders * C.herdGrowthPerHerder * thrallOutputMultiplier(state),
+  );
   const next = Math.min(cap, state.herd.count + grown);
   const added = next - state.herd.count;
   state.herd.count = next;

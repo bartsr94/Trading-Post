@@ -238,6 +238,17 @@ cross-reference.
   `QueuedEvent`s assuming "not active" only ever meant dead/departed. Both
   now also accept `'captive'` — re-check both call sites if a 5th status is
   ever added.
+- **Thralls** (`engine/thralls.ts`; see `docs/GAME_FEATURES.md` §18): a
+  second, parallel population pool — `GameState.thralls: ThrallState`
+  mirrors `ResidentState`'s shape (`roles`/`idle`/`tags`/`heritage`) but
+  tracks `restiveness` (0–10) instead of `contentment` and never populates
+  `guards`. One-directional dependency to avoid a cycle: `thralls.ts`
+  imports nothing from `residents.ts`/`claim.ts` (reads
+  `state.residents.roles.guards` as plain data); those two import selectors
+  from `thralls.ts` instead — keep that direction if either module grows
+  further. `claimedPopulation` (`residents.ts`) is the combined-pool
+  selector — anything weighing Concession capacity should read that, not
+  `residentTotal` alone.
 - **Reusable helpers from past cleanup passes** (nothing left to do here,
   just don't re-derive these): `activeHeroesById`/`isActiveHeroId` (not a
   fresh copy of the "resolve ids to living active heroes" filter) and
@@ -251,10 +262,10 @@ cross-reference.
 ## Conventions
 
 - Content event ids are prefixed by category: `post_`, `hero_`, `season_`,
-  `travel_`, `beastfolk_`, `family_`, `raid_`, `recruit_`, `captive_` (one
-  file per prefix under `content/events/`). Travel events typically gate on
-  `destinationTag`/`expeditionKind`/`expeditionLeg` rather than a specific
-  location id, so they fire at any matching node.
+  `travel_`, `beastfolk_`, `family_`, `raid_`, `recruit_`, `captive_`,
+  `thrall_` (one file per prefix under `content/events/`). Travel events
+  typically gate on `destinationTag`/`expeditionKind`/`expeditionLeg` rather
+  than a specific location id, so they fire at any matching node.
 - **New hero-personal events should not lock to one pool hero.** A handful of
   legacy events (`hero_p1_debt`/`p3_letters`/`p5_poachers`/`p7_game` in
   `heroEvents.ts`) gate on `{ type: 'heroInParty', heroId: 'pN' }` +

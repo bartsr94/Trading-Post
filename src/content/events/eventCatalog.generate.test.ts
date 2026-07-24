@@ -22,6 +22,7 @@ import { POST_EVENTS } from './postEvents';
 import { RAID_EVENTS } from './raidEvents';
 import { RECRUIT_EVENTS } from './recruitEvents';
 import { SEASON_EVENTS } from './seasonEvents';
+import { THRALL_EVENTS } from './thrallEvents';
 import { TRAVEL_EVENTS } from './travelEvents';
 
 const OUTPUT_PATH = new URL('../../../docs/EVENT_CATALOG.md', import.meta.url);
@@ -55,6 +56,7 @@ const GROUPS: { label: string; events: readonly GameEvent[] }[] = [
   { label: 'raidEvents.ts', events: RAID_EVENTS },
   { label: 'diplomacyEvents.ts', events: DIPLOMACY_EVENTS },
   { label: 'captiveEvents.ts', events: CAPTIVE_EVENTS },
+  { label: 'thrallEvents.ts', events: THRALL_EVENTS },
 ];
 
 const ALL_EVENTS: GameEvent[] = GROUPS.flatMap((g) => g.events);

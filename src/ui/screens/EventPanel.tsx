@@ -41,6 +41,7 @@ export function EventPanel({ game }: { game: GameState }) {
   const partner = typeof partnerId === 'string' ? game.heroes.find((h) => h.id === partnerId) : undefined;
   const ctx = {
     heroName: hero.name,
+    heroGender: hero.gender,
     destinationName: travel?.destination.name ?? contactSeat?.name,
     factionName: contactSeat?.faction ? FACTION_DEFS.get(contactSeat.faction)?.name : undefined,
     partnerName: partner?.name,

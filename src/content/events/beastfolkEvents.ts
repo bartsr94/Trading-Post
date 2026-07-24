@@ -22,7 +22,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     category: 'post',
     illustration: 'orc_demand',
     title: 'A Price for Peace',
-    text: 'An orc war-band camps in plain sight beyond bowshot — not hiding, not attacking, just waiting to be noticed. Their spokesman walks in alone at midday and names a price: grain and silver, paid now, for a season left in peace. {hero} is the one who has to answer him, with the whole camp watching to see whether the post pays like it understands the wilds, or has to be taught.',
+    text: 'An orc war-band camps in plain sight beyond bowshot — not hiding, not attacking, just waiting to be noticed. Their spokeswoman walks in alone at midday and names a price: grain and silver, paid now, for a season left in peace. {hero} is the one who has to answer her, with the whole camp watching to see whether the post pays like it understands the wilds, or has to be taught.',
     conditions: [
       { type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' },
       { type: 'standingAtMost', faction: 'BEASTFOLK', value: -20 },
@@ -34,10 +34,10 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     peoples: ['orc'],
     choices: [
       {
-        label: 'Pay what he asks — buy this season\'s quiet.',
+        label: 'Pay what she asks — buy this season\'s quiet.',
         outcomes: {
           success: {
-            text: 'You count it out yourself, in the open, and make the bargain plain: this season’s due in exchange for a season’s peace. He takes it without thanks, but with understanding. So long as the due keeps coming, his band will leave the post alone.',
+            text: 'You count it out yourself, in the open, and make the bargain plain: this season’s due in exchange for a season’s peace. She takes it without thanks, but with understanding. So long as the due keeps coming, her band will leave the post alone.',
             outcomes: [
               { type: 'silver', delta: -25 },
               { type: 'good', good: 'grain', delta: -5 },
@@ -49,18 +49,18 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
         },
       },
       {
-        label: 'Send {hero} to face him down and refuse.',
+        label: 'Send {hero} to face her down and refuse.',
         check: { skill: 'leadership', stat: 'resolve', difficulty: 11, tags: ['BEASTFOLK'] },
         outcomes: {
           critSuccess: {
-            text: '{hero} doesn\'t flinch, doesn\'t reach for a weapon, simply says no in a voice that ends the conversation. The spokesman studies {hero} a long moment — then laughs, once, and walks his band off without a backward look. That kind of nerve, it turns out, is its own currency here.',
+            text: '{hero} doesn\'t flinch, doesn\'t reach for a weapon, simply says no in a voice that ends the conversation. The spokeswoman studies {hero} a long moment — then laughs, once, and walks her band off without a backward look. That kind of nerve, it turns out, is its own currency here.',
             outcomes: [
               { type: 'standing', faction: 'BEASTFOLK', delta: 3 },
               { type: 'history', text: 'Refused an orc war-band\'s demand and won their grudging respect.' },
             ],
           },
           success: {
-            text: '{hero} holds the line. The spokesman spits, mutters something uncomplimentary, and the camp breaks by evening — nothing taken, nothing given.',
+            text: '{hero} holds the line. The spokeswoman spits, mutters something uncomplimentary, and the camp breaks by evening — nothing taken, nothing given.',
             outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: 1 }],
           },
           failure: {
@@ -161,7 +161,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     category: 'post',
     illustration: 'orc_arrival',
     title: 'One Who Chose to Come',
-    text: 'She walks in alone, unarmed, and asks for {hero} by the reputation the wilds have given him — steady, fair, worth the risk. No war-band sent her and no elder blessed the errand; among her own kind there is no one left to spare, and she has decided the post is a better wager than waiting. She will not ask twice, and she will not be talked into leaving disappointed without an answer either way.',
+    text: 'She walks in alone, unarmed, and asks for {hero} by the reputation the wilds have given {him} — steady, fair, worth the risk. No war-band sent her and no elder blessed the errand; among her own kind there is no one left to spare, and she has decided the post is a better wager than waiting. She will not ask twice, and she will not be talked into leaving disappointed without an answer either way.',
     conditions: [
       { type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' },
       { type: 'standingAtLeast', faction: 'BEASTFOLK', value: 10 },
@@ -386,7 +386,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
             ],
           },
           critFailure: {
-            text: 'Something in {hero}\'s tone or timing goes wrong, and the goodwill drains out of the moment fast. The patrol closes ranks, spears no longer quite so low — but they still, grudgingly, lead {hero} toward the camp instead of driving him off.',
+            text: 'Something in {hero}\'s tone or timing goes wrong, and the goodwill drains out of the moment fast. The patrol closes ranks, spears no longer quite so low — but they still, grudgingly, lead {hero} toward the camp instead of driving {him} off.',
             outcomes: [
               { type: 'setChainVar', key: 'approach', value: 'peace' },
               { type: 'standing', faction: 'BEASTFOLK', delta: -1 },
@@ -409,14 +409,14 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
             ],
           },
           success: {
-            text: '{hero} holds ground and holds it well. The patrol studies him a long moment, weighing the risk of a fight against whatever they came here to do — then falls back half a step and gestures him toward the camp.',
+            text: '{hero} holds ground and holds it well. The patrol studies {him} a long moment, weighing the risk of a fight against whatever they came here to do — then falls back half a step and gestures {him} toward the camp.',
             outcomes: [
               { type: 'setChainVar', key: 'approach', value: 'force' },
               { type: 'continueChain', eventId: 'beastfolk_first_encounter_talks' },
             ],
           },
           failure: {
-            text: 'The standoff runs longer than it should, and it\'s {hero} who breaks first, not by choice — a shoved shoulder, a scraped forearm, nothing worse. The patrol seems almost amused. They lead him on anyway.',
+            text: 'The standoff runs longer than it should, and it\'s {hero} who breaks first, not by choice — a shoved shoulder, a scraped forearm, nothing worse. The patrol seems almost amused. They lead {him} on anyway.',
             outcomes: [
               { type: 'setChainVar', key: 'approach', value: 'force' },
               { type: 'health', delta: -2 },
@@ -424,7 +424,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
             ],
           },
           critFailure: {
-            text: 'It goes physical fast, and badly — {hero} comes out of it bruised and short of breath, and the lesson the patrol takes isn\'t the one intended. They march him toward the camp less as an equal than as a catch.',
+            text: 'It goes physical fast, and badly — {hero} comes out of it bruised and short of breath, and the lesson the patrol takes isn\'t the one intended. They march {him} toward the camp less as an equal than as a catch.',
             outcomes: [
               { type: 'setChainVar', key: 'approach', value: 'force' },
               { type: 'health', delta: -4 },
@@ -438,7 +438,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
         label: 'Withdraw quietly — this isn\'t a fight worth having.',
         outcomes: {
           success: {
-            text: '{hero} backs away slow and empty-handed, and the patrol lets him go without a word — watching until the treeline swallows him again. Whatever this was, it\'s over before it started.',
+            text: '{hero} backs away slow and empty-handed, and the patrol lets {him} go without a word — watching until the treeline swallows {him} again. Whatever this was, it\'s over before it started.',
             outcomes: [
               {
                 type: 'history',
@@ -507,7 +507,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
         label: 'Leave a token of goodwill and go.',
         outcomes: {
           success: {
-            text: '{hero} offers what little he\'s carrying — not much, but freely given — and says nothing more. She turns it over in her hands, unreadable, and finally sets it aside. "Go on, then. We\'ll remember the gesture, at least."',
+            text: '{hero} offers what little {he}\'s carrying — not much, but freely given — and says nothing more. She turns it over in her hands, unreadable, and finally sets it aside. "Go on, then. We\'ll remember the gesture, at least."',
             outcomes: [
               { type: 'setChainVar', key: 'outcome', value: 'token' },
               { type: 'continueChain', eventId: 'beastfolk_first_encounter_close' },
@@ -566,7 +566,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
         requires: [{ type: 'chainVar', key: 'outcome', value: 'grudge' }],
         outcomes: {
           success: {
-            text: 'The parting was cold and it stays cold. No violence comes of it, but no warmth either — the wilds will remember {hero}\'s tone longer than they remember his words.',
+            text: 'The parting was cold and it stays cold. No violence comes of it, but no warmth either — the wilds will remember {hero}\'s tone longer than they remember {his} words.',
             outcomes: [
               { type: 'standing', faction: 'BEASTFOLK', delta: -2 },
               {
@@ -736,7 +736,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     category: 'post',
     illustration: 'beastfolk_settled',
     title: 'One of the Wall, Now',
-    text: 'Nobody announces it. It just becomes true one ordinary evening: an orc guardsman passes a joke to a homeland-born farmer at the well, and it lands the way jokes are supposed to — nobody flinches, nobody watches to see how it\'s taken. Whatever the post was arguing about before, it has quietly stopped.',
+    text: 'Nobody announces it. It just becomes true one ordinary evening: an orc guardswoman passes a joke to a homeland-born farmer at the well, and it lands the way jokes are supposed to — nobody flinches, nobody watches to see how it\'s taken. Whatever the post was arguing about before, it has quietly stopped.',
     conditions: [
       { type: 'residentTagAtLeast', tag: 'orc', value: 1 },
       { type: 'frictionAtMost', heritage: 'orc', value: 2 },
@@ -836,7 +836,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
             ],
           },
           critFailure: {
-            text: '{hero} follows the wrong trail entirely, loses a day, and comes home to find the herd thinner than when he left it — someone came back for a second helping while the post\'s best tracker was busy elsewhere.',
+            text: '{hero} follows the wrong trail entirely, loses a day, and comes home to find the herd thinner than when {he} left it — someone came back for a second helping while the post\'s best tracker was busy elsewhere.',
             outcomes: [{ type: 'loseHerd', delta: 2 }],
           },
         },
@@ -918,7 +918,7 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     category: 'post',
     illustration: 'beastfolk_dare',
     title: 'A Challenge, Loudly Made',
-    text: 'A young orc plants himself just outside bowshot and shouts a challenge across the open ground — a wrestle, a footrace, whatever passes for sport out here — naming {hero} by whatever name the wilds have given him. It\'s bravado more than threat, the kind of thing his own people will talk about for a season regardless of who wins. Ignoring him is an option. Staying ignored is not, for him.',
+    text: 'A young orc plants herself just outside bowshot and shouts a challenge across the open ground — a wrestle, a footrace, whatever passes for sport out here — naming {hero} by whatever name the wilds have given {him}. It\'s bravado more than threat, the kind of thing her own people will talk about for a season regardless of who wins. Ignoring her is an option. Staying ignored is not, for her.',
     conditions: [{ type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' }],
     weight: 6,
     cooldownTurns: 6,
@@ -931,18 +931,18 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
         check: { skill: 'combat', stat: 'might', difficulty: 10, tags: ['BEASTFOLK'] },
         outcomes: {
           critSuccess: {
-            text: '{hero} puts him down hard enough to draw a laugh out of his own war-band, and the story that travels back to the wilds does the post more good than a season of careful diplomacy.',
+            text: '{hero} puts her down hard enough to draw a laugh out of her own war-band, and the story that travels back to the wilds does the post more good than a season of careful diplomacy.',
             outcomes: [
               { type: 'standing', faction: 'BEASTFOLK', delta: 3 },
               { type: 'history', text: 'Won a shouted challenge from an orc youth and earned the wilds\' attention.' },
             ],
           },
           success: {
-            text: 'It\'s close and it\'s ugly and {hero} wins anyway, which is apparently all that matters. The orc claps him on the shoulder like they\'re old friends and wanders off satisfied.',
+            text: 'It\'s close and it\'s ugly and {hero} wins anyway, which is apparently all that matters. The orc claps {him} on the shoulder like they\'re old friends and wanders off satisfied.',
             outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: 1 }],
           },
           failure: {
-            text: 'He\'s stronger than he looked, and {hero} ends up in the dirt for it — bruised more in pride than in body, but bruised.',
+            text: 'She\'s stronger than she looked, and {hero} ends up in the dirt for it — bruised more in pride than in body, but bruised.',
             outcomes: [
               { type: 'health', delta: -2 },
               { type: 'stress', delta: 1 },
@@ -958,10 +958,10 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
         },
       },
       {
-        label: 'Wave him off — there\'s work to do.',
+        label: 'Wave her off — there\'s work to do.',
         outcomes: {
           success: {
-            text: '{hero} turns his back on the shouting, which is its own kind of answer. The orc calls him a coward once, for form\'s sake, and loses interest by midday.',
+            text: '{hero} turns {his} back on the shouting, which is its own kind of answer. The orc calls {him} a coward once, for form\'s sake, and loses interest by midday.',
             outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: -1 }],
           },
         },

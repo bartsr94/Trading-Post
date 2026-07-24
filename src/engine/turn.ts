@@ -37,6 +37,7 @@ import {
   applyDesertion,
   applyGrowth,
   claimCapacity,
+  claimedPopulation,
   driftFriction,
   outputMultiplier,
   removeTransients,
@@ -44,6 +45,7 @@ import {
   residentTotal,
   updateContentment,
 } from './residents';
+import { applyEscape, applyHoldingPressure, thrallTotal, updateRestiveness } from './thralls';
 import { applyOutcomes } from './events/outcomes';
 import type { OutcomeContext } from './events/outcomes';
 import { evalConditions } from './events/conditions';
@@ -282,10 +284,12 @@ function payUpkeep(
   if (trickle > 0) report('🏹', `The wildland yields ${trickle} food.`);
 
   const mouths = residentTotal(state);
-  // Named characters (active + reserve) eat as heroes; dependants eat too.
+  // Named characters (active + reserve) eat as heroes; dependants eat too;
+  // held thralls draw no wage but are still fed (THRALLS_SPEC.md decision #5).
   const grainNeeded =
     party.length * TUNING.economy.grainPerHeroPerTurn +
     mouths * res.grainPerResidentPerTurn +
+    thrallTotal(state) * TUNING.thralls.grainPerThrallPerTurn +
     dependantCount(state) * TUNING.dependants.grainPerDependantPerTurn;
   const grainDef = ctx.goodDefs.get('grain');
   let missed = false;
@@ -442,6 +446,7 @@ function resolveResidentSociety(
   flags: { missedFood: boolean; missedWages: boolean },
 ): void {
   advanceTransients(state, report);
+  resolveThrallSociety(state, report, flags);
   if (residentTotal(state) === 0) return;
 
   updateContentment(state, flags);
@@ -472,6 +477,33 @@ function resolveResidentSociety(
           ? 'The post takes on a more Sauromatian character.'
           : 'The post holds to its Imanian ways.',
       );
+    }
+  }
+}
+
+/** Restiveness, escape, and the season-end standing/culture cost of holding
+ *  thralls at all (THRALLS_SPEC.md's risk levers). No-ops with an empty pool. */
+function resolveThrallSociety(
+  state: GameState,
+  report: (icon: string, text: string) => void,
+  flags: { missedFood: boolean },
+): void {
+  if (thrallTotal(state) === 0) return;
+
+  updateRestiveness(state, flags);
+
+  const escaped = applyEscape(state);
+  if (escaped > 0) {
+    report('🏃', `${escaped} thrall${escaped === 1 ? '' : 's'} slip away in the unrest — gone for good.`);
+  }
+
+  if (isSeasonEnd(state.turn)) {
+    const { standingLoss, cultureNudge } = applyHoldingPressure(state);
+    if (standingLoss) {
+      report('⛓️', 'Word travels that the post keeps thralls. The neighboring peoples take note.');
+    }
+    if (cultureNudge !== 0) {
+      report('🧭', 'Holding thralls leaves its mark on the post\'s character.');
     }
   }
 }
@@ -508,7 +540,7 @@ function resolveOverClaimPressure(
   ctx: TurnContext,
   report: (icon: string, text: string) => void,
 ): void {
-  if (residentTotal(state) <= claimCapacity(state)) return;
+  if (claimedPopulation(state) <= claimCapacity(state)) return;
   const target = overClaimStandingTarget(state, ctx.locationDefs);
   if (!target) return; // no neighbour discovered yet — no one to offend
   const faction = state.factions[target];

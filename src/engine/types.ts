@@ -56,7 +56,7 @@ export type FactionId = (typeof FACTION_IDS)[number];
 export const DIPLOMACY_PACTS = ['none', 'alliance', 'truce'] as const;
 export type DiplomacyPact = (typeof DIPLOMACY_PACTS)[number];
 
-export const DIPLOMACY_MISSION_TYPES = ['talks', 'gift', 'alliance', 'peace', 'tribute', 'ransom'] as const;
+export const DIPLOMACY_MISSION_TYPES = ['talks', 'gift', 'alliance', 'peace', 'tribute', 'ransom', 'thralls'] as const;
 export type DiplomacyMissionType = (typeof DIPLOMACY_MISSION_TYPES)[number];
 
 export const DIPLOMACY_TRIBUTE_MODES = ['offer', 'demand_end', 'demand_continue'] as const;
@@ -366,6 +366,9 @@ export interface ExpeditionState {
   raidAlly?: FactionId;
   /** Diplomacy mission payload; absent on older saves / generic envoys. */
   diplomacyMission?: { type: DiplomacyMissionType; mode?: DiplomacyTributeMode };
+  /** Headcount asked for on a `thralls`-mission envoy, set at dispatch
+   *  (THRALLS_SPEC.md Acquisition §3). */
+  thrallPurchaseCount?: number;
   /** Survey knowledge carried home by an exploration party. */
   surveyResult?: SurveyResult;
 }
@@ -556,6 +559,28 @@ export interface ResidentState {
   friction: Partial<Record<Heritage, number>>;
 }
 
+/** Forced labor held by the post — thralls to the Sauromatians, "indentured
+ *  labor" to the Company, the same mechanic either way (THRALLS_SPEC.md). A
+ *  parallel pool to `ResidentState`, never merged into it: distinct upkeep
+ *  (grain only, no wage), a distinct restiveness track instead of contentment,
+ *  and its own risk levers. */
+export interface ThrallState {
+  /** Same 6 roles as ResidentState, though 'guards' is never populated by
+   *  thralls — arming the people you're holding down is off the table. */
+  roles: Record<ResidentRole, number>;
+  idle: number;
+  /** 0–10, inverse of resident contentment: higher = closer to escape/revolt.
+   *  A distinct field from residents.contentment, not a shared scale — thralls
+   *  are never "happy," only more or less contained. */
+  restiveness: number;
+  /** Same partial flavor-tag breakdown as ResidentState.tags (heritage of
+   *  origin), for the Origins-style UI and content gating. */
+  tags: Record<string, number>;
+  /** Same coarse homeland/native tally as ResidentState.heritage, kept
+   *  summed-equal to thrallTotal(state) the same way. */
+  heritage: Record<HeritageGroup, number>;
+}
+
 /** A transient group of outsiders present at the post (Phase B). */
 export interface TransientGroup {
   id: string;
@@ -696,8 +721,9 @@ export const RAID_DEFEND_GOALS = ['driveoff', 'stand', 'sally', 'hold'] as const
 export type RaidDefendGoal = (typeof RAID_DEFEND_GOALS)[number];
 
 /** Attacker battle goals (outgoing raids, Phase B). `rescue` only dispatchable
- *  against a faction currently holding one of our captives. */
-export const RAID_ATTACK_GOALS = ['plunder', 'burn', 'bloody', 'cow', 'rescue'] as const;
+ *  against a faction currently holding one of our captives. `enslave` only
+ *  dispatchable with at least one escort guard along (THRALLS_SPEC.md §Acquisition). */
+export const RAID_ATTACK_GOALS = ['plunder', 'burn', 'bloody', 'cow', 'rescue', 'enslave'] as const;
 export type RaidAttackGoal = (typeof RAID_ATTACK_GOALS)[number];
 
 export type RaidGoal = RaidDefendGoal | RaidAttackGoal;
@@ -784,6 +810,8 @@ export interface GameState {
   nextCharacterId: number;
   /** The post's unnamed population (RESIDENTS_SPEC.md). */
   residents: ResidentState;
+  /** Forced labor held by the post — thralls/"indentured labor" (THRALLS_SPEC.md). */
+  thralls: ThrallState;
   /** Land under settlement — the Concession (TULA_SETTLEMENT_SPEC.md §2). */
   claim: ClaimState;
   /** Abstracted livestock, tended by herders (TULA_SETTLEMENT_SPEC.md §4.2). */
