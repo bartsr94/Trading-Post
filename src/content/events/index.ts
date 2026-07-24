@@ -11,6 +11,7 @@ import { POST_EVENTS } from './postEvents';
 import { RAID_EVENTS } from './raidEvents';
 import { RECRUIT_EVENTS } from './recruitEvents';
 import { SEASON_EVENTS } from './seasonEvents';
+import { THRALL_EVENTS } from './thrallEvents';
 import { TRAVEL_EVENTS } from './travelEvents';
 import { uniqueIdMap } from '../uniqueIdMap';
 
@@ -26,6 +27,7 @@ export const ALL_EVENTS: GameEvent[] = [
   ...RAID_EVENTS,
   ...DIPLOMACY_EVENTS,
   ...CAPTIVE_EVENTS,
+  ...THRALL_EVENTS,
 ];
 
 export const EVENT_MAP: ReadonlyMap<string, GameEvent> = uniqueIdMap('event', ALL_EVENTS);

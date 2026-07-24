@@ -107,6 +107,23 @@ Shipped example: "A Patrol at the Treeline" — `beastfolk_first_encounter` →
 `_talks` → `_close`, 3 stages, `content/events/beastfolkEvents.ts`, gated on
 `beast_wilds` discovery.
 
+**Text interpolation & pronoun tokens** (`engine/events/text.ts`). Besides
+`{hero}`/`{post}`/`{destination}`/`{faction}`/`{partner}`, `interpolate` takes
+an optional `TextContext.heroGender` and resolves `{he}`/`{him}`/`{his}`/
+`{himself}` (and capitalized `{He}`/`{Him}`/`{His}`/`{Himself}` for
+sentence-initial use) to the bound hero's actual pronouns — `EventPanel.tsx`
+is the only call site and threads `hero.gender` through. Falls back to
+`'male'` when `heroGender` is omitted, so old fixed-gender NPC flavor text
+(a trader, a stranger, a captor's kin — never the bound `{hero}`) needs no
+changes. Use these tokens for any pronoun referring to the *bound* hero
+whenever the binding isn't locked to a single fixed-gender pool hero (i.e.
+not `binding: { type: 'specific', heroId: 'pN' }` for one of the always-male
+p1/p3/p7 legacy heroes) — hardcoding "he"/"his"/"him" there reads wrong for a
+female-bound hero (fixed 2026-07-24: `thrallEvents.ts`'s river-clans offer
+and five `beastfolkEvents.ts` events — the treeline patrol chain, the
+livestock-thief chase, and the orc's-dare challenge — all bind by
+`highestStat`/`highestSkill` and had leftover hardcoded male pronouns).
+
 ## 4. Economy & goods
 
 9 goods (furs, hides, grain [displayed as **"Food"**, id unchanged], salt,
@@ -275,7 +292,9 @@ support 60) is a threshold residents may freely exceed — `addResidents`
 never refuses on space. Exceeding it costs contentment (`overClaimPenalty`
 per head over) and nudges standing down each turn with
 `overClaimStandingTarget` (the negotiated landholder, else the nearest
-discovered native faction).
+discovered native faction). Held thralls (§18) occupy the same land — the
+pressure check weighs `residentTotal + thrallTotal` (`claimedPopulation`)
+against `claimCapacity`, not residents alone.
 
 Farmers accrue `cropProgress` each turn, becoming a lump seasonal harvest
 with ordinary variance plus a rare true crop-failure branch
@@ -539,6 +558,12 @@ battle math.
 **Save shape:** v13→v16 across the feature's own rollout (pending-raid slot
 + cooldown bookkeeping, tributes, the incoming/outgoing pendingRaid union).
 
+**Thralls integration** (shipped later — see §18): a new `enslave` attack
+goal converts an outgoing win's spoils into captured thralls instead of the
+usual loot (requires an escort guard); an incoming sack's population-loss
+line is reflavored as enthrallment, mechanically unchanged. Neither touches
+the force-margin battle math.
+
 ## 12. Buildings & construction
 
 The post raises buildings one project at a time. `GameState.buildings` is
@@ -674,13 +699,13 @@ mechanism as originally specced.
 
 `saveVersion` + migrations live in `engine/save.ts`; any `GameState` shape
 change bumps `TUNING.save.version` and adds a migration case (tests enforce
-unknown versions throw). Current version: **v24**. Rough history: v5 roster/
+unknown versions throw). Current version: **v25**. Rough history: v5 roster/
 reserve split; v6 buildings; v7 heritage/culture; v8 gender/family; v9
 peoples restructure (Hanjoda/Weri, KNIGHTS_EIRWEN); v10 Beastfolk; v11
 resident tag counts fixed; v13→v16 raiding; v19→v20 diplomacy discovery;
 v20→v21 the Concession (claim/herd, hard cap removed); v22 hero-to-hero
 marriage (`spouseIds`/`temperament`); v23 captivity (§17); v24 resident
-integration friction (§7, §10).
+integration friction (§7, §10); v25 thralls/indentured labor (§18).
 
 ## 17. Captivity — abduction & ransom
 
@@ -741,6 +766,104 @@ both now also accept `'captive'`. A new `freeCaptive` outcome (mirrors
 options on `RaidModal`/`MapScreen` (rescue) and `DiplomacyScreen` (ransom).
 Save shape → **v23** (`migrateV22toV23`, a no-op passthrough — both new
 fields are optional/additive, no old save ever had either).
+
+## 18. Thralls — forced labor as a risk/reward alternative
+
+*(THRALLS_SPEC.md — trimmed to open questions only, since none remain; the
+design record for *why* it looks this way still lives there.)*
+
+A second, parallel unnamed population — `GameState.thralls: ThrallState`
+(`src/engine/thralls.ts`) — mirroring `ResidentState`'s shape (`roles`/
+`idle`/`tags`/`heritage`) but never merged into it: no silver wage, a
+`restiveness` 0–10 track instead of `contentment`, and `guards` never
+populated (thralls can never be armed). Sauromatians call it thraldom, the
+Company calls it "indentured labor" (`docs/lore/Ansberry Company.md`'s
+Beastfolk Labor Contracting) — same mechanism, display text only differs by
+acquisition channel. **Named-hero captivity (§17) is unrelated and
+unchanged** — this system is only about the unnamed pool.
+
+**Four risk levers, all live simultaneously:**
+- **Output penalty, offset by guards.** `thrallOutputMultiplier` reads the
+  free-resident guard:thrall ratio — below `guardRatioForFullOutput`, thralls
+  work at `unguardedOutputMult` (0.5); above it, `guardedOutputMult` (0.9,
+  still short of a free resident's 1.0). Thralls in `farmers`/`hunters`/
+  `herders`/`craftsfolk` fill whatever land/build capacity free residents
+  leave spare (`claim.ts`'s `accrueCropProgress`/`wildlandTrickle`/
+  `growHerd`, `residents.ts`'s `applyCraftsfolkConstruction`), at this
+  multiplier.
+- **Escape & revolt.** `updateRestiveness` rises with the thrall:free-resident
+  ratio and missed food, falls with guards present. In the `restive` band
+  (≥7), `applyEscape` passively bleeds a fraction each turn (permanent loss,
+  guard-suppressed, mirrors `applyDesertion`); a `thrall_revolt` content
+  event (`content/events/thrallEvents.ts`) becomes eligible via the new
+  `thrallsAtLeast`/`thrallRestivenessAtLeast` conditions, resolved with
+  ordinary `loseThralls`/`loseResidents`/`contentment`/`stress`/`health`
+  outcomes — no new battle system.
+- **Free-resident contentment pressure.** `thrallContentmentPressure` scales
+  with the thrall:free-resident ratio, folded into `updateContentment`
+  alongside friction pressure (§7) — living alongside a held population
+  unsettles the free pool.
+- **Standing / Company judgment.** Season-end, while any thralls are held:
+  a flat standing loss against every non-hostile faction in
+  `TUNING.thralls.holding.nativeFactions` (deliberately not per-origin), plus
+  a `culture`-axis nudge toward Frontier (`applyHoldingPressure`) —
+  deliberately the input the still-unbuilt `charterRevoked` mechanism
+  (`TODO_FEATURES.md`) would read, without building that mechanism. The
+  Company's own purchase channel carries no separate penalty — holding
+  thralls at all is what counts, not which euphemism they were bought under.
+
+**Acquisition — four vectors:**
+1. **Outgoing raid** — a new `enslave` `RaidAttackGoal` (§11), requiring at
+   least one escort guard (`dispatchErrorRaid`) — "you cannot march captives
+   home unescorted." Higher `factionStandingLoss` than `plunder`. Captured
+   thralls land in `thralls.idle`, tagged by the target's people
+   (`targetHeritageFor`, generalizing the BEASTFOLK orc/goblin split
+   `captivity.ts` already rolls, via `TUNING.heritage.hireSources` for every
+   seated faction).
+2. **Incoming raid — reflavor only.** A sack's existing population-loss line
+   now reads "N of the post's people are taken as thralls by `<aggressor>`."
+   No new mechanic, no rescue path — mirrors §17's captivity being
+   reflavor-only for the reverse case.
+3. **Purchase**, two channels: a native `thralls` `DiplomacyMissionType`
+   (envoy mission, gated Friendly+ standing, silver scales with headcount
+   requested, turnout scales by check tier like every other envoy mission —
+   `DiplomacyScreen.tsx`); and the Company's "indentured labor" channel, a
+   silver-only `purchaseCompanyThralls` store action surfaced on the
+   Diplomacy screen's Company-seat detail (no envoy/turn needed), gated on
+   `CHARTER_COMPANY` standing not being Hostile.
+4. **Via event** — `thrall_river_clans_offer` (`thrallEvents.ts`) using the
+   generic `addThralls`/`loseThralls` outcome vocabulary; any future event
+   can offer/cost thralls the same way.
+
+**Manumission** — the counter-play. `manumitThralls(state, role, count)`
+moves heads from `thralls` into `residents` (same role or idle), carrying
+`tags`/`heritage` proportionally, for `TUNING.thralls.manumission.
+silverPerHead` — plus a one-time standing gain with every non-hostile native
+faction and a small culture nudge back toward Homeland (the mirror of the
+holding-pressure lever). Freed heads immediately draw a wage like any other
+resident. Store action `freeThralls` (assignmentAction, debounced autosave);
+UI is a "Free" button alongside the Outpost Overview's Idle Thralls controls.
+
+**Concession capacity is combined**: `claimedPopulation = residentTotal +
+thrallTotal` is what's weighed against `claimCapacity` (`isOverClaim`,
+`updateContentment`'s over-Concession pressure, `resolveOverClaimPressure`)
+— thralls occupy the same land. Thralls still eat grain (`payUpkeep`), no
+silver wage.
+
+**Files:** `src/engine/thralls.ts` (new — selectors/mutators, deliberately
+importing nothing from `residents.ts`/`claim.ts` to avoid a cycle; those
+modules import from it instead), `content/tuning.ts` (`TUNING.thralls`),
+`engine/raids.ts` (`enslave` goal + branch, incoming reflavor),
+`engine/expeditions.ts` (`thralls` mission dispatch/arrival, escort gate),
+`engine/events/{types,conditions,outcomes}.ts` (`thrallsAtLeast`/
+`thrallRestivenessAtLeast` conditions; `addThralls`/`loseThralls`/
+`thrallRestiveness` outcomes), `content/events/thrallEvents.ts`,
+`store/gameStore.ts` (`reallocateThralls`/`freeThralls`/
+`purchaseCompanyThralls`), UI (`ResidentsPanel.tsx`'s Thralls block on
+Outpost Overview, `DiplomacyScreen.tsx`, `RaidModal.tsx`/`MapScreen.tsx`'s
+`enslave` goal option, a `CheatConsole.tsx` Thralls section for testing).
+**Save shape: v25** (`migrateV24toV25`, backfills `thralls: freshThralls()`
+— no old save ever had one).
 
 ---
 

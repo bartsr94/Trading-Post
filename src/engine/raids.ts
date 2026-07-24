@@ -26,6 +26,7 @@ import {
   residentsAvailable,
   transientEffect,
 } from './residents';
+import { addThralls } from './thralls';
 import type { Rng } from './rng';
 import { declareGameOver } from './turn';
 import {
@@ -33,6 +34,7 @@ import {
   clamp,
   clampStanding,
   FACTION_IDS,
+  heritageGroup,
   heroesAtPost,
   isActiveHeroId,
   RAID_MANEUVERS,
@@ -44,6 +46,7 @@ import type {
   FactionId,
   GameState,
   GoodId,
+  Heritage,
   Hero,
   LocationDef,
   PendingIncomingRaid,
@@ -87,7 +90,8 @@ export interface RaidResolution {
     | 'plundered'
     | 'bloodied'
     | 'cowed'
-    | 'rescued';
+    | 'rescued'
+    | 'enslaved';
   log: string[];
   /** True when this raid triggered the `destroyed` cascade game-over. */
   gameOver: boolean;
@@ -318,6 +322,16 @@ function pickAttackerManeuver(faction: FactionId, rng: Rng): RaidManeuver {
 function bandLabel(faction: FactionId, rng: Rng): string {
   if (faction === 'BEASTFOLK') return rng.next() < 0.5 ? 'an orc war-band' : 'a goblin raiding party';
   return 'a raiding party';
+}
+
+/** The people captured thralls belong to, by the target faction — mirrors
+ *  `captorHeritageFor`'s BEASTFOLK even split, generalized via
+ *  `TUNING.heritage.hireSources` for every seated faction (THRALLS_SPEC.md
+ *  Acquisition §1). */
+function targetHeritageFor(faction: FactionId, rng: Rng): Heritage {
+  if (faction === 'BEASTFOLK') return rng.next() < 0.5 ? 'orc' : 'goblin';
+  const entry = Object.values(TUNING.heritage.hireSources).find((src) => src.faction === faction);
+  return entry?.people ?? 'imanian';
 }
 
 function bestInParty(
@@ -662,7 +676,9 @@ export function resolveOutgoingRaid(
         ? 'bloodied'
         : goalId === 'rescue'
           ? 'rescued'
-          : 'plundered';
+          : goalId === 'enslave'
+            ? 'enslaved'
+            : 'plundered';
   if (goalId === 'cow') {
     setTribute(state, {
       faction: targetFaction,
@@ -673,6 +689,20 @@ export function resolveOutgoingRaid(
     log.push(`The people of ${raid.targetName} yield and agree to send ${goal.tributeSilver} silver each season.`);
   } else if (goalId === 'burn') {
     log.push(`Fires are left behind in ${raid.targetName}.`);
+  } else if (goalId === 'enslave') {
+    const captured = Math.max(
+      0,
+      Math.round(
+        TUNING.raid.outgoingThrallsBase + Math.max(0, margin) * TUNING.raid.outgoingThrallsPerMargin,
+      ),
+    );
+    if (captured > 0) {
+      const heritage = targetHeritageFor(targetFaction, rng);
+      addThralls(state, 'idle', captured, heritage, heritageGroup(heritage));
+      log.push(
+        `${captured} of ${raid.targetName}'s people are marched home as thralls, tagged ${heritage}.`,
+      );
+    }
   } else if (goalId === 'rescue') {
     const freed = state.heroes.filter(
       (h) => h.status === 'captive' && h.captivity?.faction === targetFaction,
@@ -829,9 +859,15 @@ export function resolveIncomingRaid(
   }
 
   // A sack spills over into the general population and wounds those who stood.
+  // Reflavor only (THRALLS_SPEC.md decision #9) — the unnamed people carried
+  // off are, in-fiction, taken as thralls by the aggressor, but mechanically
+  // this stays the same population loss it always was: no rescue path, no
+  // tracked destination pool.
   if (sacked) {
     const extra = loseResidents(state, undefined, Math.max(1, Math.round(deficit * 0.2)));
-    if (extra > 0) log.push(`${extra} of the post's people are lost in the sack.`);
+    if (extra > 0) {
+      log.push(`${extra} of the post's people are taken as thralls by ${cap(raid.band)}.`);
+    }
     for (const hero of heroesAtPost(state)) {
       if (
         hero.gender === 'male' &&

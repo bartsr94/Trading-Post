@@ -5,6 +5,7 @@ import { TUNING } from '../content/tuning';
 import { freshClaim, freshHerd } from './claim';
 import { createDiplomacySeatStates } from './diplomacy';
 import { emptyRoles, freshResidents, residentTotal } from './residents';
+import { freshThralls } from './thralls';
 import { journeyTurns, mapKnowledgeFromDiscovery, mergeSurveyCells } from './map';
 import { createLocationStates } from './state';
 import { validateGameState } from './saveValidation';
@@ -143,6 +144,9 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
         break;
       case 23:
         current = migrateV23toV24(current);
+        break;
+      case 24:
+        current = migrateV24toV25(current);
         break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
@@ -602,6 +606,17 @@ function migrateV23toV24(save: GameState): GameState {
       ...save.residents,
       friction: {},
     },
+  };
+}
+
+/** v25 adds thralls/"indentured labor" (THRALLS_SPEC.md) — a new parallel
+ *  pool, empty on every old save since nothing before this version could
+ *  hold one. */
+function migrateV24toV25(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 25,
+    thralls: freshThralls(),
   };
 }
 

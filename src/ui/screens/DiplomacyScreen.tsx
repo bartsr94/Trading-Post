@@ -7,6 +7,7 @@ import {
   diplomacyReasons,
   diplomacySeatDefs,
   diplomacySeatStateOrDefault,
+  effectiveDiplomacyStanding,
   tributeForCommunity,
 } from '../../engine/diplomacy';
 import { hasCaptiveHeldBy } from '../../engine/captivity';
@@ -16,7 +17,7 @@ import { discoveryAtLeast, heroesAtPost, stanceOf } from '../../engine/types';
 import type { ExpeditionPace, GameState, GoodId } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 
-type DiplomacyMissionChoice = 'talks' | 'gift' | 'alliance' | 'peace' | 'ransom';
+type DiplomacyMissionChoice = 'talks' | 'gift' | 'alliance' | 'peace' | 'ransom' | 'thralls';
 
 function positiveGoods(goods: Partial<Record<GoodId, number>>): Partial<Record<GoodId, number>> {
   return Object.fromEntries(
@@ -44,7 +45,10 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
   const [party, setParty] = useState<string[]>([]);
   const [giftSilver, setGiftSilver] = useState(0);
   const [giftGoods, setGiftGoods] = useState<Partial<Record<GoodId, number>>>({});
+  const [thrallCount, setThrallCount] = useState(1);
+  const [companyThrallCount, setCompanyThrallCount] = useState(1);
   const [error, setError] = useState<string | null>(null);
+  const purchaseCompanyThralls = useGameStore((state) => state.purchaseCompanyThralls);
 
   useEffect(() => {
     if (diplomacySeatFocus) {
@@ -67,6 +71,11 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
   const canReachSelected =
     selectedLoc !== undefined && discoveryAtLeast(selectedLoc.discovery, 'visited');
   const canRansom = selected?.faction ? hasCaptiveHeldBy(game, selected.faction) : false;
+  const canBuyThralls =
+    selectedSeat !== null &&
+    effectiveDiplomacyStanding(game, selectedSeat) >= TUNING.thralls.purchase.nativeMinStanding;
+  const thrallCost = thrallCount * TUNING.thralls.purchase.nativeSilverPerHead;
+  const companyThrallCost = companyThrallCount * TUNING.thralls.purchase.companySilverPerHead;
 
   const toggleHero = (heroId: string) => {
     setError(null);
@@ -101,6 +110,7 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
       silver,
       cargo,
       diplomacyMission: { type: mission },
+      ...(mission === 'thralls' ? { thrallPurchaseCount: thrallCount } : {}),
     };
     const reason = dispatchError(game, params, LOCATION_DEFS);
     if (reason) {
@@ -203,6 +213,37 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
                 </span>
               </div>
 
+              {selected.faction === 'CHARTER_COMPANY' && (
+                <>
+                  <h4 style={{ marginTop: 14 }}>Indentured Labor</h4>
+                  <p className="dim" style={{ fontSize: '0.8rem', marginTop: 0 }}>
+                    The Company's own euphemism for the same trade — no envoy needed, silver only.
+                  </p>
+                  <label className="compact-field">
+                    <span>Headcount</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={companyThrallCount}
+                      onChange={(event) =>
+                        setCompanyThrallCount(Math.max(1, Math.floor(Number(event.target.value) || 1)))
+                      }
+                    />
+                  </label>
+                  <button
+                    className="small primary"
+                    disabled={
+                      game.phase !== 'assignment' ||
+                      game.silver < companyThrallCost ||
+                      stanceOf(game.factions.CHARTER_COMPANY.standing) === 'Hostile'
+                    }
+                    onClick={() => purchaseCompanyThralls(companyThrallCount)}
+                  >
+                    Buy ({companyThrallCost} silver)
+                  </button>
+                </>
+              )}
+
               <h4 style={{ marginTop: 14 }}>Why they feel this way</h4>
               <ul className="diplomacy-reasons">
                 {diplomacyReasons(game, selected).map((reason) => (
@@ -235,6 +276,7 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
                   <option value="alliance">Propose alliance</option>
                   <option value="peace">Seek truce</option>
                   {canRansom && <option value="ransom">Ransom captive</option>}
+                  {canBuyThralls && <option value="thralls">Buy thralls</option>}
                 </select>
               </label>
               <label className="compact-field">
@@ -277,6 +319,23 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
                     </div>
                   )}
                 </>
+              )}
+
+              {mission === 'thralls' && (
+                <label className="compact-field">
+                  <span>Thralls wanted</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={thrallCount}
+                    onChange={(event) =>
+                      setThrallCount(Math.max(1, Math.floor(Number(event.target.value) || 1)))
+                    }
+                  />
+                  <span className="dim" style={{ fontSize: '0.75rem' }}>
+                    {thrallCost} silver up front{thrallCost > game.silver ? ' (not enough)' : ''}
+                  </span>
+                </label>
               )}
 
               <h4>Party</h4>

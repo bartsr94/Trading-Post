@@ -123,6 +123,7 @@ export function CheatConsole({ game, onClose }: { game: GameState; onClose: () =
             <AxesSection apply={apply} />
             <HeroSection apply={apply} actingHeroName={graphNode(game, actingHeroId)?.name ?? ''} />
             <ResidentsSection apply={apply} />
+            <ThrallsSection apply={apply} />
             <BuildingsSection apply={apply} />
             <RosterSection apply={apply} heroes={heroes} />
             <FamilySection apply={apply} game={game} />
@@ -362,6 +363,68 @@ function ResidentsSection({ apply }: { apply: (o: Outcome[]) => void }) {
           }
         >
           Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ThrallsSection({ apply }: { apply: (o: Outcome[]) => void }) {
+  const [role, setRole] = useState<ResidentRole | 'idle'>('idle');
+  const [count, setCount] = useState(3);
+  const [heritage, setHeritage] = useState<Heritage | ''>('');
+  const [group, setGroup] = useState<HeritageGroup | ''>('');
+  const [restivenessDelta, setRestivenessDelta] = useState(3);
+
+  const resolvedGroup = group || (heritage ? heritageGroup(heritage) : undefined);
+  const roles: (ResidentRole | 'idle')[] = ['idle', ...RESIDENT_ROLES.filter((r) => r !== 'guards')];
+
+  return (
+    <div className="panel">
+      <h4 style={{ marginTop: 0 }}>Thralls</h4>
+      <div className="cc-row">
+        <select value={role} onChange={(e) => setRole(e.target.value as ResidentRole | 'idle')}>
+          {roles.map((r) => (
+            <option key={r} value={r}>{cap(r)}</option>
+          ))}
+        </select>
+        <NumField value={count} onChange={setCount} width={55} />
+        <select value={heritage} onChange={(e) => setHeritage(e.target.value as Heritage | '')}>
+          <option value="">no heritage tag</option>
+          {HERITAGES.map((h) => (
+            <option key={h} value={h}>{cap(h)}</option>
+          ))}
+        </select>
+        <select value={group} onChange={(e) => setGroup(e.target.value as HeritageGroup | '')}>
+          <option value="">
+            {heritage ? `origin: ${resolvedGroup}` : 'any origin'}
+          </option>
+          <option value="homeland">homeland</option>
+          <option value="native">native</option>
+        </select>
+        <button
+          className="small"
+          onClick={() =>
+            apply([
+              { type: 'addThralls', role, count, tag: heritage || undefined, group: resolvedGroup },
+            ])
+          }
+        >
+          Add
+        </button>
+        <button
+          className="small"
+          onClick={() =>
+            apply([{ type: 'loseThralls', role: role === 'idle' ? undefined : role, count, group: resolvedGroup }])
+          }
+        >
+          Lose
+        </button>
+      </div>
+      <div className="cc-row">
+        Restiveness <NumField value={restivenessDelta} onChange={setRestivenessDelta} />
+        <button className="small" onClick={() => apply([{ type: 'thrallRestiveness', delta: restivenessDelta }])}>
+          Apply
         </button>
       </div>
     </div>

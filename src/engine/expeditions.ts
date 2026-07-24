@@ -15,6 +15,8 @@ import type { CheckModifier } from './checks';
 import {
   applyDiplomacyShift,
   applyDiplomacyShiftById,
+  diplomacySeatStateOrDefault,
+  effectiveDiplomacyStanding,
   ensureDiplomacySeat,
   isFirstContact,
   queueFirstContact,
@@ -38,6 +40,7 @@ import {
   residentsAvailable,
   transientEffect,
 } from './residents';
+import { addThralls } from './thralls';
 import { Rng } from './rng';
 import {
   discoveryAfterSurvey,
@@ -131,6 +134,9 @@ export interface DispatchParams {
   raidAlly?: FactionId;
   /** For `diplomacy` runs: the purpose of the envoy. */
   diplomacyMission?: { type: DiplomacyMissionType; mode?: DiplomacyTributeMode };
+  /** For a `diplomacy` run with mission type `thralls`: headcount asked for
+   *  (THRALLS_SPEC.md Acquisition §3). */
+  thrallPurchaseCount?: number;
 }
 
 export function cargoUnits(cargo: Partial<Record<GoodId, number>>): number {
@@ -260,6 +266,19 @@ function dispatchErrorDiplomacy(
   if (mission === 'ransom' && !hasCaptiveHeldBy(state, def.faction)) {
     return 'There is no one of yours held here.';
   }
+  if (mission === 'thralls') {
+    const seat = diplomacySeatStateOrDefault(state, def);
+    if (effectiveDiplomacyStanding(state, seat) < TUNING.thralls.purchase.nativeMinStanding) {
+      return 'They do not trust you enough yet to sell you people.';
+    }
+    const count = params.thrallPurchaseCount ?? 0;
+    if (!Number.isFinite(count) || !Number.isInteger(count) || count < 1) {
+      return 'Ask for at least one thrall.';
+    }
+    if (state.silver < count * TUNING.thralls.purchase.nativeSilverPerHead) {
+      return 'Not enough silver to buy that many.';
+    }
+  }
   return null;
 }
 
@@ -354,6 +373,9 @@ function dispatchErrorRaid(
   }
   if (params.raidGoal === 'rescue' && !hasCaptiveHeldBy(state, targetFaction)) {
     return 'There is no one of yours held there.';
+  }
+  if (params.raidGoal === 'enslave' && (params.residents?.guards ?? 0) < 1) {
+    return 'You cannot march captives home unescorted — bring at least one guard.';
   }
   return null;
 }
@@ -498,6 +520,12 @@ export function dispatchExpedition(
     }
   }
 
+  // A thralls-purchase envoy pays the asking price up front, same as an
+  // Invite Settlers run (THRALLS_SPEC.md Acquisition §3).
+  if (params.kind === 'diplomacy' && params.diplomacyMission?.type === 'thralls') {
+    state.silver -= (params.thrallPurchaseCount ?? 0) * TUNING.thralls.purchase.nativeSilverPerHead;
+  }
+
   // A courtship run pays the bride-price up front and records who is to be wed.
   let courtshipFor: string | undefined;
   if (params.kind === 'courtship') {
@@ -542,7 +570,12 @@ export function dispatchExpedition(
     ...(params.kind === 'concession' ? { concessionAsk: params.concessionAsk ?? 0 } : {}),
     ...(courtshipFor !== undefined ? { courtshipFor } : {}),
     ...(params.kind === 'diplomacy'
-      ? { diplomacyMission: { ...(params.diplomacyMission ?? { type: 'talks' as const }) } }
+      ? {
+          diplomacyMission: { ...(params.diplomacyMission ?? { type: 'talks' as const }) },
+          ...(params.diplomacyMission?.type === 'thralls'
+            ? { thrallPurchaseCount: params.thrallPurchaseCount ?? 0 }
+            : {}),
+        }
       : {}),
     ...(params.kind === 'raid'
       ? {
@@ -967,6 +1000,24 @@ function resolveDiplomacyArrival(
       }
       break;
     }
+    case 'thralls': {
+      const requested = exp.thrallPurchaseCount ?? 0;
+      const frac = TUNING.thralls.purchase.baseFractionByCheckTier[check.tier] ?? 0;
+      const acquired = Math.round(requested * frac);
+      if (acquired > 0) {
+        const source = Object.values(TUNING.heritage.hireSources).find((src) => src.seat === def.id);
+        const tag = source?.people;
+        addThralls(state, 'idle', acquired, tag, tag ? heritageGroup(tag) : 'native');
+        missionLine = ` ${acquired} thrall${acquired === 1 ? '' : 's'} are brought back, bound for the march home.`;
+      } else {
+        missionLine = ' But none are handed over for the price offered.';
+      }
+      if (check.tier === 'critFailure') {
+        grievanceDelta = dip.grievanceOnCritFailure;
+      }
+      delta = 0;
+      break;
+    }
     default:
       if (check.tier === 'critSuccess') delta = dip.expeditionStandingGainCrit;
       else if (check.tier === 'success') delta = dip.expeditionStandingGainSuccess;
@@ -1002,7 +1053,9 @@ function resolveDiplomacyArrival(
           ? 'seeks peace with'
           : mission === 'ransom'
             ? 'seeks to ransom a captive from'
-            : 'treats with';
+            : mission === 'thralls'
+              ? 'seeks to buy thralls from'
+              : 'treats with';
   report(
     '🤝',
     `${hero.name} ${verb} ${def.name}: ${checkBreakdown(check)}. ` +

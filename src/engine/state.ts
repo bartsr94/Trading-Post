@@ -5,6 +5,7 @@ import { TUNING } from '../content/tuning';
 import { freshClaim, freshHerd } from './claim';
 import { createDiplomacySeatStates } from './diplomacy';
 import { freshResidents } from './residents';
+import { freshThralls } from './thralls';
 import { mapKnowledgeFromDiscovery } from './map';
 import { GOOD_IDS, FACTION_IDS } from './types';
 import type {
@@ -96,6 +97,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     nextDependantId: 1,
     nextCharacterId: 1,
     residents,
+    thralls: freshThralls(),
     claim: freshClaim(),
     herd: freshHerd(),
     transients: [],

@@ -417,4 +417,17 @@ describe('text interpolation', () => {
     );
     expect(interpolate('Ask {partner}.', { heroName: 'Sela' })).toBe('Ask them.');
   });
+
+  it('replaces pronoun tokens by heroGender, defaulting to male', () => {
+    const text = '{He} nods. {hero} steadies {his} grip, then loses {himself} in the crowd — {him}.';
+    expect(interpolate(text, { heroName: 'Berrin', heroGender: 'male' })).toBe(
+      'He nods. Berrin steadies his grip, then loses himself in the crowd — him.',
+    );
+    expect(interpolate(text, { heroName: 'Sela', heroGender: 'female' })).toBe(
+      'She nods. Sela steadies her grip, then loses herself in the crowd — her.',
+    );
+    expect(interpolate(text, { heroName: 'Berrin' })).toBe(
+      'He nods. Berrin steadies his grip, then loses himself in the crowd — him.',
+    );
+  });
 });

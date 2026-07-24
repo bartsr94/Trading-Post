@@ -20,6 +20,8 @@ import type { RaidAttackParams, RaidDefenseParams, RaidResolution } from '../eng
 import { Rng } from '../engine/rng';
 import { setLandAllocation as setLandAllocationFn } from '../engine/claim';
 import { reallocate } from '../engine/residents';
+import { addThralls, manumitThralls, reallocateThralls } from '../engine/thralls';
+import { TUNING } from '../content/tuning';
 import { activateHero, benchHero } from '../engine/roster';
 import { evalConditions } from '../engine/events/conditions';
 import { applyOutcomes } from '../engine/events/outcomes';
@@ -35,7 +37,7 @@ import {
   resolveTurn,
 } from '../engine/turn';
 import type { ChoiceResolution } from '../engine/turn';
-import { livingHeroes } from '../engine/types';
+import { livingHeroes, stanceOf } from '../engine/types';
 import type {
   ActiveEvent,
   ActivityId,
@@ -135,6 +137,17 @@ interface GameStore {
     to: ResidentRole | 'idle',
     count: number,
   ) => boolean;
+  /** Move thralls between roles/idle at the post (never into 'guards'). Returns false if invalid. */
+  reallocateThralls: (
+    from: ResidentRole | 'idle',
+    to: ResidentRole | 'idle',
+    count: number,
+  ) => boolean;
+  /** Free thralls into ordinary residents at the silver cost per head. Returns false if invalid. */
+  freeThralls: (role: ResidentRole | 'idle', count: number) => boolean;
+  /** Buy thralls ("indentured labor") directly from the Company, silver-only.
+   *  Returns false if invalid (not enough silver, or the Company is Hostile). */
+  purchaseCompanyThralls: (count: number) => boolean;
 
   /** Unlock/lock the cheat console (persisted across reloads). */
   setCheatMode: (enabled: boolean) => void;
@@ -395,6 +408,31 @@ export const useGameStore = create<GameStore>((set, get) => {
   setLandAllocation: assignmentAction(setLandAllocationFn),
 
   reallocateResidents: assignmentAction(reallocate),
+
+  reallocateThralls: assignmentAction(reallocateThralls),
+
+  freeThralls: assignmentAction((state, role: ResidentRole | 'idle', count: number) => {
+    if (count <= 0) return false;
+    const cost = count * TUNING.thralls.manumission.silverPerHead;
+    if (state.silver < cost) return false;
+    const freed = manumitThralls(state, role, count);
+    if (freed <= 0) return false;
+    state.silver -= cost;
+    return true;
+  }),
+
+  purchaseCompanyThralls: assignmentAction((state, count: number) => {
+    if (!Number.isFinite(count) || !Number.isInteger(count) || count < 1) return false;
+    if (stanceOf(state.factions.CHARTER_COMPANY.standing) === 'Hostile') return false;
+    const cost = count * TUNING.thralls.purchase.companySilverPerHead;
+    if (state.silver < cost) return false;
+    state.silver -= cost;
+    // The Company's "indentured labor" channel draws on its wider contracting
+    // network (docs/lore/Ansberry Company.md's Beastfolk Labor Contracting),
+    // not homeland stock — an unspecified native mix, no single tag.
+    addThralls(state, 'idle', count, undefined, 'native');
+    return true;
+  }),
 
   setCheatMode: (enabled) => {
     if (typeof localStorage !== 'undefined') {

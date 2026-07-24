@@ -6,6 +6,7 @@ import { eligiblePartners, isMarried } from '../family';
 import { diplomacySeatStateById } from '../diplomacy';
 import { frictionFor, heritageCount, nativeShare, postDefense, residentCount } from '../residents';
 import { raidThreatActive } from '../raids';
+import { thrallCount } from '../thralls';
 import type { ChainVars, GameState } from '../types';
 import type { Condition, TravelContext } from './types';
 
@@ -99,6 +100,14 @@ export function evalCondition(
       return state.residents.contentment >= cond.value;
     case 'contentmentAtMost':
       return state.residents.contentment <= cond.value;
+    case 'thrallsAtLeast':
+      return thrallCount(state, cond.role) >= cond.value;
+    case 'thrallsBelow':
+      return thrallCount(state, cond.role) < cond.value;
+    case 'thrallRestivenessAtLeast':
+      return state.thralls.restiveness >= cond.value;
+    case 'thrallRestivenessAtMost':
+      return state.thralls.restiveness <= cond.value;
     case 'frictionAtLeast':
       return frictionFor(state, cond.heritage) >= cond.value;
     case 'frictionAtMost':

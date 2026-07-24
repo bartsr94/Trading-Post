@@ -23,9 +23,22 @@ import {
   residentTagCounts,
   residentTotal,
 } from '../../engine/residents';
+import {
+  restivenessBand,
+  thrallOutputMultiplier,
+  thrallTotal,
+} from '../../engine/thralls';
 import { RESIDENT_ROLES } from '../../engine/types';
 import type { GameState, LandUse, ResidentRole, TransientKind } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
+
+const THRALL_ROLES = RESIDENT_ROLES.filter((role) => role !== 'guards');
+
+const RESTIVENESS_LABEL = {
+  settled: { text: 'Settled', cls: 'good' },
+  uneasy: { text: 'Uneasy', cls: 'dim' },
+  restive: { text: 'Restive', cls: 'bad' },
+} as const;
 
 const TRANSIENT_LABELS: Record<TransientKind, string> = {
   visitorGuards: 'Visiting guards',
@@ -83,6 +96,8 @@ const FRICTION_BAND_LABEL = {
 /** Dashboard column: population summary + hands + idle reassignment. */
 export function PeopleOverviewColumn({ game }: { game: GameState }) {
   const reallocate = useGameStore((s) => s.reallocateResidents);
+  const reallocateThralls = useGameStore((s) => s.reallocateThralls);
+  const freeThralls = useGameStore((s) => s.freeThralls);
   const canAct = game.phase === 'assignment';
 
   const r = game.residents;
@@ -252,6 +267,88 @@ export function PeopleOverviewColumn({ game }: { game: GameState }) {
           </div>
         </>
       )}
+
+      {thrallTotal(game) > 0 && (() => {
+        const t = game.thralls;
+        const band = restivenessBand(game);
+        const bandInfo = RESTIVENESS_LABEL[band];
+        const manumitCost = TUNING.thralls.manumission.silverPerHead;
+        return (
+          <>
+            <h4 title="Forced labor — thralls to the Sauromatians, 'indentured labor' to the Company. No wage, but held at real risk.">
+              Thralls{' '}
+              <span className="dim" style={{ fontSize: '0.8rem' }}>
+                ({thrallTotal(game)})
+              </span>
+            </h4>
+            <div className="faction-row">
+              <span>Restiveness</span>
+              <span className={bandInfo.cls}>
+                {bandInfo.text} <span className="dim">({Math.round(t.restiveness)}/10)</span>
+              </span>
+            </div>
+            <div className="faction-row" title="Output vs. a free resident's, by the guard:thrall ratio.">
+              <span className="dim" style={{ fontSize: '0.78rem' }}>
+                Output
+              </span>
+              <span className="dim" style={{ fontSize: '0.78rem' }}>
+                ×{thrallOutputMultiplier(game).toFixed(2)}
+              </span>
+            </div>
+            <div className="hand-list">
+              {THRALL_ROLES.map((role) => {
+                const at = t.roles[role];
+                if (at === 0) return null;
+                return (
+                  <div key={role} className="hand-row">
+                    <span>
+                      {ROLE_LABELS[role]} <b>{at}</b>
+                    </span>
+                    <button
+                      className="small"
+                      disabled={!canAct}
+                      title="Send to the idle thrall pool"
+                      onClick={() => reallocateThralls(role, 'idle', 1)}
+                    >
+                      Release
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            {t.idle > 0 && (
+              <>
+                <h4>
+                  Idle Thralls{' '}
+                  <span className="dim" style={{ fontSize: '0.8rem' }}>
+                    ({t.idle})
+                  </span>
+                </h4>
+                <div className="idle-hands-actions">
+                  {THRALL_ROLES.map((role) => (
+                    <button
+                      key={role}
+                      className="small"
+                      disabled={!canAct}
+                      onClick={() => reallocateThralls('idle', role, 1)}
+                    >
+                      → {ROLE_LABELS[role]}
+                    </button>
+                  ))}
+                  <button
+                    className="small"
+                    disabled={!canAct || game.silver < manumitCost}
+                    title={`Free one thrall into the resident pool for ${manumitCost} silver.`}
+                    onClick={() => freeThralls('idle', 1)}
+                  >
+                    Free ({manumitCost}s)
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }

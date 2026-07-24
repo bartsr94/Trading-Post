@@ -14,6 +14,7 @@ import type {
   TransientKind,
 } from './types';
 import type { Rng } from './rng';
+import { thrallContentmentPressure, thrallOutputMultiplier, thrallsAvailable, thrallTotal } from './thralls';
 
 export type ContentmentBand = 'content' | 'grumbling' | 'unrest';
 export type FrictionBand = 'settled' | 'tense' | 'volatile';
@@ -74,6 +75,12 @@ export function residentCount(state: GameState, role?: ResidentRole): number {
  */
 export function claimCapacity(state: GameState): number {
   return state.claim.size * TUNING.claim.residentsPerChain;
+}
+
+/** Free residents + held thralls together — what's weighed against
+ *  `claimCapacity` (THRALLS_SPEC.md decision #6: thralls occupy the same land). */
+export function claimedPopulation(state: GameState): number {
+  return residentTotal(state) + thrallTotal(state);
 }
 
 // ------------------------------------------------------- heritage (HERITAGE_SPEC.md)
@@ -383,8 +390,10 @@ export function removeTransients(state: GameState, kind: TransientKind): number 
 export function applyCraftsfolkConstruction(state: GameState): number {
   if (!state.construction) return 0;
   const crew = residentsAvailable(state, 'craftsfolk');
+  const thrallCrew = thrallsAvailable(state, 'craftsfolk');
   const gain = Math.round(
-    crew * TUNING.residents.effects.crewYieldPerCraftsperson * outputMultiplier(state),
+    crew * TUNING.residents.effects.crewYieldPerCraftsperson * outputMultiplier(state) +
+      thrallCrew * TUNING.residents.effects.crewYieldPerCraftsperson * thrallOutputMultiplier(state),
   );
   if (gain <= 0) return 0;
   addBuildProgress(state, gain);
@@ -411,7 +420,8 @@ export function updateContentment(state: GameState, flags: UpkeepFlags): number 
 
   // Crowding past what the Concession supports drags the mood (§2.1) — steeper
   // than the old over-cap penalty, since it is land the post never secured.
-  const over = residentTotal(state) - claimCapacity(state);
+  // Held thralls occupy the same land, so they count toward the crowding too.
+  const over = claimedPopulation(state) - claimCapacity(state);
   if (over > 0) delta -= TUNING.claim.overClaimPenalty * over;
 
   if (state.residents.idle > t.idleTolerance) delta -= t.idlePenalty;
@@ -421,6 +431,9 @@ export function updateContentment(state: GameState, flags: UpkeepFlags): number 
 
   // A newly-settled group still working out its place in the post.
   delta -= frictionContentmentPressure(state);
+
+  // Living alongside a held forced-labor population unsettles the free pool.
+  delta -= thrallContentmentPressure(state, residentTotal(state));
 
   // A shrine, warren, or longhouse that speaks to the residents' own people.
   delta += buildingEffect(state, 'contentmentBonus');

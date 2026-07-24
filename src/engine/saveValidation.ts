@@ -1,5 +1,6 @@
 import { TUNING } from '../content/tuning';
 import { residentTotal } from './residents';
+import { thrallTotal } from './thralls';
 import { CHECK_TIERS } from './checks';
 import {
   ACTIVITY_IDS,
@@ -379,6 +380,13 @@ export function validateGameState(value: unknown): GameState {
   validateIntegerRecord(residents.tags, 'save.residents.tags', true);
   validateNumericRecord(residents.heritage, ['homeland', 'native'], 'save.residents.heritage', true);
 
+  const thralls = record(state.thralls, 'save.thralls');
+  validateNumericRecord(thralls.roles, RESIDENT_ROLES, 'save.thralls.roles', true);
+  nonNegativeInteger(thralls.idle, 'save.thralls.idle');
+  finite(thralls.restiveness, 'save.thralls.restiveness');
+  validateIntegerRecord(thralls.tags, 'save.thralls.tags', true);
+  validateNumericRecord(thralls.heritage, ['homeland', 'native'], 'save.thralls.heritage', true);
+
   const claim = record(state.claim, 'save.claim');
   nonNegativeInteger(claim.size, 'save.claim.size');
   nonNegativeInteger(claim.cropProgress, 'save.claim.cropProgress');
@@ -505,5 +513,7 @@ export function validateGameState(value: unknown): GameState {
   const validated = state as unknown as GameState;
   const heritageTotal = validated.residents.heritage.homeland + validated.residents.heritage.native;
   if (heritageTotal !== residentTotal(validated)) invalid('save.residents.heritage', 'does not match resident total');
+  const thrallHeritageTotal = validated.thralls.heritage.homeland + validated.thralls.heritage.native;
+  if (thrallHeritageTotal !== thrallTotal(validated)) invalid('save.thralls.heritage', 'does not match thrall total');
   return validated;
 }

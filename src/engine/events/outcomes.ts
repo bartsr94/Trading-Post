@@ -30,6 +30,7 @@ import {
   adjustFriction,
   loseResidents,
 } from '../residents';
+import { addThralls, adjustRestiveness, loseThralls } from '../thralls';
 import { departCharacter, recruitCharacter } from '../roster';
 import { Rng } from '../rng';
 import { clamp, getHero, livingHeroes, nextDiscovery, oppositeGender } from '../types';
@@ -241,6 +242,24 @@ export function applyOutcomes(
       case 'contentment': {
         adjustContentment(state, outcome.delta);
         log.push(`Residents ${outcome.delta >= 0 ? 'heartened' : 'discontented'}`);
+        break;
+      }
+      case 'addThralls': {
+        const added = addThralls(state, outcome.role, outcome.count, outcome.tag, outcome.group);
+        if (added > 0) {
+          const tagNote = outcome.tag ? ` (${outcome.tag})` : '';
+          log.push(`+${added} thrall${added === 1 ? '' : 's'}${tagNote}`);
+        }
+        break;
+      }
+      case 'loseThralls': {
+        const lost = loseThralls(state, outcome.role, outcome.count, outcome.group);
+        if (lost > 0) log.push(`−${lost} thrall${lost === 1 ? '' : 's'}`);
+        break;
+      }
+      case 'thrallRestiveness': {
+        adjustRestiveness(state, outcome.delta);
+        log.push(`Thralls grow ${outcome.delta >= 0 ? 'more restive' : 'more settled'}`);
         break;
       }
       case 'friction': {

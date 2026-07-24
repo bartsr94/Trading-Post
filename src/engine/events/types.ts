@@ -82,6 +82,13 @@ export type Condition =
   | { type: 'residentsBelow'; role?: ResidentRole; value: number }
   | { type: 'contentmentAtLeast'; value: number }
   | { type: 'contentmentAtMost'; value: number }
+  /** Held thralls (THRALLS_SPEC.md), mirroring residentsAtLeast/residentsBelow. */
+  | { type: 'thrallsAtLeast'; role?: ResidentRole; value: number }
+  | { type: 'thrallsBelow'; role?: ResidentRole; value: number }
+  /** Thrall restiveness, 0–10 (ThrallState.restiveness) — mirrors
+   *  contentmentAtLeast/contentmentAtMost. */
+  | { type: 'thrallRestivenessAtLeast'; value: number }
+  | { type: 'thrallRestivenessAtMost'; value: number }
   /** Integration friction for a settled heritage group, 0–10 (ResidentState.friction). */
   | { type: 'frictionAtLeast'; heritage: Heritage; value: number }
   | { type: 'frictionAtMost'; heritage: Heritage; value: number }
@@ -167,6 +174,17 @@ export type Outcome =
     }
   | { type: 'loseResidents'; role?: ResidentRole; count: number; group?: HeritageGroup }
   | { type: 'contentment'; delta: number }
+  /** Held thralls (THRALLS_SPEC.md), mirroring addResidents/loseResidents. */
+  | {
+      type: 'addThralls';
+      role: ResidentRole | 'idle';
+      count: number;
+      tag?: string;
+      group?: HeritageGroup;
+    }
+  | { type: 'loseThralls'; role?: ResidentRole; count: number; group?: HeritageGroup }
+  /** Adjust thrall restiveness, clamped 0–10 — mirrors the `contentment` outcome. */
+  | { type: 'thrallRestiveness'; delta: number }
   /** Adjust a heritage's settled-in integration friction, clamped 0–10. */
   | { type: 'friction'; heritage: Heritage; delta: number }
   /** Grow/shrink the Concession or the herd (TULA_SETTLEMENT_SPEC.md §6). */

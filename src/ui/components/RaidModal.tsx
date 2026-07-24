@@ -34,6 +34,7 @@ const ATTACK_GOALS: { id: RaidAttackGoal; label: string; hint: string }[] = [
   { id: 'bloody', label: 'Bloody them', hint: 'Teach a lesson even if the haul is thin.' },
   { id: 'cow', label: 'Cow them', hint: 'Break their nerve and force tribute from them.' },
   { id: 'rescue', label: 'Rescue', hint: 'Free whoever of ours is held here — leave the rest be.' },
+  { id: 'enslave', label: 'Take thralls', hint: 'March captives home as thralls — needs a guard escort.' },
 ];
 
 const MANEUVERS: { id: RaidManeuver; label: string; hint: string }[] = [
@@ -60,6 +61,7 @@ function resultHeading(direction: 'incoming' | 'outgoing', outcome: string): str
   if (outcome === 'bloodied') return 'Blood Paid in Kind';
   if (outcome === 'cowed') return 'Tribute is Won';
   if (outcome === 'rescued') return 'Brought Home';
+  if (outcome === 'enslaved') return 'Captives Marched Home';
   return 'The Raid Lands';
 }
 
@@ -280,7 +282,9 @@ export function RaidModal({ game }: { game: GameState }) {
     const porterHeads = outgoingExpedition.residentEscort?.porters ?? 0;
     const tripLength = outgoingExpedition.legTurns ?? outgoingExpedition.turnsLeft;
     const canRescue = hasCaptiveHeldBy(game, raid.faction);
-    const visibleAttackGoals = ATTACK_GOALS.filter((goal) => goal.id !== 'rescue' || canRescue);
+    const visibleAttackGoals = ATTACK_GOALS.filter(
+      (goal) => (goal.id !== 'rescue' || canRescue) && (goal.id !== 'enslave' || guardHeads >= 1),
+    );
 
     return (
       <div className="overlay">

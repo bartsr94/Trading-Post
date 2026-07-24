@@ -717,7 +717,13 @@ export function MapScreen({ game }: { game: GameState }) {
                         <option value="bloody">Bloody them</option>
                         <option value="cow">Cow them</option>
                         {canRescue && <option value="rescue">Rescue</option>}
+                        <option value="enslave">Take thralls</option>
                       </select>
+                      {raidGoal === 'enslave' && (
+                        <span className="dim" style={{ fontSize: '0.75rem' }}>
+                          Needs at least one guard escort — you cannot march captives home unescorted.
+                        </span>
+                      )}
                     </label>
                     <label className="compact-field">
                       <span>Maneuver</span>
