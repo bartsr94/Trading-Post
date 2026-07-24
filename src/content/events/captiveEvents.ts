@@ -17,6 +17,15 @@ export const CAPTIVE_EVENTS: GameEvent[] = [
     text: '{hero} comes up the road alone, thinner than he left and short on details, but walking under his own power. However it happened — a guard who looked away, a debt called in, simple luck run out — his captors let him go rather than keep feeding a man they had no more use for.',
     conditions: [],
     weight: 0,
+    factions: ['RIVER_CLANS', 'BEASTFOLK'],
+    // 2026-07-24 lore audit: "no more use for him" runs backward against
+    // Sauromatian Clan and Tribal Organization.md ("any loss strikes at a
+    // clan's reproductive future, while any gain represents precious
+    // opportunity") for the RIVER_CLANS case — a captured man is their most
+    // valuable asset, not a burden shed for cost. Sauromatian Youth
+    // Acquisition and Integration Practices.md's note that men past their
+    // twenties "rarely shed their cultural conditioning" would be a better-
+    // grounded reason for a release. Not yet rewritten.
     choices: [
       {
         label: 'Get him inside and fed.',
@@ -40,6 +49,17 @@ export const CAPTIVE_EVENTS: GameEvent[] = [
     text: 'It has been long enough now that "any day" no longer sounds honest. {hero} is still out there somewhere, held by hands that have given no sign of loosening their grip, and the post is left to decide how much longer to simply wait and see.',
     conditions: [],
     weight: 0,
+    factions: ['RIVER_CLANS', 'BEASTFOLK'],
+    loreRef: ['Sauromatian Clan and Tribal Organization.md'],
+    // 2026-07-24 lore audit: the emphasis here is inverted — "Ransom
+    // Negotiations: Losing groups will offer substantial compensation to
+    // recover captured males, with negotiations potentially spanning years"
+    // (Sauromatian Clan and Tribal Organization.md) is written about
+    // Sauromatian/Kiswani practice specifically, yet only the BEASTFOLK
+    // branch below names ransom explicitly; the Kiswani branch undersells
+    // it with a passive "wait and see." The `ransom` diplomacy mission
+    // itself works correctly against RIVER_CLANS — this is a flavor-text
+    // gap, not a missing mechanic. Not yet rewritten.
     choices: [
       {
         label: "They won't let go on their own — this will take a ransom or a raid.",
@@ -80,6 +100,18 @@ export const CAPTIVE_EVENTS: GameEvent[] = [
     text: "A woman arrives at the gate with a child on her hip and no one to vouch for her, and says plainly what she has come to say: the child is {hero}'s, got during his time held captive, and she has walked a long way on the strength of that claim alone. She isn't asking for pity. She's asking to stay.",
     conditions: [{ type: 'heroUnmarried' }],
     weight: 0,
+    factions: ['RIVER_CLANS', 'BEASTFOLK'],
+    peoples: ['kiswani', 'orc', 'goblin'],
+    loreRef: ['Sauromatian Household Composition.md'],
+    // 2026-07-24 lore audit: only well-grounded for the kiswani branch if this
+    // woman is read as a thrall exercising the free-birth clause ("children
+    // born to thralls and freeborn fathers... become full members of the
+    // father's household," Sauromatian Household Composition.md) — the text
+    // never specifies her status, and read as a free clanswoman this
+    // contradicts the matrilineal-clan logic elsewhere in the lore set
+    // ("children belong to their mother's clan from birth," Sauromatian Clan
+    // and Tribal Organization.md). A one-line specification of her status
+    // would resolve the ambiguity. Not yet rewritten.
     choices: [
       {
         label: 'Take them both in.',

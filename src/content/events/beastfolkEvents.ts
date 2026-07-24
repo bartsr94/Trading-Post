@@ -4,6 +4,15 @@
 // standing opens a voluntary path, since neither people has a chief who can be
 // courted the traditional way — individuals approach the post themselves.
 // Tone per CLAUDE.md: second person, terse, 60–120 words, choices as intentions.
+//
+// Orc/goblin peoples are new, game-specific lore being actively built out —
+// not yet consolidated into docs/lore/, so these events intentionally carry
+// no `loreRef` (nothing to point at yet). Confirmed with Bartosz 2026-07-24:
+// the naming overlap with docs/lore/World of Palusteria.md's unrelated
+// "Beastfolk" (the Al'Rakasha hybrid races) is fine as-is, and beast_wilds
+// sitting inside the Ashmark.md/Western Nomadic Tribes.md Hanjoda/Cult
+// region is not a conflict to resolve. Add a `loreRef` here once this
+// worldbuilding gets written down properly.
 
 import type { GameEvent } from '../../engine/events/types';
 
@@ -21,6 +30,8 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     weight: 10,
     cooldownTurns: 6,
     binding: { type: 'highestStat', stat: 'resolve' },
+    factions: ['BEASTFOLK'],
+    peoples: ['orc'],
     choices: [
       {
         label: 'Pay what he asks — buy this season\'s quiet.',
@@ -87,6 +98,8 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     weight: 10,
     cooldownTurns: 6,
     binding: { type: 'highestSkill', skill: 'bargain' },
+    factions: ['BEASTFOLK'],
+    peoples: ['goblin'],
     choices: [
       {
         label: 'Fill the wagon — it is cheaper than a grudge.',
@@ -159,6 +172,8 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     once: true,
     cooldownTurns: 8,
     binding: { type: 'highestStat', stat: 'charm' },
+    factions: ['BEASTFOLK'],
+    peoples: ['orc'],
     choices: [
       {
         label: 'Welcome her into the household.',
@@ -201,6 +216,8 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     once: true,
     cooldownTurns: 8,
     binding: { type: 'lowestSkill', skill: 'diplomacy' },
+    factions: ['BEASTFOLK'],
+    peoples: ['goblin'],
     choices: [
       {
         label: 'Take the wager she is offering.',
@@ -240,6 +257,8 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     weight: 6,
     cooldownTurns: 12,
     binding: { type: 'highestSkill', skill: 'leadership' },
+    factions: ['BEASTFOLK'],
+    peoples: ['orc', 'goblin'],
     choices: [
       {
         label: 'Take them in as guards.',
@@ -287,6 +306,8 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     weight: 7,
     once: true,
     binding: { type: 'highestStat', stat: 'resolve' },
+    factions: ['BEASTFOLK'],
+    peoples: ['orc', 'goblin'],
     choices: [
       {
         label: 'Speak first — offer words, not weapons.',
@@ -388,6 +409,8 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     text: 'The patrol brings {hero} in past the cook-fires to someone who wears no obvious mark of rank but is plainly the one they answer to. She doesn\'t waste time on ceremony. "You\'re here," she says. "So — why."',
     conditions: [],
     weight: 0,
+    factions: ['BEASTFOLK'],
+    peoples: ['orc', 'goblin'],
     choices: [
       {
         label: 'Press for a lasting truce.',
@@ -453,6 +476,8 @@ export const BEASTFOLK_EVENTS: GameEvent[] = [
     text: '{hero} makes it back to the post with the whole conversation still turning over — the kind of first meeting that will color everything the wilds and the post are to each other from here.',
     conditions: [],
     weight: 0,
+    factions: ['BEASTFOLK'],
+    peoples: ['orc', 'goblin'],
     choices: [
       {
         label: 'Seal it — send word back confirming the terms.',

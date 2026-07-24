@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "catalog": "vitest run src/content/events/eventCatalog.generate.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
@@ -18,6 +19,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
+    "@types/node": "^26.1.1",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^5.0.0",

@@ -21,6 +21,7 @@ export const HERO_EVENTS: GameEvent[] = [
     weight: 14,
     once: true,
     binding: { type: 'specific', heroId: 'p1' },
+    factions: ['CHARTER_COMPANY'],
     choices: [
       {
         label: 'Pay it from the company chest. Debts of honor bind the company now.',
@@ -67,6 +68,7 @@ export const HERO_EVENTS: GameEvent[] = [
     weight: 10,
     once: true,
     binding: { type: 'specific', heroId: 'p3' },
+    factions: ['CHARTER_COMPANY'],
     choices: [
       {
         label: 'Set him to turn the letters into a proper survey for the Company.',
@@ -108,6 +110,9 @@ export const HERO_EVENTS: GameEvent[] = [
     weight: 12,
     once: true,
     binding: { type: 'specific', heroId: 'p5' },
+    factions: ['HILL_TRIBES'],
+    peoples: ['hanjoda'],
+    loreRef: ['Western Nomadic Tribes.md'],
     choices: [
       {
         label: 'Send Dagny to run them off — her hills, her rules.',
@@ -309,6 +314,7 @@ export const GENERIC_HERO_EVENTS: GameEvent[] = [
     weight: 10,
     once: true,
     binding: { type: 'highestStat', stat: 'resolve' },
+    factions: ['CHARTER_COMPANY'],
     choices: [
       {
         label: 'Pay it from the company chest. Debts of honor bind the company now.',
@@ -354,6 +360,7 @@ export const GENERIC_HERO_EVENTS: GameEvent[] = [
     weight: 10,
     once: true,
     binding: { type: 'highestSkill', skill: 'lore' },
+    factions: ['CHARTER_COMPANY'],
     choices: [
       {
         label: 'Set them to turn it into a proper survey for the Company.',
@@ -394,6 +401,9 @@ export const GENERIC_HERO_EVENTS: GameEvent[] = [
     weight: 11,
     once: true,
     binding: { type: 'highestSkill', skill: 'survival' },
+    factions: ['HILL_TRIBES'],
+    peoples: ['hanjoda'],
+    loreRef: ['Western Nomadic Tribes.md'],
     choices: [
       {
         label: 'Send {hero} to run them off.',
