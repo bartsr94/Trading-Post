@@ -330,21 +330,23 @@ function bestInParty(
   return heroes.reduce((a, b) => (b.skills[skill] > a.skills[skill] ? b : a));
 }
 
-function raidCargoCapacity(expedition: ExpeditionState): number {
+function raidCargoCapacity(state: GameState, expedition: ExpeditionState): number {
   const porters = expedition.residentEscort?.porters ?? 0;
   return (
     expedition.heroIds.length * TUNING.map.cargoCapacityPerHero +
-    porters * TUNING.residents.effects.cargoPerPorter
+    porters * TUNING.residents.effects.cargoPerPorter +
+    buildingEffect(state, 'cargoCapacityBonus')
   );
 }
 
 function fillRaidLoot(
+  state: GameState,
   expedition: ExpeditionState,
   units: number,
   rng: Rng,
 ): Partial<Record<GoodId, number>> {
   const looted: Partial<Record<GoodId, number>> = {};
-  const capLeft = Math.max(0, raidCargoCapacity(expedition) - cargoUnits(expedition.cargo));
+  const capLeft = Math.max(0, raidCargoCapacity(state, expedition) - cargoUnits(expedition.cargo));
   const toTake = Math.max(0, Math.min(capLeft, units));
   for (let i = 0; i < toTake; i++) {
     const good = rng.pick(TUNING.raid.lootGoods as GoodId[]);
@@ -395,7 +397,7 @@ export function raidingForceBreakdown(
     heroes,
     guards: guards * TUNING.raid.guardEscortForce,
     porters,
-    cargoCapacity: raidCargoCapacity(expedition),
+    cargoCapacity: raidCargoCapacity(state, expedition),
     ally,
     distancePenalty,
     total: Math.max(
@@ -650,7 +652,7 @@ export function resolveOutgoingRaid(
         Math.max(0, margin) * TUNING.raid.outgoingGoodsPerMargin * goal.lootGoodsMult,
     ),
   );
-  const goodsLoot = fillRaidLoot(expedition, goodsUnits, rng);
+  const goodsLoot = fillRaidLoot(state, expedition, goodsUnits, rng);
   const goodsLine = lootSummary(goodsLoot, ctx.goodNames);
 
   let outcome: RaidResolution['outcome'] =

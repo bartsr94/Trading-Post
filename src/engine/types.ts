@@ -569,6 +569,14 @@ export interface BuildingEffects {
   foodStorageBonus: number;
   contentmentBonus: number;
   healingBonus: number; // extra health recovery on a Rest turn, alongside stressReliefBonus
+  /** Extra cargo units any expedition can carry, on top of party size + porter
+   *  escort (a Dock's river barges) — added wherever `cargoCapacity`/
+   *  `raidCargoCapacity` is read. */
+  cargoCapacityBonus: number;
+  /** Flat check bonus on any expedition arrival check (a Stables' mounts),
+   *  applied alongside the resident guard-escort bonus regardless of whether
+   *  guards actually came along. */
+  travelCheckBonus: number;
 }
 
 /** A building's cost, effort, prerequisites, and effects (TUNING.building.defs). */

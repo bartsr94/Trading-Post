@@ -112,6 +112,19 @@ describe('dispatch validation', () => {
     ).toBeTruthy();
   });
 
+  it('a Dock raises the cargo a caravan can carry', () => {
+    const s = testState();
+    s.goods.tools = 100;
+    expect(
+      dispatchError(s, { kind: 'caravan', destination: 'river_meet', heroIds: ['p1'], cargo: { tools: 25 } }, DEFS),
+    ).toBeTruthy(); // 1 hero, no escort: cap is 20, short of 25
+
+    s.buildings.push('dock'); // +8 cargo capacity
+    expect(
+      dispatchError(s, { kind: 'caravan', destination: 'river_meet', heroIds: ['p1'], cargo: { tools: 25 } }, DEFS),
+    ).toBeNull();
+  });
+
   it('moves cargo and silver out of the post stock on dispatch', () => {
     const s = testState();
     const toolsBefore = s.goods.tools;

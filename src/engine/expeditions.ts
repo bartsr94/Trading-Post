@@ -24,6 +24,7 @@ import type { TravelContext } from './events/types';
 import { priceAt } from './economy';
 import type { GoodDef } from './economy';
 import { addClaim } from './claim';
+import { buildingEffect } from './buildings';
 import { canWed, formUnion, unionError } from './family';
 import { canCallRaidAlly, createOutgoingRaid, raidTargetFaction } from './raids';
 import { hasCaptiveHeldBy, maybeQueueKinArrival, rollAbductionRisk } from './captivity';
@@ -165,11 +166,19 @@ export function cargoCapacity(
   return heroCount * TUNING.map.cargoCapacityPerHero + porters * TUNING.residents.effects.cargoPerPorter;
 }
 
-/** Check bonus a guard escort lends to a caravan/explore/envoy arrival check. */
-function escortMods(exp: ExpeditionState): CheckModifier[] {
+/** Check bonus a guard escort (and a Stables' mounts) lend to a caravan/
+ *  explore/envoy arrival check. */
+function escortMods(state: GameState, exp: ExpeditionState): CheckModifier[] {
+  const mods: CheckModifier[] = [];
   const guards = exp.residentEscort?.guards ?? 0;
-  if (guards <= 0) return [];
-  return [{ label: `Escort of ${guards}`, value: TUNING.residents.effects.guardEscortBonus }];
+  if (guards > 0) {
+    mods.push({ label: `Escort of ${guards}`, value: TUNING.residents.effects.guardEscortBonus });
+  }
+  const stables = buildingEffect(state, 'travelCheckBonus');
+  if (stables > 0) {
+    mods.push({ label: 'Stabled mounts', value: stables });
+  }
+  return mods;
 }
 
 /** Builds the generic event destination for authored and free-coordinate trips. */
@@ -431,7 +440,7 @@ export function dispatchError(
   }
 
   const cargo = params.cargo ?? {};
-  if (cargoUnits(cargo) > cargoCapacity(heroIds.length, escort)) {
+  if (cargoUnits(cargo) > cargoCapacity(heroIds.length, escort) + buildingEffect(state, 'cargoCapacityBonus')) {
     return 'The party cannot carry that much.';
   }
   for (const [good, qty] of Object.entries(cargo) as [GoodId, number][]) {
@@ -672,7 +681,7 @@ function resolveCaravanArrival(
   const tags = ['trade', ...def.tags, ...(def.faction ? [def.faction] : [])];
   const mods = [
     ...traitModifiers(hero, ctx.traitDefs, 'bargain', tags),
-    ...escortMods(exp),
+    ...escortMods(state, exp),
     ...paceMods(exp),
   ];
   const stat = bestGoverningStat(hero, 'bargain');
@@ -700,7 +709,9 @@ function resolveCaravanArrival(
   const bought: string[] = [];
   // A supplier crew passing through lends extra backs to haul the load home.
   let capacityLeft =
-    cargoCapacity(exp.heroIds.length, exp.residentEscort) + transientEffect(state, 'cargoBonus');
+    cargoCapacity(exp.heroIds.length, exp.residentEscort) +
+    transientEffect(state, 'cargoBonus') +
+    buildingEffect(state, 'cargoCapacityBonus');
   for (const [good, qty] of Object.entries(exp.buyOrders) as [GoodId, number][]) {
     const goodDef = ctx.goodDefs.get(good);
     if (!goodDef || !qty) continue;
@@ -746,7 +757,7 @@ function resolveExploreArrival(
   const tags = ['exploration', ...spatialTags, ...(def?.tags ?? [])];
   const mods = [
     ...traitModifiers(hero, ctx.traitDefs, 'survival', tags),
-    ...escortMods(exp),
+    ...escortMods(state, exp),
     ...paceMods(exp),
   ];
   const stat = bestGoverningStat(hero, 'survival');
@@ -847,7 +858,7 @@ function resolveDiplomacyArrival(
   const mods = [
     ...traitModifiers(hero, ctx.traitDefs, 'diplomacy', tags),
     ...relationshipMods,
-    ...escortMods(exp),
+    ...escortMods(state, exp),
     ...paceMods(exp),
   ];
   const stat = bestGoverningStat(hero, 'diplomacy');
@@ -1034,7 +1045,7 @@ function resolveInviteArrival(
   const tags = ['strangers', ...def.tags, ...(def.faction ? [def.faction] : [])];
   const mods = [
     ...traitModifiers(hero, ctx.traitDefs, skill, tags),
-    ...escortMods(exp),
+    ...escortMods(state, exp),
     ...paceMods(exp),
     { label: 'offer', value: inv.offerTierRollBonus[offer] ?? 0 },
   ];
@@ -1085,7 +1096,7 @@ function resolveConcessionArrival(
   const tags = ['bargain', ...def.tags, ...(def.faction ? [def.faction] : [])];
   const mods = [
     ...traitModifiers(hero, ctx.traitDefs, skill, tags),
-    ...escortMods(exp),
+    ...escortMods(state, exp),
     ...paceMods(exp),
   ];
   const stat = bestGoverningStat(hero, skill);
