@@ -5,12 +5,15 @@
 
 import { describe, expect, it } from 'vitest';
 import { LOCATIONS } from '../../content/locations';
+import { evalConditions } from '../events/conditions';
+import { applyOutcomes } from '../events/outcomes';
+import type { TravelContext } from '../events/types';
 import { addChild, formUnion, isMixed, nodePeoples } from '../family';
 import { isEligible } from '../events/selection';
 import { addResidents, residentTotal } from '../residents';
 import { Rng } from '../rng';
 import { migrate } from '../save';
-import { advancePendingEvent, resolveChoice } from '../turn';
+import { advancePendingEvent, outcomeCtx, resolveChoice } from '../turn';
 import {
   defaultSubPeople,
   getHero,
@@ -18,7 +21,7 @@ import {
   isNativeHeritage,
   stanceOf,
 } from '../types';
-import type { GameState } from '../types';
+import type { ExpeditionState, GameState } from '../types';
 import { TEST_CONTENT, testState } from './helpers';
 
 describe('Beastfolk taxonomy', () => {
@@ -150,7 +153,7 @@ describe('save migration v9 -> v10', () => {
     preV10.factions = factions as GameState['factions'];
 
     const migrated = migrate(preV10);
-    expect(migrated.saveVersion).toBe(23); // migrate() chains all the way to current
+    expect(migrated.saveVersion).toBe(24); // migrate() chains all the way to current
     expect(migrated.factions.BEASTFOLK).toBeDefined();
     expect(migrated.factions.BEASTFOLK.standing).toBe(-60);
   });
@@ -256,5 +259,233 @@ describe('"A Patrol at the Treeline" chain', () => {
 
     resolveChoice(s, TEST_CONTENT, entry, 2, 'p1');
     expect(s.pendingEvents).toHaveLength(1);
+  });
+});
+
+// A 2026-07-24 "deepen Beastfolk interactions" pass: post-settlement
+// integration friction (a new generic ResidentState.friction mechanism),
+// a second settlement flavor, a general-mischief content tier, a "testing
+// the waters" visitor beat, and a travel-toll variant.
+describe('second settlement flavor + friction wiring at settlement', () => {
+  function readyState(standing = 30) {
+    const s = testState();
+    s.locations.beast_wilds.discovery = 'visited';
+    s.factions.BEASTFOLK.standing = standing;
+    return s;
+  }
+
+  it('the guard settlement event sets both heritages to volatile friction', () => {
+    const s = readyState();
+    const event = TEST_CONTENT.events.get('beastfolk_settlement')!;
+    resolveChoice(s, TEST_CONTENT, event, 0, 'p1');
+    expect(s.residents.friction.orc).toBe(7);
+    expect(s.residents.friction.goblin).toBe(7);
+    expect(s.residents.tags.orc).toBe(2);
+    expect(s.residents.tags.goblin).toBe(1);
+  });
+
+  it('the worker settlement variant tags craftsfolk/porters and sets friction the same way', () => {
+    const s = readyState();
+    const event = TEST_CONTENT.events.get('beastfolk_settlement_workers')!;
+    expect(isEligible(s, event)).toBe(true);
+    resolveChoice(s, TEST_CONTENT, event, 0, 'p1');
+    expect(s.residents.roles.craftsfolk).toBe(1);
+    expect(s.residents.roles.porters).toBe(2);
+    expect(s.residents.tags.orc).toBe(1);
+    expect(s.residents.tags.goblin).toBe(2);
+    expect(s.residents.friction.orc).toBe(7);
+    expect(s.residents.friction.goblin).toBe(7);
+  });
+
+  it('the worker variant is gated by discovery/standing exactly like the guard variant', () => {
+    const s = testState();
+    const event = TEST_CONTENT.events.get('beastfolk_settlement_workers')!;
+    expect(isEligible(s, event)).toBe(false);
+    s.locations.beast_wilds.discovery = 'visited';
+    s.factions.BEASTFOLK.standing = 25;
+    expect(isEligible(s, event)).toBe(true);
+  });
+});
+
+describe('integration friction arc', () => {
+  it('the orc mediation event needs both an orc resident and tense-or-worse friction', () => {
+    const s = testState();
+    const event = TEST_CONTENT.events.get('beastfolk_integration_orc')!;
+    expect(isEligible(s, event)).toBe(false);
+    s.residents.tags.orc = 1;
+    expect(isEligible(s, event)).toBe(false); // friction still 0
+    s.residents.friction.orc = 4;
+    expect(isEligible(s, event)).toBe(true);
+  });
+
+  it('mediating lowers orc friction; leaving it be raises it', () => {
+    const s = testState();
+    s.residents.tags.orc = 1;
+    s.residents.friction.orc = 7;
+    const hero = getHero(s, 'p1');
+    hero.stats.resolve = 20;
+    hero.skills.leadership = 5;
+    const event = TEST_CONTENT.events.get('beastfolk_integration_orc')!;
+    resolveChoice(s, TEST_CONTENT, event, 0, 'p1');
+    expect(s.residents.friction.orc).toBeLessThan(7);
+
+    const s2 = testState();
+    s2.residents.tags.orc = 1;
+    s2.residents.friction.orc = 7;
+    resolveChoice(s2, TEST_CONTENT, event, 1, 'p1'); // "let them work it out"
+    expect(s2.residents.friction.orc).toBe(8);
+  });
+
+  it('the goblin mediation event mirrors the orc one, gated on the goblin tag/friction', () => {
+    const s = testState();
+    const event = TEST_CONTENT.events.get('beastfolk_integration_goblin')!;
+    expect(isEligible(s, event)).toBe(false);
+    s.residents.tags.goblin = 1;
+    s.residents.friction.goblin = 5;
+    expect(isEligible(s, event)).toBe(true);
+    // Ignoring it (no check) always nudges friction up by 1.
+    resolveChoice(s, TEST_CONTENT, event, 1, 'p1');
+    expect(s.residents.friction.goblin).toBe(6);
+  });
+
+  it('the closing event only fires once the group is present and its friction has settled', () => {
+    const s = testState();
+    const event = TEST_CONTENT.events.get('beastfolk_integration_settled_orc')!;
+    expect(isEligible(s, event)).toBe(false); // no orcs at all
+    s.residents.tags.orc = 1;
+    s.residents.friction.orc = 7;
+    expect(isEligible(s, event)).toBe(false); // still volatile
+    s.residents.friction.orc = 2;
+    expect(isEligible(s, event)).toBe(true);
+
+    const standingBefore = s.factions.BEASTFOLK.standing;
+    const contentmentBefore = s.residents.contentment;
+    resolveChoice(s, TEST_CONTENT, event, 0, 'p1');
+    expect(s.factions.BEASTFOLK.standing).toBe(standingBefore + 2);
+    expect(s.residents.contentment).toBe(contentmentBefore + 1);
+  });
+
+  it('the goblin closing event is gated the same way, independently of the orc one', () => {
+    const s = testState();
+    const event = TEST_CONTENT.events.get('beastfolk_integration_settled_goblin')!;
+    s.residents.tags.orc = 1;
+    s.residents.friction.orc = 2; // orc settled...
+    expect(isEligible(s, event)).toBe(false); // ...but no goblins present
+    s.residents.tags.goblin = 1;
+    s.residents.friction.goblin = 7;
+    expect(isEligible(s, event)).toBe(false); // present, but still volatile
+    s.residents.friction.goblin = 1;
+    expect(isEligible(s, event)).toBe(true);
+  });
+});
+
+describe('general mischief content', () => {
+  it('the livestock raid needs discovery, a herd, and standing not already friendly', () => {
+    const event = TEST_CONTENT.events.get('beastfolk_livestock_raid')!;
+    const s = testState();
+    expect(isEligible(s, event)).toBe(false);
+    s.locations.beast_wilds.discovery = 'visited';
+    expect(isEligible(s, event)).toBe(false); // no herd yet
+    s.herd.count = 5;
+    expect(isEligible(s, event)).toBe(true);
+    s.factions.BEASTFOLK.standing = 60;
+    expect(isEligible(s, event)).toBe(false); // too friendly for this to read as mischief
+  });
+
+  it('writing off a livestock loss shrinks the herd by one', () => {
+    const s = testState();
+    s.herd.count = 5;
+    const event = TEST_CONTENT.events.get('beastfolk_livestock_raid')!;
+    resolveChoice(s, TEST_CONTENT, event, 1, 'p1'); // "Write it off"
+    expect(s.herd.count).toBe(4);
+  });
+
+  it('pilfering is gated on discovery/standing but not on a herd', () => {
+    const event = TEST_CONTENT.events.get('beastfolk_pilfering')!;
+    const s = testState();
+    expect(isEligible(s, event)).toBe(false);
+    s.locations.beast_wilds.discovery = 'visited';
+    expect(isEligible(s, event)).toBe(true);
+  });
+
+  it('letting pilfering go costs tools and a little silver', () => {
+    const s = testState();
+    s.goods.tools = 10;
+    const silverBefore = s.silver;
+    const event = TEST_CONTENT.events.get('beastfolk_pilfering')!;
+    resolveChoice(s, TEST_CONTENT, event, 1, 'p1'); // "Let it go"
+    expect(s.goods.tools).toBe(9);
+    expect(s.silver).toBe(silverBefore - 4);
+  });
+
+  it('the dare has no standing gate at all — bravado, not policy', () => {
+    const event = TEST_CONTENT.events.get('beastfolk_dare')!;
+    const s = testState();
+    expect(isEligible(s, event)).toBe(false); // undiscovered
+    s.locations.beast_wilds.discovery = 'visited';
+    s.factions.BEASTFOLK.standing = -80;
+    expect(isEligible(s, event)).toBe(true);
+    s.factions.BEASTFOLK.standing = 80;
+    expect(isEligible(s, event)).toBe(true);
+  });
+
+  it('waving off the dare costs a little standing', () => {
+    const s = testState();
+    const before = s.factions.BEASTFOLK.standing;
+    const event = TEST_CONTENT.events.get('beastfolk_dare')!;
+    resolveChoice(s, TEST_CONTENT, event, 1, 'p1'); // "Wave him off"
+    expect(s.factions.BEASTFOLK.standing).toBe(before - 1);
+  });
+});
+
+describe('the "testing the waters" visitor beat', () => {
+  it('is only eligible in the mid-standing band between tribute and settlement', () => {
+    const s = testState();
+    s.locations.beast_wilds.discovery = 'visited';
+    const event = TEST_CONTENT.events.get('beastfolk_visitors')!;
+    s.factions.BEASTFOLK.standing = -10;
+    expect(isEligible(s, event)).toBe(false);
+    s.factions.BEASTFOLK.standing = 10;
+    expect(isEligible(s, event)).toBe(true);
+    s.factions.BEASTFOLK.standing = 40;
+    expect(isEligible(s, event)).toBe(false);
+  });
+
+  it('letting them look spawns a beastfolkVisitors transient', () => {
+    const s = testState();
+    s.locations.beast_wilds.discovery = 'visited';
+    s.factions.BEASTFOLK.standing = 10;
+    const event = TEST_CONTENT.events.get('beastfolk_visitors')!;
+    resolveChoice(s, TEST_CONTENT, event, 0, 'p1');
+    expect(s.transients.some((t) => t.kind === 'beastfolkVisitors' && t.count === 4)).toBe(true);
+  });
+});
+
+describe('travel_beastfolk_toll', () => {
+  it('gates on the beastfolk destination tag, not any other', () => {
+    const s = testState();
+    const event = TEST_CONTENT.events.get('travel_beastfolk_toll')!;
+    const dummyExpedition = {} as unknown as ExpeditionState;
+    const atBeastWilds: TravelContext = {
+      expedition: dummyExpedition,
+      destination: { point: { x: 0, y: 0 }, name: 'The Gnawback Camp', tags: ['wilds', 'beastfolk', 'danger'] },
+      paceCheckModifier: 0,
+    };
+    const atRiver: TravelContext = {
+      ...atBeastWilds,
+      destination: { ...atBeastWilds.destination, tags: ['river'] },
+    };
+    expect(evalConditions(s, event.conditions, { travel: atBeastWilds })).toBe(true);
+    expect(evalConditions(s, event.conditions, { travel: atRiver })).toBe(false);
+  });
+
+  it('paying the toll costs silver and nudges standing up', () => {
+    const s = testState();
+    const silverBefore = s.silver;
+    const standingBefore = s.factions.BEASTFOLK.standing;
+    const event = TEST_CONTENT.events.get('travel_beastfolk_toll')!;
+    applyOutcomes(s, event.choices[0].outcomes.success.outcomes, outcomeCtx(TEST_CONTENT, 'p1'));
+    expect(s.silver).toBe(silverBefore - 8);
+    expect(s.factions.BEASTFOLK.standing).toBe(standingBefore + 1);
   });
 });

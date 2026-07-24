@@ -7,6 +7,7 @@ import { addBuildProgress, buildingEffect } from './buildings';
 import { clamp, RESIDENT_ROLES } from './types';
 import type {
   GameState,
+  Heritage,
   HeritageGroup,
   ResidentRole,
   ResidentState,
@@ -15,6 +16,7 @@ import type {
 import type { Rng } from './rng';
 
 export type ContentmentBand = 'content' | 'grumbling' | 'unrest';
+export type FrictionBand = 'settled' | 'tense' | 'volatile';
 
 export function emptyRoles(): Record<ResidentRole, number> {
   return { farmers: 0, porters: 0, guards: 0, craftsfolk: 0, herders: 0, hunters: 0 };
@@ -27,6 +29,7 @@ export function freshResidents(): ResidentState {
     contentment: TUNING.residents.contentment.start,
     tags: {},
     heritage: { homeland: 0, native: 0 },
+    friction: {},
   };
 }
 
@@ -131,6 +134,49 @@ export function contentmentBand(state: GameState): ContentmentBand {
   if (c >= t.contentThreshold) return 'content';
   if (c <= t.unrestThreshold) return 'unrest';
   return 'grumbling';
+}
+
+/** Current integration friction for a heritage, 0 if it never accrued one. */
+export function frictionFor(state: GameState, heritage: Heritage): number {
+  return state.residents.friction[heritage] ?? 0;
+}
+
+export function frictionBand(value: number): FrictionBand {
+  const t = TUNING.residents.friction;
+  if (value >= t.volatileThreshold) return 'volatile';
+  if (value >= t.tenseThreshold) return 'tense';
+  return 'settled';
+}
+
+/** Clamped 0–10 adjustment to a heritage's integration friction. */
+export function adjustFriction(state: GameState, heritage: Heritage, delta: number): void {
+  const next = clamp(frictionFor(state, heritage) + delta, 0, 10);
+  state.residents.friction[heritage] = next;
+}
+
+/** Ongoing contentment drag from every heritage still sitting in the volatile
+ *  band — mirrors `transientEffect`'s per-head-style pressure, but per group
+ *  rather than per head (a whole cohort's unrest weighs on the pool once,
+ *  not scaled by its size). */
+export function frictionContentmentPressure(state: GameState): number {
+  const t = TUNING.residents.friction;
+  let pressure = 0;
+  for (const value of Object.values(state.residents.friction)) {
+    if (value !== undefined && frictionBand(value) === 'volatile') pressure += t.volatileContentmentPressure;
+  }
+  return pressure;
+}
+
+/** Friction settles naturally over time absent any event pushing it back up
+ *  — called once per turn from `resolveResidentSociety`. */
+export function driftFriction(state: GameState): void {
+  const decay = TUNING.residents.friction.passiveDecayPerTurn;
+  for (const heritage of Object.keys(state.residents.friction) as Heritage[]) {
+    const value = state.residents.friction[heritage];
+    if (value !== undefined && value > 0) {
+      state.residents.friction[heritage] = Math.max(0, value - decay);
+    }
+  }
 }
 
 /** Role-output multiplier from the current contentment band. */
@@ -372,6 +418,9 @@ export function updateContentment(state: GameState, flags: UpkeepFlags): number 
 
   // Company inspectors and the like weigh on the mood while they linger.
   delta -= transientEffect(state, 'contentmentPressure');
+
+  // A newly-settled group still working out its place in the post.
+  delta -= frictionContentmentPressure(state);
 
   // A shrine, warren, or longhouse that speaks to the residents' own people.
   delta += buildingEffect(state, 'contentmentBonus');

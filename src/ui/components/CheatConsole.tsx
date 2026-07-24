@@ -22,6 +22,7 @@ import {
   RAID_SEVERITIES,
   RESIDENT_ROLES,
   TRANSIENT_KINDS,
+  heritageGroup,
   livingHeroes,
 } from '../../engine/types';
 import type {
@@ -50,6 +51,7 @@ const TRANSIENT_LABELS: Record<TransientKind, string> = {
   visitorGuards: 'Visitor Guards',
   companyAgents: 'Company Agents',
   supplierCrew: 'Supplier Crew',
+  beastfolkVisitors: 'Beastfolk Visitors',
 };
 
 function cap(s: string): string {
@@ -286,10 +288,16 @@ function ResidentsSection({ apply }: { apply: (o: Outcome[]) => void }) {
   const [role, setRole] = useState<ResidentRole>(RESIDENT_ROLES[0]);
   const [count, setCount] = useState(5);
   const [group, setGroup] = useState<HeritageGroup | ''>('');
+  const [heritage, setHeritage] = useState<Heritage | ''>('');
   const [contentDelta, setContentDelta] = useState(2);
   const [transientKind, setTransientKind] = useState<TransientKind>(TRANSIENT_KINDS[0]);
   const [transientCount, setTransientCount] = useState(3);
   const [transientTurns, setTransientTurns] = useState(4);
+
+  // A heritage pick (e.g. 'orc'/'goblin') tags the resident with that heritage
+  // and defaults their origin bucket from it — the manual origin dropdown
+  // below still wins if explicitly set, for testing mismatched cases.
+  const resolvedGroup = group || (heritage ? heritageGroup(heritage) : undefined);
 
   return (
     <div className="panel">
@@ -301,22 +309,32 @@ function ResidentsSection({ apply }: { apply: (o: Outcome[]) => void }) {
           ))}
         </select>
         <NumField value={count} onChange={setCount} width={55} />
+        <select value={heritage} onChange={(e) => setHeritage(e.target.value as Heritage | '')}>
+          <option value="">no heritage tag</option>
+          {HERITAGES.map((h) => (
+            <option key={h} value={h}>{cap(h)}</option>
+          ))}
+        </select>
         <select value={group} onChange={(e) => setGroup(e.target.value as HeritageGroup | '')}>
-          <option value="">any origin</option>
+          <option value="">
+            {heritage ? `origin: ${resolvedGroup}` : 'any origin'}
+          </option>
           <option value="homeland">homeland</option>
           <option value="native">native</option>
         </select>
         <button
           className="small"
           onClick={() =>
-            apply([{ type: 'addResidents', role, count, group: group || undefined }])
+            apply([
+              { type: 'addResidents', role, count, tag: heritage || undefined, group: resolvedGroup },
+            ])
           }
         >
           Add
         </button>
         <button
           className="small"
-          onClick={() => apply([{ type: 'loseResidents', role, count, group: group || undefined }])}
+          onClick={() => apply([{ type: 'loseResidents', role, count, group: resolvedGroup }])}
         >
           Lose
         </button>

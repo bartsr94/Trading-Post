@@ -5,7 +5,7 @@ import type { BuildingDefData, FactionId, Heritage, TierRequirement } from '../e
 
 export const TUNING = {
   save: {
-    version: 23,
+    version: 24,
     autosaveKey: 'trading-post-save',
     /** Manual import guard; current saves are far smaller than five MiB. */
     maxImportBytes: 5 * 1024 * 1024,
@@ -287,6 +287,9 @@ export const TUNING = {
         visitorGuards: { defenseBonus: 1, contentmentPressure: 0, cargoBonus: 0 },
         companyAgents: { defenseBonus: 0, contentmentPressure: 1, cargoBonus: 0 },
         supplierCrew: { defenseBonus: 0, contentmentPressure: 0, cargoBonus: 20 },
+        /** A handful of orcs/goblins "testing the waters" before ever settling —
+         *  wary residents keep half an eye on them, a light ongoing pressure. */
+        beastfolkVisitors: { defenseBonus: 0, contentmentPressure: 1, cargoBonus: 0 },
       } as Record<
         string,
         { defenseBonus: number; contentmentPressure: number; cargoBonus: number }
@@ -296,6 +299,19 @@ export const TUNING = {
       visitorGuardTurns: 3,
       /** Inspectors posted (indefinitely) while the Charter quota goes unmet. */
       companyAgentCount: 1,
+    },
+    /** Integration friction (0–10) for a settled heritage group — distinct from
+     *  pool-wide contentment (BEASTFOLK_SPEC.md's integration-friction pass). */
+    friction: {
+      /** ≥ this = still volatile: costs contentment every turn until it eases. */
+      volatileThreshold: 7,
+      /** ≥ this = tense: friction-mediation events remain eligible. Below this
+       *  is 'settled' — the arc's closing event can fire. */
+      tenseThreshold: 4,
+      /** Passive per-turn settling absent any event pushing it back up. */
+      passiveDecayPerTurn: 0.05,
+      /** Contentment cost per turn, per heritage currently in the volatile band. */
+      volatileContentmentPressure: 1,
     },
   },
 
@@ -859,10 +875,17 @@ export const TUNING = {
     /** Chance a qualifying hero is captured instead of wounded/killed when a
      *  raid sacks the post (resolveIncomingRaid). */
     incomingCaptureChance: 0.35,
+    /** Per-faction override of the above — BEASTFOLK war-bands snatch
+     *  opportunistically far more readily than the more purposeful River
+     *  Clans (BEASTFOLK_SPEC.md's abduction-identity pass). Falls back to
+     *  `incomingCaptureChance` for any faction with no entry. */
+    incomingCaptureChanceByFaction: { BEASTFOLK: 0.45 } as Partial<Record<FactionId, number>>,
 
     /** Chance a qualifying hero is captured on arrival at a risky-faction
      *  destination, before guard-escort reduction. */
     expeditionCaptureChanceBase: 0.08,
+    /** Per-faction override of the above, same rationale. */
+    expeditionCaptureChanceBaseByFaction: { BEASTFOLK: 0.12 } as Partial<Record<FactionId, number>>,
     /** Subtracted per guard seconded onto the expedition. */
     expeditionCaptureChancePerGuard: 0.02,
     /** Floor so an escort can reduce but never fully eliminate the risk. */

@@ -15,6 +15,7 @@ import {
   applyGrowth,
   claimCapacity,
   contentmentBand,
+  driftFriction,
   freshResidents,
   loseResidents,
   outputMultiplier,
@@ -275,6 +276,63 @@ describe('resident event outcomes and conditions', () => {
     expect(evalCondition(s, { type: 'residentsBelow', value: 5 })).toBe(true);
     expect(evalCondition(s, { type: 'contentmentAtMost', value: 6 })).toBe(true);
     expect(evalCondition(s, { type: 'contentmentAtLeast', value: 7 })).toBe(false);
+  });
+
+  it('residentTagAtLeast reads ResidentState.tags', () => {
+    const s = testState();
+    s.residents = freshResidents();
+    s.residents.tags.orc = 2;
+    expect(evalCondition(s, { type: 'residentTagAtLeast', tag: 'orc', value: 2 })).toBe(true);
+    expect(evalCondition(s, { type: 'residentTagAtLeast', tag: 'orc', value: 3 })).toBe(false);
+    expect(evalCondition(s, { type: 'residentTagAtLeast', tag: 'goblin', value: 1 })).toBe(false);
+  });
+});
+
+describe('integration friction', () => {
+  it('friction outcome clamps 0-10 and the conditions read it back', () => {
+    const s = testState();
+    s.residents = freshResidents();
+    applyOutcomes(s, [{ type: 'friction', heritage: 'orc', delta: 7 }], outcomeCtx(s));
+    expect(s.residents.friction.orc).toBe(7);
+    expect(evalCondition(s, { type: 'frictionAtLeast', heritage: 'orc', value: 4 })).toBe(true);
+    expect(evalCondition(s, { type: 'frictionAtMost', heritage: 'orc', value: 2 })).toBe(false);
+
+    applyOutcomes(s, [{ type: 'friction', heritage: 'orc', delta: 10 }], outcomeCtx(s));
+    expect(s.residents.friction.orc).toBe(10);
+    applyOutcomes(s, [{ type: 'friction', heritage: 'orc', delta: -20 }], outcomeCtx(s));
+    expect(s.residents.friction.orc).toBe(0);
+
+    // An untouched heritage never accrues an entry, and reads as 0.
+    expect(evalCondition(s, { type: 'frictionAtMost', heritage: 'goblin', value: 0 })).toBe(true);
+  });
+
+  it('a volatile-band heritage drags contentment; a settled one does not', () => {
+    const s = testState();
+    s.residents = freshResidents();
+    s.residents.roles.farmers = 1; // non-empty pool, else updateContentment no-ops
+    s.residents.friction.orc = 8; // volatile (>= 7)
+    const withFriction = updateContentment(s, { missedFood: false, missedWages: false });
+
+    const s2 = testState();
+    s2.residents = freshResidents();
+    s2.residents.roles.farmers = 1;
+    s2.residents.friction.orc = 2; // settled (< 4)
+    const withoutFriction = updateContentment(s2, { missedFood: false, missedWages: false });
+
+    expect(withFriction).toBeLessThan(withoutFriction);
+  });
+
+  it('driftFriction settles a heritage toward 0 over time, never below it', () => {
+    const s = testState();
+    s.residents = freshResidents();
+    s.residents.friction.orc = 0.03;
+    driftFriction(s);
+    expect(s.residents.friction.orc).toBe(0);
+
+    s.residents.friction.goblin = 5;
+    driftFriction(s);
+    expect(s.residents.friction.goblin).toBeLessThan(5);
+    expect(s.residents.friction.goblin).toBeGreaterThan(0);
   });
 });
 

@@ -246,6 +246,23 @@ describe('expedition-arrival abduction risk (captivity.ts / expeditions.ts hook)
     expect(hitsNoGuards).toBeGreaterThan(0);
     expect(hitsManyGuards).toBeLessThanOrEqual(hitsNoGuards);
   });
+
+  it('BEASTFOLK territory rolls captures more readily than RIVER_CLANS, per the per-faction TUNING override', () => {
+    const beastWilds = DEFS.get('beast_wilds')!;
+    const riverMeet = DEFS.get('river_meet')!;
+    let beastHits = 0;
+    let riverHits = 0;
+    const trials = 400;
+    for (let seed = 1; seed <= trials; seed++) {
+      const sBeast = withGenders(seed);
+      if (rollAbductionRisk(sBeast, expeditionAt(), beastWilds, new Rng(seed))) beastHits++;
+
+      const sRiver = withGenders(seed);
+      if (rollAbductionRisk(sRiver, expeditionAt({ destination: 'river_meet' }), riverMeet, new Rng(seed)))
+        riverHits++;
+    }
+    expect(beastHits).toBeGreaterThan(riverHits);
+  });
 });
 
 describe('the ransom diplomacy mission', () => {

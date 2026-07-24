@@ -126,10 +126,8 @@ export function rollAbductionRisk(
 
   const a = TUNING.abduction;
   const guards = expedition.residentEscort?.guards ?? 0;
-  const chance = Math.max(
-    a.expeditionCaptureChanceFloor,
-    a.expeditionCaptureChanceBase - guards * a.expeditionCaptureChancePerGuard,
-  );
+  const base = a.expeditionCaptureChanceBaseByFaction[faction as FactionId] ?? a.expeditionCaptureChanceBase;
+  const chance = Math.max(a.expeditionCaptureChanceFloor, base - guards * a.expeditionCaptureChancePerGuard);
   if (rng.next() >= chance) return null;
 
   const hero = candidates[rng.int(0, candidates.length - 1)];

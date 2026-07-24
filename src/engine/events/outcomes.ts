@@ -23,7 +23,13 @@ import {
 } from '../family';
 import { addClaim, addHerd, setLandAllocation } from '../claim';
 import { createIncomingRaid, setTribute } from '../raids';
-import { addResidents, addTransientGroup, adjustContentment, loseResidents } from '../residents';
+import {
+  addResidents,
+  addTransientGroup,
+  adjustContentment,
+  adjustFriction,
+  loseResidents,
+} from '../residents';
 import { departCharacter, recruitCharacter } from '../roster';
 import { Rng } from '../rng';
 import { clamp, getHero, livingHeroes, nextDiscovery, oppositeGender } from '../types';
@@ -235,6 +241,11 @@ export function applyOutcomes(
       case 'contentment': {
         adjustContentment(state, outcome.delta);
         log.push(`Residents ${outcome.delta >= 0 ? 'heartened' : 'discontented'}`);
+        break;
+      }
+      case 'friction': {
+        adjustFriction(state, outcome.heritage, outcome.delta);
+        log.push(`${outcome.heritage} integration friction ${signed(outcome.delta)}`);
         break;
       }
       case 'addClaim': {

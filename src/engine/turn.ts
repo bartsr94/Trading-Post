@@ -37,6 +37,7 @@ import {
   applyDesertion,
   applyGrowth,
   claimCapacity,
+  driftFriction,
   outputMultiplier,
   removeTransients,
   residentsAvailable,
@@ -444,6 +445,7 @@ function resolveResidentSociety(
   if (residentTotal(state) === 0) return;
 
   updateContentment(state, flags);
+  driftFriction(state);
 
   const deserted = applyDesertion(state);
   if (deserted > 0) {
