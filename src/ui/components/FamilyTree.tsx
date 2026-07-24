@@ -14,7 +14,7 @@ import {
 } from '../../engine/family';
 import type { FamilyNode } from '../../engine/family';
 import type { Dependant, GameState, Heritage } from '../../engine/types';
-import { pickPortraitKey, portraitUrl } from '../portraits';
+import { pickDependantPortraitKey, portraitUrl } from '../portraits';
 import { Portrait } from './Portrait';
 
 function cap(s: string): string {
@@ -39,7 +39,9 @@ function hueOf(key: string): number {
 /** A dependant's face: real portrait art from their people+gender pool where one
  *  exists (deterministic by id), else the hash-hue initial tile. */
 function DependantFace({ dep }: { dep: Dependant }) {
-  const key = dep.portraitKey ?? pickPortraitKey(`${dominantHeritage(dep)}_${dep.gender}`, dep.id);
+  const key =
+    dep.portraitKey ??
+    pickDependantPortraitKey(`${dominantHeritage(dep)}_${dep.gender}`, dep.id, dep.kind === 'child');
   const url = portraitUrl(key);
   if (url) return <img className="portrait-art" src={url} alt="" draggable={false} />;
   return (
