@@ -135,6 +135,12 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
       case 20:
         current = migrateV20toV21(current);
         break;
+      case 21:
+        current = migrateV21toV22(current);
+        break;
+      case 22:
+        current = migrateV22toV23(current);
+        break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
     }
@@ -554,6 +560,31 @@ function migrateV20toV21(save: GameState): GameState {
       ...save.residents,
       roles: { ...emptyRoles(), ...save.residents.roles },
     },
+  };
+}
+
+/**
+ * v22 adds hero-to-hero marriage (`Hero.spouseIds`) and personality flavor
+ * tags (`Hero.temperament`) — FAMILY_PHASE_D_SPEC.md §2. Both are optional
+ * and additive; no old hero had either, so nothing needs backfilling beyond
+ * leaving them absent (same pattern `subPeople` used at v9).
+ */
+function migrateV21toV22(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 22,
+  };
+}
+
+/**
+ * v23 adds the abduction/captivity mechanic: `'captive'` joins `HeroStatus`
+ * and an optional `Hero.captivity` field. Both are additive; no old hero was
+ * ever captive, so nothing needs backfilling beyond leaving it absent.
+ */
+function migrateV22toV23(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 23,
   };
 }
 

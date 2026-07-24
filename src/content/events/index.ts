@@ -3,6 +3,7 @@
 import type { GameEvent } from '../../engine/events/types';
 import { TUNING } from '../tuning';
 import { BEASTFOLK_EVENTS } from './beastfolkEvents';
+import { CAPTIVE_EVENTS } from './captiveEvents';
 import { DIPLOMACY_EVENTS } from './diplomacyEvents';
 import { FAMILY_EVENTS } from './familyEvents';
 import { GENERIC_HERO_EVENTS, HERO_EVENTS } from './heroEvents';
@@ -24,6 +25,7 @@ export const ALL_EVENTS: GameEvent[] = [
   ...BEASTFOLK_EVENTS,
   ...RAID_EVENTS,
   ...DIPLOMACY_EVENTS,
+  ...CAPTIVE_EVENTS,
 ];
 
 export const EVENT_MAP: ReadonlyMap<string, GameEvent> = uniqueIdMap('event', ALL_EVENTS);

@@ -1,8 +1,9 @@
 // Hero Sheet (spec §11): stats, skills, traits, condition, personal history,
 // plus roster status (active/reserve) and swap action (CHARACTERS_SPEC.md §9).
 
+import { CONTENT } from '../../content/registry';
 import { TRAIT_DEFS } from '../../content/traits';
-import { dominantHeritage } from '../../engine/family';
+import { dominantHeritage, isHeroNode, spousesOf } from '../../engine/family';
 import { activateError, benchError, dependantsOf } from '../../engine/roster';
 import { SKILL_IDS, STAT_IDS } from '../../engine/types';
 import type { Dependant, Hero, Heritage } from '../../engine/types';
@@ -81,6 +82,28 @@ function DependantTile({ dep }: { dep: Dependant }) {
   );
 }
 
+/** A married-in hero — still a full working party member, not a Dependant
+ *  (FAMILY_PHASE_D_SPEC.md §2.3), so there's no Dependant record to read a
+ *  portrait/name/kind from here — this reuses the ordinary Portrait
+ *  component instead of DependantTile's art lookup, and jumps to their own
+ *  Hero Sheet on click since they're a person with their own sheet to show. */
+function HeroSpouseTile({ spouse, onSelect }: { spouse: Hero; onSelect: (heroId: string) => void }) {
+  return (
+    <div
+      className="fam-tile"
+      title="Spouse — one of the company, still at work"
+      style={{ cursor: 'pointer' }}
+      onClick={() => onSelect(spouse.id)}
+    >
+      <div className="fam-face">
+        <Portrait hero={spouse} />
+      </div>
+      <div className="fam-name">{spouse.name}</div>
+      <div className="fam-rel dim">spouse</div>
+    </div>
+  );
+}
+
 export function HeroSheet({ hero }: { hero: Hero }) {
   const selectHero = useGameStore((s) => s.selectHero);
   const game = useGameStore((s) => s.game);
@@ -91,6 +114,9 @@ export function HeroSheet({ hero }: { hero: Hero }) {
   const isLiving = hero.status === 'active';
   const canAct = game?.phase === 'assignment';
   const deps = game ? dependantsOf(game, hero.id) : [];
+  // Hero-to-hero spouses never appear in `deps` — they're not a Dependant at
+  // all, so they'd otherwise be invisible here even right after the wedding.
+  const heroSpouses = game ? spousesOf(game, hero.id).filter(isHeroNode) : [];
   const swapReason = game
     ? isActive
       ? benchError(game, hero.id)
@@ -114,7 +140,13 @@ export function HeroSheet({ hero }: { hero: Hero }) {
             <p className="dim" style={{ fontSize: '0.88rem' }}>{hero.bio}</p>
             <ConditionBars hero={hero} />
             {hero.status !== 'active' ? (
-              <p className="bad">{hero.status === 'dead' ? '☠ Dead' : 'Departed'}</p>
+              <p className="bad">
+                {hero.status === 'dead'
+                  ? '☠ Dead'
+                  : hero.status === 'captive'
+                    ? `🔒 Captive (held by ${CONTENT.factionNames.get(hero.captivity?.faction ?? '') ?? 'unknown captors'})`
+                    : 'Departed'}
+              </p>
             ) : (
               <div className="roster-badge-row">
                 <span className={`roster-badge ${isActive ? 'active' : 'reserve'}`}>
@@ -135,10 +167,13 @@ export function HeroSheet({ hero }: { hero: Hero }) {
           </div>
         </div>
 
-        {isLiving && deps.length > 0 && (
+        {isLiving && (deps.length > 0 || heroSpouses.length > 0) && (
           <>
             <h3 style={{ marginTop: 14 }}>Family</h3>
             <div className="fam-row">
+              {heroSpouses.map((s) => (
+                <HeroSpouseTile key={s.id} spouse={s} onSelect={selectHero} />
+              ))}
               {deps.map((d) => (
                 <DependantTile key={d.id} dep={d} />
               ))}

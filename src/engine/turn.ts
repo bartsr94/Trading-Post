@@ -197,10 +197,15 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
 
   // 5. Event selection.
   // Permanently impossible pinned chains cannot ever become bindable again.
+  // A captive hero is temporarily not 'active' but a captivity chain still
+  // needs to reach them later, so 'captive' also keeps a pinned chain alive.
   state.queuedEvents = state.queuedEvents.filter(
     (queued) =>
       queued.heroId === undefined ||
-      state.heroes.some((hero) => hero.id === queued.heroId && hero.status === 'active'),
+      state.heroes.some(
+        (hero) =>
+          hero.id === queued.heroId && (hero.status === 'active' || hero.status === 'captive'),
+      ),
   );
   const selected = selectEvents(
     state,
@@ -828,7 +833,11 @@ export function advanceTurn(state: GameState): string[] {
 }
 
 function checkBrokenCompany(state: GameState): void {
-  if (!state.gameOver && livingHeroes(state).length === 0) {
+  if (state.gameOver) return;
+  // A captive hero isn't dead — they may yet be ransomed or rescued — so a
+  // roster that's all-captive must not read as "everyone lost."
+  const anyoneLeft = state.heroes.some((h) => h.status === 'active' || h.status === 'captive');
+  if (!anyoneLeft) {
     declareGameOver(state, 'brokenCompany');
   }
 }

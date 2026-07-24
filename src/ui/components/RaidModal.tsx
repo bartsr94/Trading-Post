@@ -4,6 +4,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { CONTENT } from '../../content/registry';
+import { hasCaptiveHeldBy } from '../../engine/captivity';
 import {
   defenderForceBreakdown,
   raidingForceBreakdown,
@@ -32,6 +33,7 @@ const ATTACK_GOALS: { id: RaidAttackGoal; label: string; hint: string }[] = [
   { id: 'burn', label: 'Burn it', hint: 'Leave hurt behind you, not just empty stores.' },
   { id: 'bloody', label: 'Bloody them', hint: 'Teach a lesson even if the haul is thin.' },
   { id: 'cow', label: 'Cow them', hint: 'Break their nerve and force tribute from them.' },
+  { id: 'rescue', label: 'Rescue', hint: 'Free whoever of ours is held here — leave the rest be.' },
 ];
 
 const MANEUVERS: { id: RaidManeuver; label: string; hint: string }[] = [
@@ -57,6 +59,7 @@ function resultHeading(direction: 'incoming' | 'outgoing', outcome: string): str
   if (outcome === 'drivenOff') return 'The Raid Fails';
   if (outcome === 'bloodied') return 'Blood Paid in Kind';
   if (outcome === 'cowed') return 'Tribute is Won';
+  if (outcome === 'rescued') return 'Brought Home';
   return 'The Raid Lands';
 }
 
@@ -276,6 +279,8 @@ export function RaidModal({ game }: { game: GameState }) {
     const guardHeads = outgoingExpedition.residentEscort?.guards ?? 0;
     const porterHeads = outgoingExpedition.residentEscort?.porters ?? 0;
     const tripLength = outgoingExpedition.legTurns ?? outgoingExpedition.turnsLeft;
+    const canRescue = hasCaptiveHeldBy(game, raid.faction);
+    const visibleAttackGoals = ATTACK_GOALS.filter((goal) => goal.id !== 'rescue' || canRescue);
 
     return (
       <div className="overlay">
@@ -335,7 +340,7 @@ export function RaidModal({ game }: { game: GameState }) {
               <section className="raid-plan-card">
                 <div className="raid-choice-label">Battle goal</div>
                 <div className="raid-option-grid">
-                  {ATTACK_GOALS.map((goal) => (
+                  {visibleAttackGoals.map((goal) => (
                     <button
                       key={goal.id}
                       className={`raid-option ${attackGoal === goal.id ? 'selected' : ''}`}

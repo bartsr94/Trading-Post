@@ -2,7 +2,7 @@ import { activeHeroes, discoveryAtLeast, livingHeroes, reserveHeroes, seasonOfTu
 import { canAdvanceTier, hasBuilding } from '../buildings';
 import { isOverClaim } from '../claim';
 import { cargoUnits } from '../expeditions';
-import { isMarried } from '../family';
+import { eligiblePartners, isMarried } from '../family';
 import { diplomacySeatStateById } from '../diplomacy';
 import { heritageCount, nativeShare, postDefense, residentCount } from '../residents';
 import { raidThreatActive } from '../raids';
@@ -81,6 +81,16 @@ export function evalCondition(
       return (cond.heroId ?? ctx.heroId) !== undefined
         ? !isMarried(state, (cond.heroId ?? ctx.heroId)!)
         : false;
+    case 'heroGender': {
+      const heroId = cond.heroId ?? ctx.heroId;
+      if (heroId === undefined) return false;
+      const hero = state.heroes.find((h) => h.id === heroId);
+      return hero !== undefined && hero.gender === cond.gender;
+    }
+    case 'partnerAvailable': {
+      const heroId = cond.heroId ?? ctx.heroId;
+      return heroId !== undefined && eligiblePartners(state, heroId).length > 0;
+    }
     case 'residentsAtLeast':
       return residentCount(state, cond.role) >= cond.value;
     case 'residentsBelow':

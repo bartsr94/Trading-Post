@@ -23,6 +23,10 @@ export interface HeroTemplate {
   subPeople?: string;
   /** Gender (FAMILY_SPEC.md §3.1). Optional — falls back to the portrait-key middle token. */
   gender?: Gender;
+  /** Free-form personality flavor tags (FAMILY_PHASE_D_SPEC.md §2.2), e.g.
+   *  'warm'/'aloof'/'ambitious' — content-authored, engine never branches on
+   *  specific values. Optional; most heroes have none yet. */
+  temperament?: string[];
   stats: Record<StatId, number>;
   skills: Partial<Record<SkillId, number>>;
   traits: string[];
@@ -79,6 +83,7 @@ export function createHero(template: HeroTemplate): Hero {
     heritage: heritageOf(template),
     subPeople: subPeopleOf(template),
     gender: genderOf(template),
+    ...(template.temperament ? { temperament: [...template.temperament] } : {}),
     history: [],
   };
 }
@@ -94,6 +99,7 @@ export const HERO_POOL: HeroTemplate[] = [
     stats: { might: 4, agility: 2, wits: 3, charm: 2, resolve: 4 },
     skills: { combat: 3, leadership: 2, survival: 1 },
     traits: ['scarred'],
+    temperament: ['steadfast', 'guarded'],
   },
   {
     id: 'p2',
@@ -105,6 +111,7 @@ export const HERO_POOL: HeroTemplate[] = [
     stats: { might: 1, agility: 2, wits: 4, charm: 4, resolve: 3 },
     skills: { bargain: 3, diplomacy: 2, lore: 1 },
     traits: ['silver_tongued'],
+    temperament: ['ambitious', 'sharp-tongued'],
   },
   {
     id: 'p3',
@@ -127,6 +134,7 @@ export const HERO_POOL: HeroTemplate[] = [
     stats: { might: 2, agility: 4, wits: 3, charm: 3, resolve: 2 },
     skills: { survival: 3, stealth: 2, diplomacy: 1 },
     traits: ['friend_river_clans'],
+    temperament: ['guarded', 'restless'],
   },
   {
     id: 'p5',
@@ -173,6 +181,7 @@ export const HERO_POOL: HeroTemplate[] = [
     stats: { might: 1, agility: 2, wits: 3, charm: 3, resolve: 4 },
     skills: { lore: 3, diplomacy: 2, leadership: 1 },
     traits: ['pious', 'kindhearted'],
+    temperament: ['devout', 'gentle'],
   },
   {
     id: 'p9',

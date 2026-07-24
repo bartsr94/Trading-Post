@@ -181,6 +181,20 @@ function validateHero(value: unknown, path: string): string {
   enumValue(hero.heritage, HERITAGES, `${path}.heritage`);
   enumValue(hero.gender, GENDERS, `${path}.gender`);
   if (hero.bloodline !== undefined) enumValue(hero.bloodline, BLOODLINES, `${path}.bloodline`);
+  if (hero.spouseIds !== undefined) {
+    const spouseIds = stringArray(hero.spouseIds, `${path}.spouseIds`);
+    unique(spouseIds, `${path}.spouseIds`);
+    if (spouseIds.includes(id)) invalid(`${path}.spouseIds`, 'cannot include its own hero');
+  }
+  if (hero.temperament !== undefined) stringArray(hero.temperament, `${path}.temperament`);
+  if (hero.captivity !== undefined) {
+    const captivity = record(hero.captivity, `${path}.captivity`);
+    enumValue(captivity.faction, FACTION_IDS, `${path}.captivity.faction`);
+    nonNegativeInteger(captivity.capturedTurn, `${path}.captivity.capturedTurn`);
+    if (captivity.source !== undefined) {
+      enumValue(captivity.source, ['raid', 'expedition'], `${path}.captivity.source`);
+    }
+  }
   stringArray(hero.history, `${path}.history`);
   return id;
 }
@@ -292,6 +306,15 @@ export function validateGameState(value: unknown): GameState {
   const heroIdList = heroList.map((hero, index) => validateHero(hero, `save.heroes[${index}]`));
   unique(heroIdList, 'save.heroes');
   const heroIds = new Set(heroIdList);
+  heroList.forEach((hero, index) => {
+    const spouseIds = (hero as { spouseIds?: string[] }).spouseIds;
+    if (!spouseIds) return;
+    for (const spouseId of spouseIds) {
+      if (!heroIds.has(spouseId)) {
+        invalid(`save.heroes[${index}].spouseIds`, 'references an unknown hero');
+      }
+    }
+  });
 
   const activePartyIds = stringArray(state.activePartyIds, 'save.activePartyIds');
   unique(activePartyIds, 'save.activePartyIds');

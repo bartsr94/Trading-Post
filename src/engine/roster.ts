@@ -118,8 +118,9 @@ export function recruitCharacter(state: GameState, def: RecruitDef, toActive = f
  */
 export function departCharacter(state: GameState, heroId: string): boolean {
   const hero = state.heroes.find((h) => h.id === heroId);
-  if (!hero || hero.status !== 'active') return false;
+  if (!hero || (hero.status !== 'active' && hero.status !== 'captive')) return false;
   hero.status = 'departed';
+  delete hero.captivity;
   hero.history.push(`Left the company in turn ${state.turn}.`);
   state.activePartyIds = state.activePartyIds.filter((id) => id !== heroId);
   delete state.assignments[heroId];

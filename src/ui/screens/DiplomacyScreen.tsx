@@ -9,13 +9,14 @@ import {
   diplomacySeatStateOrDefault,
   tributeForCommunity,
 } from '../../engine/diplomacy';
+import { hasCaptiveHeldBy } from '../../engine/captivity';
 import { dispatchError } from '../../engine/expeditions';
 import { journeyTurns } from '../../engine/map';
 import { discoveryAtLeast, heroesAtPost, stanceOf } from '../../engine/types';
 import type { ExpeditionPace, GameState, GoodId } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 
-type DiplomacyMissionChoice = 'talks' | 'gift' | 'alliance' | 'peace';
+type DiplomacyMissionChoice = 'talks' | 'gift' | 'alliance' | 'peace' | 'ransom';
 
 function positiveGoods(goods: Partial<Record<GoodId, number>>): Partial<Record<GoodId, number>> {
   return Object.fromEntries(
@@ -65,6 +66,7 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
   const oneWay = selected ? journeyTurns(home.mapPoint, selected.mapPoint, pace) : null;
   const canReachSelected =
     selectedLoc !== undefined && discoveryAtLeast(selectedLoc.discovery, 'visited');
+  const canRansom = selected?.faction ? hasCaptiveHeldBy(game, selected.faction) : false;
 
   const toggleHero = (heroId: string) => {
     setError(null);
@@ -87,7 +89,10 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
   const send = () => {
     if (!selected) return;
     const cargo = mission === 'gift' || mission === 'peace' ? positiveGoods(giftGoods) : {};
-    const silver = mission === 'gift' || mission === 'peace' ? Math.max(0, Math.floor(giftSilver)) : 0;
+    const silver =
+      mission === 'gift' || mission === 'peace' || mission === 'ransom'
+        ? Math.max(0, Math.floor(giftSilver))
+        : 0;
     const params = {
       kind: 'diplomacy' as const,
       destination: selected.id,
@@ -95,7 +100,7 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
       pace,
       silver,
       cargo,
-      diplomacyMission: { type: mission as 'talks' | 'gift' | 'alliance' | 'peace' },
+      diplomacyMission: { type: mission },
     };
     const reason = dispatchError(game, params, LOCATION_DEFS);
     if (reason) {
@@ -229,6 +234,7 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
                   <option value="gift">Bear gifts</option>
                   <option value="alliance">Propose alliance</option>
                   <option value="peace">Seek truce</option>
+                  {canRansom && <option value="ransom">Ransom captive</option>}
                 </select>
               </label>
               <label className="compact-field">
@@ -240,10 +246,10 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
                 </select>
               </label>
 
-              {(mission === 'gift' || mission === 'peace') && (
+              {(mission === 'gift' || mission === 'peace' || mission === 'ransom') && (
                 <>
                   <label className="compact-field">
-                    <span>Silver offered</span>
+                    <span>{mission === 'ransom' ? 'Ransom offered' : 'Silver offered'}</span>
                     <input
                       type="number"
                       min={0}
@@ -254,20 +260,22 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
                       }
                     />
                   </label>
-                  <div className="cargo-grid">
-                    {GOODS.filter((good) => game.goods[good.id] > 0).map((good) => (
-                      <label key={good.id} className="dim">
-                        {good.name} <span style={{ fontSize: '0.75rem' }}>(of {game.goods[good.id]})</span>
-                        <input
-                          type="number"
-                          min={0}
-                          max={game.goods[good.id]}
-                          value={giftGoods[good.id] ?? 0}
-                          onChange={(event) => setGiftQty(good.id, event.target.value)}
-                        />
-                      </label>
-                    ))}
-                  </div>
+                  {mission !== 'ransom' && (
+                    <div className="cargo-grid">
+                      {GOODS.filter((good) => game.goods[good.id] > 0).map((good) => (
+                        <label key={good.id} className="dim">
+                          {good.name} <span style={{ fontSize: '0.75rem' }}>(of {game.goods[good.id]})</span>
+                          <input
+                            type="number"
+                            min={0}
+                            max={game.goods[good.id]}
+                            value={giftGoods[good.id] ?? 0}
+                            onChange={(event) => setGiftQty(good.id, event.target.value)}
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
 

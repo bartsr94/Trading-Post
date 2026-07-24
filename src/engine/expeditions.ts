@@ -26,6 +26,8 @@ import type { GoodDef } from './economy';
 import { addClaim } from './claim';
 import { canWed, formUnion, unionError } from './family';
 import { canCallRaidAlly, createOutgoingRaid, raidTargetFaction } from './raids';
+import { hasCaptiveHeldBy, maybeQueueKinArrival, rollAbductionRisk } from './captivity';
+import { departCharacter } from './roster';
 import {
   addResidents,
   addTransientGroup,
@@ -228,7 +230,7 @@ function dispatchErrorExplore(
 }
 
 function dispatchErrorDiplomacy(
-  _state: GameState,
+  state: GameState,
   params: DispatchParams,
   def: LocationDef | undefined,
   discovery: DiscoveryState,
@@ -245,6 +247,9 @@ function dispatchErrorDiplomacy(
   }
   if (mission === 'tribute') {
     return 'Tribute negotiations are not ready yet.';
+  }
+  if (mission === 'ransom' && !hasCaptiveHeldBy(state, def.faction)) {
+    return 'There is no one of yours held here.';
   }
   return null;
 }
@@ -337,6 +342,9 @@ function dispatchErrorRaid(
   }
   if (params.raidAlly && !canCallRaidAlly(state, params.raidAlly, targetFaction)) {
     return 'That ally will not ride on this raid.';
+  }
+  if (params.raidGoal === 'rescue' && !hasCaptiveHeldBy(state, targetFaction)) {
+    return 'There is no one of yours held there.';
   }
   return null;
 }
@@ -592,6 +600,15 @@ export function advanceExpeditions(
     }
 
     if (exp.leg === 'outbound') {
+      const abductionLine = rollAbductionRisk(state, exp, def, rng);
+      if (abductionLine) {
+        report('🔒', abductionLine);
+        if (exp.heroIds.length === 0) {
+          loseResidentEscort(state, exp.residentEscort);
+          finished.push(exp.id);
+          continue;
+        }
+      }
       if (exp.kind === 'caravan' && def) resolveCaravanArrival(state, ctx, exp, def, rng, report);
       else if (exp.kind === 'explore') resolveExploreArrival(state, ctx, exp, def, rng, report);
       else if (exp.kind === 'diplomacy' && def) resolveDiplomacyArrival(state, ctx, exp, def, rng, report);
@@ -899,6 +916,46 @@ function resolveDiplomacyArrival(
       exp.silver = 0;
       missionLine = giftValue > 0 ? ` Terms worth about ${giftValue} silver are offered.` : '';
       break;
+    case 'ransom': {
+      const abd = TUNING.abduction;
+      const captorFaction = def.faction;
+      const held = captorFaction
+        ? state.heroes
+            .filter((h) => h.status === 'captive' && h.captivity?.faction === captorFaction)
+            .sort((a, b) => (a.captivity?.capturedTurn ?? 0) - (b.captivity?.capturedTurn ?? 0))
+        : [];
+      const captive = held[0];
+      exp.cargo = {};
+      exp.silver = 0;
+      if (!captive || !captorFaction) {
+        missionLine = ' But there is no one of ours held here any longer.';
+        break;
+      }
+      if (check.tier === 'critSuccess') delta = dip.expeditionStandingGainSuccess;
+      else if (check.tier === 'success') delta = Math.max(1, giftSteps);
+      else if (check.tier === 'failure') delta = -dip.expeditionStandingLossFailure;
+      else {
+        delta = -dip.expeditionStandingLossCritFailure;
+        grievanceDelta = dip.grievanceOnCritFailure;
+      }
+      if (isSuccess(check.tier)) {
+        const capturedTurn = captive.captivity?.capturedTurn ?? state.turn;
+        const turnsHeld = state.turn - capturedTurn;
+        const refuses = turnsHeld >= abd.refuseReturnThresholdTurns && rng.next() < abd.refusesReturnChance;
+        if (refuses) {
+          departCharacter(state, captive.id);
+          missionLine = ` But ${captive.name} will not come — he has a family among ${def.name} now.`;
+        } else {
+          captive.status = 'active';
+          delete captive.captivity;
+          maybeQueueKinArrival(state, captive, captorFaction, capturedTurn, rng);
+          missionLine = ` ${captive.name} is ransomed free and rides back with the party.`;
+        }
+      } else {
+        missionLine = ` ${captive.name} remains held.`;
+      }
+      break;
+    }
     default:
       if (check.tier === 'critSuccess') delta = dip.expeditionStandingGainCrit;
       else if (check.tier === 'success') delta = dip.expeditionStandingGainSuccess;
@@ -932,7 +989,9 @@ function resolveDiplomacyArrival(
         ? 'seeks alliance with'
         : mission === 'peace'
           ? 'seeks peace with'
-          : 'treats with';
+          : mission === 'ransom'
+            ? 'seeks to ransom a captive from'
+            : 'treats with';
   report(
     '🤝',
     `${hero.name} ${verb} ${def.name}: ${checkBreakdown(check)}. ` +

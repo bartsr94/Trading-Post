@@ -88,6 +88,98 @@ export const FAMILY_EVENTS: GameEvent[] = [
       },
     ],
   },
+  // "Two Hearts at the Post" — a 2-stage same-sitting chain
+  // (CHAIN_EVENTS_SPEC.md §3), the hero-to-hero counterpart to the outsider
+  // marriages above (FAMILY_PHASE_D_SPEC.md §2.4). Stage 1 is the only one
+  // drawn by the weighted pool; stage 2 is category 'chain' (weight 0) and is
+  // only ever reached via continueChain.
+  {
+    id: 'family_party_spark',
+    category: 'post',
+    illustration: 'hearth_evening',
+    title: 'Two Hearts at the Post',
+    text: 'It has crept up on {hero} the way these things do — some ordinary hour of shared work, and the sudden realization that one particular face in the company has become the one worth watching for. Nothing has been said. Everyone else at the post, of course, has already noticed.',
+    conditions: [{ type: 'heroUnmarried' }, { type: 'partnerAvailable' }],
+    weight: 6,
+    cooldownTurns: 12,
+    binding: { type: 'random' },
+    choices: [
+      {
+        label: 'Let it be known.',
+        outcomes: {
+          success: {
+            text: 'There is no clan-mother to ask and no factor to inform — only the two of them, and the question finally spoken aloud.',
+            outcomes: [
+              { type: 'pickPartner' },
+              { type: 'continueChain', eventId: 'family_party_spark_ask' },
+            ],
+          },
+        },
+      },
+      {
+        label: 'Say nothing — not yet.',
+        outcomes: {
+          success: {
+            text: '{hero} keeps it close a while longer. Whatever it is, it can wait for a steadier season.',
+            outcomes: [],
+          },
+        },
+      },
+    ],
+  },
+  {
+    id: 'family_party_spark_ask',
+    category: 'chain',
+    illustration: 'hearth_evening',
+    title: 'The Question',
+    text: '{hero} finds {partner} somewhere the post\'s business won\'t interrupt them and asks, plainly, for the one thing left unsaid between them.',
+    conditions: [],
+    weight: 0,
+    choices: [
+      {
+        label: 'Ask {partner} to be wed.',
+        check: { skill: 'diplomacy', stat: 'charm', difficulty: 8 },
+        outcomes: {
+          critSuccess: {
+            text: '{partner} doesn\'t hesitate — the answer comes back before {hero} has finished asking, and half the post seems to know it within the hour.',
+            outcomes: [
+              { type: 'formHeroUnion' },
+              { type: 'addTrait', trait: 'wed_party' },
+              { type: 'history', text: 'Wed {partner}, another of the company\'s own.' },
+            ],
+          },
+          success: {
+            text: '{partner} says yes — quietly, and a little disbelieving of the fact, but yes.',
+            outcomes: [
+              { type: 'formHeroUnion' },
+              { type: 'addTrait', trait: 'wed_party' },
+              { type: 'history', text: 'Wed {partner}, another of the company\'s own.' },
+            ],
+          },
+          failure: {
+            text: '{partner} isn\'t ready — not a no, exactly, but not the yes {hero} was braced for either. It sits awkwardly between them for a while after.',
+            outcomes: [{ type: 'stress', delta: 1 }],
+          },
+          critFailure: {
+            text: 'It comes out wrong, or lands wrong, or both — {partner} turns the question aside so fast it barely counts as having been asked. Some things are hard to unspeak.',
+            outcomes: [
+              { type: 'stress', delta: 2 },
+              { type: 'history', text: 'Asked {partner} to be wed, and was refused.' },
+            ],
+          },
+        },
+      },
+      {
+        label: 'Let the moment pass.',
+        outcomes: {
+          success: {
+            text: '{hero} loses the nerve, or the moment, or both, and the question goes back to wherever it had been waiting.',
+            outcomes: [],
+          },
+        },
+      },
+    ],
+  },
   {
     id: 'family_first_child',
     category: 'post',

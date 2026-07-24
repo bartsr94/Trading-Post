@@ -211,6 +211,12 @@ export const TRAITS: TraitDef[] = [
     description: 'Married into a goblin clan — chosen, not taken, and rarer for it.',
     checkMods: [{ tag: 'BEASTFOLK', value: 2, label: 'Wed to a Goblin Clan' }],
   },
+  {
+    id: 'wed_party',
+    name: 'Wed Within the Company',
+    description: 'Married another of the company\'s own — no outside kin gained, no outside kin lost.',
+    checkMods: [],
+  },
 ];
 
 export const TRAIT_DEFS: ReadonlyMap<string, TraitDef> = uniqueIdMap('trait', TRAITS);

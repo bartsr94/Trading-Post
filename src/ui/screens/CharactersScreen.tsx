@@ -4,10 +4,11 @@
 // opens the full multi-generational tree.
 
 import { useState } from 'react';
+import { CONTENT } from '../../content/registry';
 import { TUNING } from '../../content/tuning';
 import { activateError, activeCap, benchError } from '../../engine/roster';
 import { childrenOf, householdMembers, spousesOf } from '../../engine/family';
-import { activeHeroes, reserveHeroes } from '../../engine/types';
+import { activeHeroes, captiveHeroes, reserveHeroes } from '../../engine/types';
 import type { GameState, Hero, UnionSource } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from '../components/ConditionBars';
@@ -18,6 +19,11 @@ const UNION_BADGE: Record<UnionSource, string> = {
   homeland: 'Homeland',
   alliance: 'Allied',
   informal: 'Household',
+  // Never actually rendered — a 'party' union (two heroes marrying each
+  // other) never creates a Dependant, so this badge (keyed off a spouse
+  // Dependant's `union` field) has nothing to read it from. Kept only so
+  // this Record stays exhaustive over UnionSource.
+  party: 'Wed',
 };
 
 function FamilyStrip({
@@ -38,14 +44,19 @@ function FamilyStrip({
 
   return (
     <div className="char-family">
-      {spouses.map((s) => (
-        <span key={s.id} className="char-dep" title="Spouse — eats grain, does no work">
-          {s.name}
-          {!('stats' in s) && s.union && (
-            <span className="union-badge"> {UNION_BADGE[s.union]}</span>
-          )}
-        </span>
-      ))}
+      {spouses.map((s) => {
+        const isHeroSpouse = 'stats' in s;
+        return (
+          <span
+            key={s.id}
+            className="char-dep"
+            title={isHeroSpouse ? 'Spouse — one of the company, still at work' : 'Spouse — eats grain, does no work'}
+          >
+            {s.name}
+            {!isHeroSpouse && s.union && <span className="union-badge"> {UNION_BADGE[s.union]}</span>}
+          </span>
+        );
+      })}
       {children.length > 0 && (
         <span className="dim">
           {children.length} child{children.length === 1 ? '' : 'ren'}
@@ -112,6 +123,7 @@ function CharacterCard({
 export function CharactersScreen({ game }: { game: GameState }) {
   const active = activeHeroes(game);
   const reserve = reserveHeroes(game);
+  const captives = captiveHeroes(game);
   const cap = activeCap(game);
   const [familyHead, setFamilyHead] = useState<string | null>(null);
 
@@ -169,6 +181,35 @@ export function CharactersScreen({ game }: { game: GameState }) {
             />
           ))}
         </div>
+      )}
+
+      {captives.length > 0 && (
+        <>
+          <h3 style={{ marginTop: 20 }}>
+            Held Captive <span className="dim" style={{ fontSize: '0.8rem' }}>({captives.length})</span>
+          </h3>
+          <div className="roster-grid">
+            {captives.map((hero) => {
+              const turnsHeld = game.turn - (hero.captivity?.capturedTurn ?? game.turn);
+              return (
+                <div key={hero.id} className="char-card">
+                  <div className="char-body">
+                    <div className="name">
+                      {hero.name} <span className="dim">{hero.epithet}</span>
+                    </div>
+                    <p className="bad" style={{ fontSize: '0.85rem', margin: '4px 0' }}>
+                      🔒 Held by {CONTENT.factionNames.get(hero.captivity?.faction ?? '') ?? 'unknown captors'}
+                      {' '}— {turnsHeld} turn{turnsHeld === 1 ? '' : 's'}
+                    </p>
+                    <p className="dim" style={{ fontSize: '0.78rem' }}>
+                      Ransom via Diplomacy, or send a rescue raid from the Map.
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {game.phase !== 'assignment' && (
