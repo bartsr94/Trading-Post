@@ -3,7 +3,7 @@
 // the math — visible dice are a design pillar.
 
 import { TUNING } from '../content/tuning';
-import { SKILL_GOVERNING } from './types';
+import { cap, SKILL_GOVERNING } from './types';
 import type { Hero, SkillId, StatId, TraitDef } from './types';
 import type { Rng } from './rng';
 
@@ -129,6 +129,35 @@ export function checkBreakdown(result: CheckResult): string {
   return `${parts.join(' ')} = ${result.total} vs ${result.difficulty} — ${tierLabel[result.tier]}`;
 }
 
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+export interface HeroCheckOptions {
+  skill: SkillId;
+  difficulty: number;
+  /** Check-modifier tags matched against the hero's traits. */
+  tags?: readonly string[];
+  /** Situational modifiers appended after trait mods (escort, pace, gifts, …). */
+  extraMods?: CheckModifier[];
+  /** Mark the skill for season-end growth on success (default true). */
+  mark?: boolean;
+}
+
+/**
+ * The shared "roll a hero check" preamble: pick the best governing stat, gather
+ * this hero's trait modifiers for the skill/tags, roll, and mark the skill on
+ * success. Trait mods come first, then `extraMods`, so the breakdown reads the
+ * same as the hand-written call sites it replaces.
+ */
+export function heroCheck(
+  rng: Rng,
+  hero: Hero,
+  traitDefs: ReadonlyMap<string, TraitDef>,
+  opts: HeroCheckOptions,
+): CheckResult {
+  const stat = bestGoverningStat(hero, opts.skill);
+  const mods = [
+    ...traitModifiers(hero, traitDefs, opts.skill, opts.tags ?? []),
+    ...(opts.extraMods ?? []),
+  ];
+  const check = resolveCheck(rng, hero, opts.skill, stat, opts.difficulty, mods);
+  if ((opts.mark ?? true) && isSuccess(check.tier)) markSkill(hero, opts.skill);
+  return check;
 }

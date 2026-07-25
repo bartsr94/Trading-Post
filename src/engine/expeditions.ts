@@ -3,15 +3,8 @@
 // travel event, resolves its business at the destination, and walks home.
 
 import { TUNING } from '../content/tuning';
-import {
-  bestGoverningStat,
-  checkBreakdown,
-  isSuccess,
-  markSkill,
-  resolveCheck,
-  traitModifiers,
-} from './checks';
-import type { CheckModifier } from './checks';
+import { checkBreakdown, heroCheck, isSuccess } from './checks';
+import type { CheckModifier, CheckResult } from './checks';
 import {
   applyDiplomacyShift,
   applyDiplomacyShiftById,
@@ -65,6 +58,8 @@ import {
   getHero,
   heritageGroup,
   isActiveHeroId,
+  isNonNegativeInt,
+  isPositiveInt,
   oppositeGender,
   RESIDENT_ROLES,
   stanceOf,
@@ -213,6 +208,30 @@ function paceMods(exp: ExpeditionState): CheckModifier[] {
   return value === 0 ? [] : [{ label: `${exp.pace ?? 'normal'} pace`, value }];
 }
 
+/** A hero check for an arrival, with the party's escort and pace bonuses (and
+ *  any mission-specific `extraMods`) already folded in — mods order stays
+ *  trait → escort → pace → extra, matching what the arrivals wrote by hand. */
+function expeditionCheck(
+  state: GameState,
+  ctx: ExpeditionContext,
+  exp: ExpeditionState,
+  hero: Hero,
+  rng: Rng,
+  opts: {
+    skill: SkillId;
+    difficulty: number;
+    tags?: readonly string[];
+    extraMods?: CheckModifier[];
+  },
+): CheckResult {
+  return heroCheck(rng, hero, ctx.traitDefs, {
+    skill: opts.skill,
+    difficulty: opts.difficulty,
+    tags: opts.tags,
+    extraMods: [...escortMods(state, exp), ...paceMods(exp), ...(opts.extraMods ?? [])],
+  });
+}
+
 function expeditionTarget(
   params: DispatchParams,
   locationDefs: ReadonlyMap<LocationId, LocationDef>,
@@ -272,7 +291,7 @@ function dispatchErrorDiplomacy(
       return 'They do not trust you enough yet to sell you people.';
     }
     const count = params.thrallPurchaseCount ?? 0;
-    if (!Number.isFinite(count) || !Number.isInteger(count) || count < 1) {
+    if (!isPositiveInt(count)) {
       return 'Ask for at least one thrall.';
     }
     if (state.silver < count * TUNING.thralls.purchase.nativeSilverPerHead) {
@@ -299,7 +318,7 @@ function dispatchErrorInvite(
   }
   const offer = params.inviteOffer ?? 'generous';
   const count = params.inviteCount ?? 0;
-  if (!Number.isFinite(count) || !Number.isInteger(count) || count < 1) {
+  if (!isPositiveInt(count)) {
     return 'Invite at least one household.';
   }
   if (state.silver < inviteRunCost(count, offer)) return 'Not enough silver for the invitation.';
@@ -319,7 +338,7 @@ function dispatchErrorConcession(
     return 'They will cede you no land while hostile.';
   }
   const ask = params.concessionAsk ?? 0;
-  if (!Number.isFinite(ask) || !Number.isInteger(ask) || ask < 1) {
+  if (!isPositiveInt(ask)) {
     return 'Ask for at least one chain of land.';
   }
   if (ask > TUNING.claim.negotiateLand.maxAsk) {
@@ -457,7 +476,7 @@ export function dispatchError(
   }
   for (const role of RESIDENT_ROLES) {
     const qty = escort[role] ?? 0;
-    if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) return 'Invalid escort.';
+    if (!isNonNegativeInt(qty)) return 'Invalid escort.';
     if (qty > residentsAvailable(state, role)) return `Not enough ${role} to spare.`;
   }
 
@@ -467,15 +486,15 @@ export function dispatchError(
   }
   for (const [good, qty] of Object.entries(cargo) as [GoodId, number][]) {
     if (!(good in state.goods)) return 'Unknown cargo.';
-    if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) return 'Invalid cargo.';
+    if (!isNonNegativeInt(qty)) return 'Invalid cargo.';
     if ((state.goods[good] ?? 0) < qty) return 'Not enough stock for that cargo.';
   }
   for (const [good, qty] of Object.entries(params.buyOrders ?? {}) as [GoodId, number][]) {
     if (!(good in state.goods)) return 'Unknown buy order.';
-    if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) return 'Invalid buy order.';
+    if (!isNonNegativeInt(qty)) return 'Invalid buy order.';
   }
   const silver = params.silver ?? 0;
-  if (!Number.isFinite(silver) || silver < 0 || !Number.isInteger(silver)) return 'Invalid silver.';
+  if (!isNonNegativeInt(silver)) return 'Invalid silver.';
   if (state.silver < silver) return 'Not enough silver on hand.';
 
   return null;
@@ -712,14 +731,11 @@ function resolveCaravanArrival(
   const map = TUNING.map;
   const hero = leadHero(state, exp, 'bargain');
   const tags = ['trade', ...def.tags, ...(def.faction ? [def.faction] : [])];
-  const mods = [
-    ...traitModifiers(hero, ctx.traitDefs, 'bargain', tags),
-    ...escortMods(state, exp),
-    ...paceMods(exp),
-  ];
-  const stat = bestGoverningStat(hero, 'bargain');
-  const check = resolveCheck(rng, hero, 'bargain', stat, map.caravanCheckDifficulty, mods);
-  if (isSuccess(check.tier)) markSkill(hero, 'bargain');
+  const check = expeditionCheck(state, ctx, exp, hero, rng, {
+    skill: 'bargain',
+    difficulty: map.caravanCheckDifficulty,
+    tags,
+  });
 
   const mult = clamp(
     1 + check.margin * map.caravanMarginRate,
@@ -788,16 +804,13 @@ function resolveExploreArrival(
   const hero = leadHero(state, exp, 'survival');
   const spatialTags = tagsAt(target, ctx.mapRegionDefs ?? [], ctx.mapFeatureDefs ?? []);
   const tags = ['exploration', ...spatialTags, ...(def?.tags ?? [])];
-  const mods = [
-    ...traitModifiers(hero, ctx.traitDefs, 'survival', tags),
-    ...escortMods(state, exp),
-    ...paceMods(exp),
-  ];
-  const stat = bestGoverningStat(hero, 'survival');
-  const check = resolveCheck(rng, hero, 'survival', stat, TUNING.map.exploreCheckDifficulty, mods);
+  const check = expeditionCheck(state, ctx, exp, hero, rng, {
+    skill: 'survival',
+    difficulty: TUNING.map.exploreCheckDifficulty,
+    tags,
+  });
 
-  if (isSuccess(check.tier)) markSkill(hero, 'survival');
-  else {
+  if (!isSuccess(check.tier)) {
     const stressGain =
       check.tier === 'critFailure'
         ? TUNING.map.exploreCritFailureStress
@@ -888,15 +901,12 @@ function resolveDiplomacyArrival(
   if (mission === 'peace' && seat.grievances > 0) {
     relationshipMods.push({ label: 'old grievances', value: -Math.ceil(seat.grievances / 2) });
   }
-  const mods = [
-    ...traitModifiers(hero, ctx.traitDefs, 'diplomacy', tags),
-    ...relationshipMods,
-    ...escortMods(state, exp),
-    ...paceMods(exp),
-  ];
-  const stat = bestGoverningStat(hero, 'diplomacy');
-  const check = resolveCheck(rng, hero, 'diplomacy', stat, dip.expeditionCheckDifficulty, mods);
-  if (isSuccess(check.tier)) markSkill(hero, 'diplomacy');
+  const check = heroCheck(rng, hero, ctx.traitDefs, {
+    skill: 'diplomacy',
+    difficulty: dip.expeditionCheckDifficulty,
+    tags,
+    extraMods: [...relationshipMods, ...escortMods(state, exp), ...paceMods(exp)],
+  });
 
   let giftValue = exp.silver;
   for (const [good, qty] of Object.entries(exp.cargo) as [GoodId, number][]) {
@@ -1006,8 +1016,10 @@ function resolveDiplomacyArrival(
       const acquired = Math.round(requested * frac);
       if (acquired > 0) {
         const source = Object.values(TUNING.heritage.hireSources).find((src) => src.seat === def.id);
-        const tag = source?.people;
-        addThralls(state, 'idle', acquired, tag, tag ? heritageGroup(tag) : 'native');
+        // Held on the expedition, not `state.thralls`, until it actually
+        // reaches home — `resolveHomecoming` applies it, same as cargo/silver.
+        exp.thrallsCaptured = acquired;
+        exp.thrallsCapturedHeritage = source?.people;
         missionLine = ` ${acquired} thrall${acquired === 1 ? '' : 's'} are brought back, bound for the march home.`;
       } else {
         missionLine = ' But none are handed over for the price offered.';
@@ -1096,15 +1108,12 @@ function resolveInviteArrival(
   const wanted = exp.inviteCount ?? 0;
   const { hero, skill } = bestNegotiator(state, exp);
   const tags = ['strangers', ...def.tags, ...(def.faction ? [def.faction] : [])];
-  const mods = [
-    ...traitModifiers(hero, ctx.traitDefs, skill, tags),
-    ...escortMods(state, exp),
-    ...paceMods(exp),
-    { label: 'offer', value: inv.offerTierRollBonus[offer] ?? 0 },
-  ];
-  const stat = bestGoverningStat(hero, skill);
-  const check = resolveCheck(rng, hero, skill, stat, inv.checkDifficulty, mods);
-  if (isSuccess(check.tier)) markSkill(hero, skill);
+  const check = expeditionCheck(state, ctx, exp, hero, rng, {
+    skill,
+    difficulty: inv.checkDifficulty,
+    tags,
+    extraMods: [{ label: 'offer', value: inv.offerTierRollBonus[offer] ?? 0 }],
+  });
 
   const band = contentmentBand(state);
   const raw =
@@ -1147,16 +1156,13 @@ function resolveConcessionArrival(
   const ask = exp.concessionAsk ?? 0;
   const { hero, skill } = bestNegotiator(state, exp);
   const tags = ['bargain', ...def.tags, ...(def.faction ? [def.faction] : [])];
-  const mods = [
-    ...traitModifiers(hero, ctx.traitDefs, skill, tags),
-    ...escortMods(state, exp),
-    ...paceMods(exp),
-  ];
-  const stat = bestGoverningStat(hero, skill);
-  const check = resolveCheck(rng, hero, skill, stat, neg.checkDifficulty, mods);
+  const check = expeditionCheck(state, ctx, exp, hero, rng, {
+    skill,
+    difficulty: neg.checkDifficulty,
+    tags,
+  });
 
   if (isSuccess(check.tier)) {
-    markSkill(hero, skill);
     exp.concessionGranted = ask;
     if (def.faction) applyDiplomacyShiftById(state, def.id, neg.successStandingGain, 0);
     report(
@@ -1252,6 +1258,18 @@ function resolveHomecoming(
   // Seconded residents rejoin the post pool.
   returnResidentEscort(state, exp);
 
+  // Thralls captured (an `enslave` raid) or purchased (a `thralls` envoy
+  // mission) only join the post's pool once the party is actually home —
+  // held on the expedition like cargo/silver until now (2026-07-24: used to
+  // be added to `state.thralls` immediately at arrival, before the return
+  // leg's travel time had even elapsed).
+  let thrallLine = '';
+  if (exp.thrallsCaptured && exp.thrallsCaptured > 0) {
+    const heritage = exp.thrallsCapturedHeritage;
+    addThralls(state, 'idle', exp.thrallsCaptured, heritage, heritage ? heritageGroup(heritage) : 'native');
+    thrallLine = ` ${exp.thrallsCaptured} thrall${exp.thrallsCaptured === 1 ? '' : 's'} are led in.`;
+  }
+
   // Invited settlers put down roots — the population is uncapped now (§5.1), so
   // all who agreed to come do. Homeland arrivals pull culture Homeland-ward,
   // native ones Frontier-ward.
@@ -1315,7 +1333,7 @@ function resolveHomecoming(
     'the frontier';
   report(
     '🏠',
-    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${destinationName}${tail}${surveyLine}${settleLine}${landLine}${matchLine}`,
+    `${partyNames(state, exp)} return${exp.heroIds.length === 1 ? 's' : ''} from ${destinationName}${tail}${surveyLine}${settleLine}${landLine}${matchLine}${thrallLine}`,
   );
 }
 

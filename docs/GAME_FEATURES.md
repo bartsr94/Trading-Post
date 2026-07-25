@@ -561,8 +561,9 @@ concept rather than a mechanical decision.
 section is sourced from the codebase directly.)*
 
 Pure battle math + selectors live in `src/engine/raids.ts`, content-free
-beyond an injected `RaidContext` (goodDefs/goodNames/buildingNames),
-mirroring `TurnContext`.
+beyond an injected `RaidContext` (goodDefs/goodNames/buildingNames/
+locationDefs — the last one added for `targetHeritageFor`'s per-location
+thrall-heritage lookup, see §18), mirroring `TurnContext`.
 
 **Incoming raids:** each turn, `resolveIncomingRaids` rolls eligibility
 (`raidEligible`/`eligibleAggressors`/`raidChance`, gated on a grace period +
@@ -861,10 +862,20 @@ unchanged** — this system is only about the unnamed pool.
 1. **Outgoing raid** — a new `enslave` `RaidAttackGoal` (§11), requiring at
    least one escort guard (`dispatchErrorRaid`) — "you cannot march captives
    home unescorted." Higher `factionStandingLoss` than `plunder`. Captured
-   thralls land in `thralls.idle`, tagged by the target's people
-   (`targetHeritageFor`, generalizing the BEASTFOLK orc/goblin split
-   `captivity.ts` already rolls, via `TUNING.heritage.hireSources` for every
-   seated faction).
+   heads are held on the expedition (`ExpeditionState.thrallsCaptured`/
+   `thrallsCapturedHeritage`) like cargo/silver and only land in
+   `thralls.idle` on homecoming (`resolveHomecoming`), not at battle
+   resolution — lost with the rest of the haul if the party never makes it
+   home (fixed 2026-07-24; used to call `addThralls` immediately at arrival,
+   before the return leg's travel time had elapsed). Tagged by the raided
+   *location's* people via `targetHeritageFor`: the location's own tag wins
+   first (`beast_wilds` 'orc', `goblin_wilds` 'goblin', `pemba_jasiri`
+   'weri', etc. — fixes both a BEASTFOLK-faction 50/50 coinflip that ignored
+   which camp was actually hit, and seatless/unmapped factions silently
+   defaulting to 'imanian'), then that seat's `hireSources` entry, then any
+   `hireSources` entry for the faction, then the BEASTFOLK coinflip as a
+   last-resort fallback (unreachable today — both beastfolk camps already
+   carry an explicit tag), then 'imanian'.
 2. **Incoming raid — reflavor only.** A sack's existing population-loss line
    now reads "N of the post's people are taken as thralls by `<aggressor>`."
    No new mechanic, no rescue path — mirrors §17's captivity being
@@ -872,10 +883,13 @@ unchanged** — this system is only about the unnamed pool.
 3. **Purchase**, two channels: a native `thralls` `DiplomacyMissionType`
    (envoy mission, gated Friendly+ standing, silver scales with headcount
    requested, turnout scales by check tier like every other envoy mission —
-   `DiplomacyScreen.tsx`); and the Company's "indentured labor" channel, a
-   silver-only `purchaseCompanyThralls` store action surfaced on the
-   Diplomacy screen's Company-seat detail (no envoy/turn needed), gated on
-   `CHARTER_COMPANY` standing not being Hostile.
+   `DiplomacyScreen.tsx`, tagged by the seat's `hireSources` entry); and the
+   Company's "indentured labor" channel, a silver-only
+   `purchaseCompanyThralls` store action surfaced on the Diplomacy screen's
+   Company-seat detail (no envoy/turn needed), gated on `CHARTER_COMPANY`
+   standing not being Hostile. The envoy channel shares the outgoing-raid
+   fix above — purchased heads ride home on the expedition and only join
+   `thralls.idle` at homecoming, not at arrival.
 4. **Via event** — `thrall_river_clans_offer` (`thrallEvents.ts`) using the
    generic `addThralls`/`loseThralls` outcome vocabulary; any future event
    can offer/cost thralls the same way.
@@ -912,6 +926,16 @@ flavor-tag breakdown) mirroring the free-resident pool's equivalent rows,
 option, a `CheatConsole.tsx` Thralls section for testing).
 **Save shape: v25** (`migrateV24toV25`, backfills `thralls: freshThralls()`
 — no old save ever had one).
+
+**Test coverage for the heritage/timing fix:** `raids.test.ts`'s "an enslave
+raid tags thralls by the raided camp and only seats them on homecoming"
+(goblin_wilds → 'goblin', beast_wilds → 'orc', asserting `thrallTotal` is 0
+right after battle resolution and only reflects the capture after
+`advanceExpeditions` runs the party all the way home) and "...tags thralls
+by that seat, not the faction default" (river_meet → 'kiswani', not a bare
+faction-level lookup); `diplomacy.test.ts`'s "a thralls-purchase envoy only
+seats thralls on homecoming, not at arrival" covers the same timing fix for
+the purchase channel.
 
 ---
 

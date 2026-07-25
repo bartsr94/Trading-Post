@@ -13,6 +13,7 @@ import { residentsAvailable } from '../../engine/residents';
 import { discoveryAtLeast, heroesAtPost } from '../../engine/types';
 import type { ExpeditionPace, GameState, GoodId, ResidentRole } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
+import { clampInt } from '../inputs';
 
 export function MarketScreen({ game }: { game: GameState }) {
   const buy = useGameStore((s) => s.buy);
@@ -53,8 +54,7 @@ export function MarketScreen({ game }: { game: GameState }) {
 
   const setEscortQty = (role: ResidentRole, raw: string, max: number) => {
     setError(null);
-    const qty = Math.max(0, Math.min(max, Math.floor(Number(raw) || 0)));
-    setEscort((prev) => ({ ...prev, [role]: qty }));
+    setEscort((prev) => ({ ...prev, [role]: clampInt(raw, 0, max) }));
   };
 
   const setQty = (
@@ -64,8 +64,7 @@ export function MarketScreen({ game }: { game: GameState }) {
     max: number,
   ) => {
     setError(null);
-    const qty = Math.max(0, Math.min(max, Math.floor(Number(raw) || 0)));
-    setter((prev) => ({ ...prev, [good]: qty }));
+    setter((prev) => ({ ...prev, [good]: clampInt(raw, 0, max) }));
   };
 
   const toggleHero = (heroId: string) => {
@@ -306,9 +305,7 @@ export function MarketScreen({ game }: { game: GameState }) {
                 value={silverCarried}
                 onChange={(e) => {
                   setError(null);
-                  setSilverCarried(
-                    Math.max(0, Math.min(game.silver, Math.floor(Number(e.target.value) || 0))),
-                  );
+                  setSilverCarried(clampInt(e.target.value, 0, game.silver));
                 }}
                 style={{ marginLeft: 8, width: 90 }}
               />

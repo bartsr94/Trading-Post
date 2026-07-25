@@ -37,7 +37,7 @@ import {
   resolveTurn,
 } from '../engine/turn';
 import type { ChoiceResolution } from '../engine/turn';
-import { livingHeroes, stanceOf } from '../engine/types';
+import { isPositiveInt, livingHeroes, stanceOf } from '../engine/types';
 import type {
   ActiveEvent,
   ActivityId,
@@ -356,11 +356,13 @@ export const useGameStore = create<GameStore>((set, get) => {
             goodDefs: CONTENT.goodDefs,
             goodNames: CONTENT.goodNames,
             buildingNames: CONTENT.buildingNames,
+            locationDefs: CONTENT.locationDefs,
           })
         : resolveOutgoingRaid(next, pendingRaid, params as RaidAttackParams, rng, {
             goodDefs: CONTENT.goodDefs,
             goodNames: CONTENT.goodNames,
             buildingNames: CONTENT.buildingNames,
+            locationDefs: CONTENT.locationDefs,
           });
     next.rngState = rng.getState();
     // Fold the battle narrative into the turn report.
@@ -422,7 +424,7 @@ export const useGameStore = create<GameStore>((set, get) => {
   }),
 
   purchaseCompanyThralls: assignmentAction((state, count: number) => {
-    if (!Number.isFinite(count) || !Number.isInteger(count) || count < 1) return false;
+    if (!isPositiveInt(count)) return false;
     if (stanceOf(state.factions.CHARTER_COMPANY.standing) === 'Hostile') return false;
     const cost = count * TUNING.thralls.purchase.companySilverPerHead;
     if (state.silver < cost) return false;

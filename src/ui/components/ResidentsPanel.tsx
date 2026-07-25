@@ -33,6 +33,7 @@ import {
 import { RESIDENT_ROLES } from '../../engine/types';
 import type { GameState, LandUse, ResidentRole, TransientKind } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
+import { clampInt } from '../inputs';
 
 const THRALL_ROLES = RESIDENT_ROLES.filter((role) => role !== 'guards');
 
@@ -420,11 +421,7 @@ export function ConcessionStrip({ game }: { game: GameState }) {
                 disabled={!canAct}
                 value={alloc[use]}
                 onChange={(event) => {
-                  const v = Math.max(
-                    0,
-                    Math.min(100, Math.floor(Number(event.target.value) || 0)),
-                  );
-                  setAlloc((cur) => ({ ...cur, [use]: v }));
+                  setAlloc((cur) => ({ ...cur, [use]: clampInt(event.target.value, 0, 100) }));
                 }}
               />
               <span className="dim" style={{ fontSize: '0.74rem' }}>

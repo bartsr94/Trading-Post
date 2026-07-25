@@ -13,7 +13,7 @@ import {
   residentsAvailable,
 } from './residents';
 import { thrallOutputMultiplier, thrallsAvailable } from './thralls';
-import { clamp, discoveryAtLeast, isNativeHeritage } from './types';
+import { clamp, discoveryAtLeast, isNativeHeritage, isNonNegativeInt } from './types';
 import type {
   ClaimState,
   FactionId,
@@ -82,7 +82,7 @@ export function isOverClaim(state: GameState): boolean {
  */
 export function setLandAllocation(state: GameState, allocation: Record<LandUse, number>): boolean {
   const values = [allocation.cropland, allocation.pasture, allocation.wildland];
-  if (values.some((v) => !Number.isFinite(v) || v < 0 || !Number.isInteger(v))) return false;
+  if (values.some((v) => !isNonNegativeInt(v))) return false;
   if (values.reduce((a, b) => a + b, 0) !== 100) return false;
   state.claim.allocation = {
     cropland: allocation.cropland,

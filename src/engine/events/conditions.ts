@@ -18,6 +18,12 @@ export interface ConditionContext {
   chainVars?: ChainVars;
 }
 
+/** The hero a hero-scoped predicate targets: its explicit `heroId`, else the
+ *  event's bound/candidate hero from context. */
+function resolveHeroId(cond: { heroId?: string }, ctx: ConditionContext): string | undefined {
+  return cond.heroId ?? ctx.heroId;
+}
+
 export function evalCondition(
   state: GameState,
   cond: Condition,
@@ -74,33 +80,33 @@ export function evalCondition(
       return rosterCount(state, cond.scope) >= cond.value;
     case 'rosterBelow':
       return rosterCount(state, cond.scope) < cond.value;
-    case 'heroHasSpouse':
-      return (cond.heroId ?? ctx.heroId) !== undefined
-        ? isMarried(state, (cond.heroId ?? ctx.heroId)!)
-        : false;
-    case 'heroUnmarried':
-      return (cond.heroId ?? ctx.heroId) !== undefined
-        ? !isMarried(state, (cond.heroId ?? ctx.heroId)!)
-        : false;
+    case 'heroHasSpouse': {
+      const heroId = resolveHeroId(cond, ctx);
+      return heroId !== undefined && isMarried(state, heroId);
+    }
+    case 'heroUnmarried': {
+      const heroId = resolveHeroId(cond, ctx);
+      return heroId !== undefined && !isMarried(state, heroId);
+    }
     case 'heroGender': {
-      const heroId = cond.heroId ?? ctx.heroId;
+      const heroId = resolveHeroId(cond, ctx);
       if (heroId === undefined) return false;
       const hero = state.heroes.find((h) => h.id === heroId);
       return hero !== undefined && hero.gender === cond.gender;
     }
     case 'heroSpouseHeritage': {
-      const heroId = cond.heroId ?? ctx.heroId;
+      const heroId = resolveHeroId(cond, ctx);
       if (heroId === undefined) return false;
       return spousesOf(state, heroId).some((spouse) => nodePeoples(spouse).includes(cond.heritage));
     }
     case 'heroSpouseNotHeritage': {
-      const heroId = cond.heroId ?? ctx.heroId;
+      const heroId = resolveHeroId(cond, ctx);
       if (heroId === undefined) return false;
       const spouses = spousesOf(state, heroId);
       return spouses.length > 0 && !spouses.some((spouse) => nodePeoples(spouse).includes(cond.heritage));
     }
     case 'partnerAvailable': {
-      const heroId = cond.heroId ?? ctx.heroId;
+      const heroId = resolveHeroId(cond, ctx);
       return heroId !== undefined && eligiblePartners(state, heroId).length > 0;
     }
     case 'residentsAtLeast':

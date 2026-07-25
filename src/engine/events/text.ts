@@ -1,5 +1,6 @@
 // Template interpolation for event text: {hero} → bound hero's name.
 
+import { cap } from '../types';
 import type { Gender } from '../types';
 
 export interface TextContext {
@@ -25,8 +26,6 @@ const PRONOUNS: Record<Gender, { he: string; him: string; his: string; himself: 
   male: { he: 'he', him: 'him', his: 'his', himself: 'himself' },
   female: { he: 'she', him: 'her', his: 'her', himself: 'herself' },
 };
-
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export function interpolate(text: string, ctx: TextContext): string {
   const p = PRONOUNS[ctx.heroGender ?? 'male'];

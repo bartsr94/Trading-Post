@@ -22,7 +22,7 @@ import {
 import { hasCaptiveHeldBy } from '../../engine/captivity';
 import { canCallRaidAlly, raidTargetFaction } from '../../engine/raids';
 import { residentsAvailable } from '../../engine/residents';
-import { discoveryAtLeast, heroesAtPost, stanceOf } from '../../engine/types';
+import { clamp, discoveryAtLeast, heroesAtPost, stanceOf } from '../../engine/types';
 import type {
   FactionId,
   ExpeditionPace,
@@ -34,6 +34,7 @@ import type {
   ResidentRole,
 } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
+import { clampInt } from '../inputs';
 
 const MAP_W = 1000;
 const MAP_H = 750;
@@ -51,10 +52,6 @@ type FogCell = { index: number; points: string };
 /** The Invite Settlers source key (into hireSources) for a seat, if any. */
 function inviteSourceForSeat(seatId: string): string | undefined {
   return Object.entries(TUNING.heritage.hireSources).find(([, s]) => s.seat === seatId)?.[0];
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 function svgPoint(point: MapPoint): { x: number; y: number } {
@@ -294,8 +291,7 @@ export function MapScreen({ game }: { game: GameState }) {
 
   const setEscortQty = (role: ResidentRole, raw: string, max: number) => {
     setError(null);
-    const qty = Math.max(0, Math.min(max, Math.floor(Number(raw) || 0)));
-    setEscort((current) => ({ ...current, [role]: qty }));
+    setEscort((current) => ({ ...current, [role]: clampInt(raw, 0, max) }));
   };
 
   const send = () => {

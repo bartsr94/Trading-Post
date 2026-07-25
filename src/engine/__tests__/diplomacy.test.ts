@@ -6,6 +6,7 @@ import { applyDiplomacyShift, isFirstContact } from '../diplomacy';
 import type { GameEvent } from '../events/types';
 import { deserialize, serialize } from '../save';
 import { Rng } from '../rng';
+import { thrallTotal } from '../thralls';
 import { resolveChoice } from '../turn';
 import { TEST_CONTENT, testState, TEST_LOCATIONS } from './helpers';
 
@@ -105,6 +106,40 @@ describe('first contact', () => {
     );
     while (state.expeditions.length > 0) advanceExpeditions(state, TEST_CONTENT, new Rng(12), noop);
     expect(state.queuedEvents.some((q) => q.locationId === 'river_meet')).toBe(false);
+  });
+
+  it('a thralls-purchase envoy only seats thralls on homecoming, not at arrival', () => {
+    const state = testState(706);
+    const hero = state.heroes.find((h) => h.id === 'p1')!;
+    hero.skills.diplomacy = 5;
+    hero.stats.charm = 5;
+    hero.stats.wits = 5;
+    expect(
+      dispatchExpedition(
+        state,
+        {
+          kind: 'diplomacy',
+          destination: 'river_meet',
+          heroIds: ['p1'],
+          diplomacyMission: { type: 'thralls' },
+          thrallPurchaseCount: 6,
+        },
+        LOCATION_DEFS,
+      ),
+    ).toBe(true);
+
+    const rng = new Rng(13);
+    // Advance exactly to arrival (outbound leg completes) without crossing
+    // all the way to homecoming, so we can inspect the in-transit state.
+    while (state.expeditions[0]?.leg === 'outbound') {
+      advanceExpeditions(state, TEST_CONTENT, rng, noop);
+    }
+    const acquired = state.expeditions[0]?.thrallsCaptured ?? 0;
+    expect(acquired).toBeGreaterThan(0);
+    expect(thrallTotal(state)).toBe(0);
+
+    while (state.expeditions.length > 0) advanceExpeditions(state, TEST_CONTENT, rng, noop);
+    expect(thrallTotal(state)).toBe(acquired);
   });
 
   it('resolveChoice threads a locationId into community outcomes with no explicit location', () => {

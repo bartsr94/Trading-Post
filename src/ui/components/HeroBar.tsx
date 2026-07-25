@@ -4,7 +4,7 @@
 // placeholder fallback) comes from Portrait.tsx.
 
 import { LOCATION_NAMES } from '../../content/locations';
-import { activeHeroes } from '../../engine/types';
+import { activeHeroes, cap } from '../../engine/types';
 import type { ExpeditionState, GameState, Hero } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from './ConditionBars';
@@ -45,7 +45,7 @@ function StatusLine({
   }
   const activity = game.assignments[hero.id];
   return (
-    <>{activity ? `Assigned: ${activity.charAt(0).toUpperCase()}${activity.slice(1)}` : 'At the post.'}</>
+    <>{activity ? `Assigned: ${cap(activity)}` : 'At the post.'}</>
   );
 }
 

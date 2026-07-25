@@ -44,6 +44,11 @@ export function diplomacySeatDefs(defs: Iterable<LocationDef>): LocationDef[] {
   return [...defs].filter(isDiplomacySeat);
 }
 
+/** A fresh seat state for `faction`, at `standing` (0 if unspecified). */
+function newSeatState(faction: FactionId, standing = 0): DiplomacySeatState {
+  return { faction, standing, grievances: 0, pact: 'none', lastContactTurn: 0 };
+}
+
 export function createDiplomacySeatStates(
   defs: readonly LocationDef[],
   startingStandings: Partial<Record<FactionId, number>> = {},
@@ -51,13 +56,10 @@ export function createDiplomacySeatStates(
   const seats: Record<LocationId, DiplomacySeatState> = {};
   for (const def of defs) {
     if (!def.faction) continue;
-    seats[def.id] = {
-      faction: def.faction,
-      standing: def.startingStanding ?? startingStandings[def.faction] ?? 0,
-      grievances: 0,
-      pact: 'none',
-      lastContactTurn: 0,
-    };
+    seats[def.id] = newSeatState(
+      def.faction,
+      def.startingStanding ?? startingStandings[def.faction] ?? 0,
+    );
   }
   return seats;
 }
@@ -72,13 +74,7 @@ export function ensureDiplomacySeat(
     return existing;
   }
   if (!def.faction) throw new Error(`Cannot create diplomacy seat ${def.id} without a faction.`);
-  const created: DiplomacySeatState = {
-    faction: def.faction,
-    standing: state.factions[def.faction]?.standing ?? 0,
-    grievances: 0,
-    pact: 'none',
-    lastContactTurn: 0,
-  };
+  const created = newSeatState(def.faction, state.factions[def.faction]?.standing ?? 0);
   state.diplomacySeats[def.id] = created;
   return created;
 }
@@ -92,13 +88,7 @@ export function diplomacySeatStateOrDefault(
   const seat = state.diplomacySeats[def.id];
   if (seat) return seat;
   if (!def.faction) throw new Error(`Cannot read diplomacy seat ${def.id} without a faction.`);
-  return {
-    faction: def.faction,
-    standing: state.factions[def.faction]?.standing ?? 0,
-    grievances: 0,
-    pact: 'none',
-    lastContactTurn: 0,
-  };
+  return newSeatState(def.faction, state.factions[def.faction]?.standing ?? 0);
 }
 
 export function diplomacySeatStateById(
