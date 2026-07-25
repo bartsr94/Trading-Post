@@ -2,7 +2,7 @@ import { activeHeroes, discoveryAtLeast, livingHeroes, reserveHeroes, seasonOfTu
 import { canAdvanceTier, hasBuilding } from '../buildings';
 import { isOverClaim } from '../claim';
 import { cargoUnits } from '../expeditions';
-import { eligiblePartners, isMarried } from '../family';
+import { eligiblePartners, isMarried, nodePeoples, spousesOf } from '../family';
 import { diplomacySeatStateById } from '../diplomacy';
 import { frictionFor, heritageCount, nativeShare, postDefense, residentCount } from '../residents';
 import { raidThreatActive } from '../raids';
@@ -16,6 +16,12 @@ export interface ConditionContext {
   travel?: TravelContext;
   /** Chain-scoped branch memory from the in-flight event (CHAIN_EVENTS_SPEC.md §3). */
   chainVars?: ChainVars;
+}
+
+/** The hero a hero-scoped predicate targets: its explicit `heroId`, else the
+ *  event's bound/candidate hero from context. */
+function resolveHeroId(cond: { heroId?: string }, ctx: ConditionContext): string | undefined {
+  return cond.heroId ?? ctx.heroId;
 }
 
 export function evalCondition(
@@ -74,22 +80,33 @@ export function evalCondition(
       return rosterCount(state, cond.scope) >= cond.value;
     case 'rosterBelow':
       return rosterCount(state, cond.scope) < cond.value;
-    case 'heroHasSpouse':
-      return (cond.heroId ?? ctx.heroId) !== undefined
-        ? isMarried(state, (cond.heroId ?? ctx.heroId)!)
-        : false;
-    case 'heroUnmarried':
-      return (cond.heroId ?? ctx.heroId) !== undefined
-        ? !isMarried(state, (cond.heroId ?? ctx.heroId)!)
-        : false;
+    case 'heroHasSpouse': {
+      const heroId = resolveHeroId(cond, ctx);
+      return heroId !== undefined && isMarried(state, heroId);
+    }
+    case 'heroUnmarried': {
+      const heroId = resolveHeroId(cond, ctx);
+      return heroId !== undefined && !isMarried(state, heroId);
+    }
     case 'heroGender': {
-      const heroId = cond.heroId ?? ctx.heroId;
+      const heroId = resolveHeroId(cond, ctx);
       if (heroId === undefined) return false;
       const hero = state.heroes.find((h) => h.id === heroId);
       return hero !== undefined && hero.gender === cond.gender;
     }
+    case 'heroSpouseHeritage': {
+      const heroId = resolveHeroId(cond, ctx);
+      if (heroId === undefined) return false;
+      return spousesOf(state, heroId).some((spouse) => nodePeoples(spouse).includes(cond.heritage));
+    }
+    case 'heroSpouseNotHeritage': {
+      const heroId = resolveHeroId(cond, ctx);
+      if (heroId === undefined) return false;
+      const spouses = spousesOf(state, heroId);
+      return spouses.length > 0 && !spouses.some((spouse) => nodePeoples(spouse).includes(cond.heritage));
+    }
     case 'partnerAvailable': {
-      const heroId = cond.heroId ?? ctx.heroId;
+      const heroId = resolveHeroId(cond, ctx);
       return heroId !== undefined && eligiblePartners(state, heroId).length > 0;
     }
     case 'residentsAtLeast':
@@ -154,6 +171,11 @@ export function evalCondition(
       const loc = state.locations[cond.location];
       return loc !== undefined && discoveryAtLeast(loc.discovery, cond.atLeast);
     }
+    case 'locationDiscoveryAny':
+      return cond.locations.some((id) => {
+        const loc = state.locations[id];
+        return loc !== undefined && discoveryAtLeast(loc.discovery, cond.atLeast);
+      });
     case 'chainVar':
       return ctx.chainVars?.[cond.key] === cond.value;
     case 'expeditionKind':

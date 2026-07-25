@@ -8,7 +8,7 @@ import { CONTENT } from '../../content/registry';
 import { evalConditions } from '../../engine/events/conditions';
 import { interpolate } from '../../engine/events/text';
 import type { Choice } from '../../engine/events/types';
-import { getHero } from '../../engine/types';
+import { cap, getHero } from '../../engine/types';
 import type { GameState } from '../../engine/types';
 import { travelContextOf, useGameStore } from '../../store/gameStore';
 import { DiceRoll } from '../components/DiceRoll';
@@ -20,7 +20,6 @@ function checkHint(state: GameState, choice: Choice): string | null {
     typeof choice.check.difficulty === 'function'
       ? choice.check.difficulty(state)
       : choice.check.difficulty;
-  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   return `${cap(choice.check.skill)} + ${cap(choice.check.stat)} vs ${difficulty}`;
 }
 

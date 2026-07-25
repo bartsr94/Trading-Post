@@ -26,18 +26,19 @@ import {
   residentsAvailable,
   transientEffect,
 } from './residents';
-import { addThralls } from './thralls';
 import type { Rng } from './rng';
 import { declareGameOver } from './turn';
 import {
   activeHeroesById,
+  cap,
   clamp,
   clampStanding,
   FACTION_IDS,
-  heritageGroup,
+  HERITAGES,
   heroesAtPost,
   isActiveHeroId,
   RAID_MANEUVERS,
+  signed,
 } from './types';
 import type {
   BuildingId,
@@ -49,6 +50,7 @@ import type {
   Heritage,
   Hero,
   LocationDef,
+  LocationId,
   PendingIncomingRaid,
   PendingOutgoingRaid,
   RaidDefendGoal,
@@ -63,6 +65,9 @@ export interface RaidContext {
   goodDefs: ReadonlyMap<GoodId, GoodDef>;
   goodNames: ReadonlyMap<GoodId, string>;
   buildingNames: ReadonlyMap<BuildingId, string>;
+  /** For `targetHeritageFor`: the raided location's own heritage tag (if any)
+   *  takes priority over its faction's `hireSources` entry. */
+  locationDefs: ReadonlyMap<LocationId, LocationDef>;
 }
 
 /** The player's defence choices for an incoming raid. */
@@ -324,14 +329,24 @@ function bandLabel(faction: FactionId, rng: Rng): string {
   return 'a raiding party';
 }
 
-/** The people captured thralls belong to, by the target faction — mirrors
- *  `captorHeritageFor`'s BEASTFOLK even split, generalized via
- *  `TUNING.heritage.hireSources` for every seated faction (THRALLS_SPEC.md
- *  Acquisition §1). */
-function targetHeritageFor(faction: FactionId, rng: Rng): Heritage {
+/** The people captured thralls belong to — the raided location's own
+ *  heritage tag takes priority (`beast_wilds` 'orc', `goblin_wilds` 'goblin',
+ *  `pemba_jasiri` 'weri', etc.), since a faction can hold seats of more than
+ *  one people; falls back to that seat's `hireSources` entry (mirrors
+ *  `resolveDiplomacyArrival`'s thralls-purchase mission, which already
+ *  looked itself up this way), then any `hireSources` entry for the faction,
+ *  then a BEASTFOLK even split (mirrors `captorHeritageFor`'s), then
+ *  'imanian' as a last resort (THRALLS_SPEC.md Acquisition §1). */
+function targetHeritageFor(faction: FactionId, def: LocationDef | undefined, rng: Rng): Heritage {
+  const tagMatch = def?.tags.find((t) => (HERITAGES as readonly string[]).includes(t)) as
+    | Heritage
+    | undefined;
+  if (tagMatch) return tagMatch;
+  const seatMatch = def && Object.values(TUNING.heritage.hireSources).find((src) => src.seat === def.id);
+  if (seatMatch) return seatMatch.people;
   if (faction === 'BEASTFOLK') return rng.next() < 0.5 ? 'orc' : 'goblin';
-  const entry = Object.values(TUNING.heritage.hireSources).find((src) => src.faction === faction);
-  return entry?.people ?? 'imanian';
+  const factionMatch = Object.values(TUNING.heritage.hireSources).find((src) => src.faction === faction);
+  return factionMatch?.people ?? 'imanian';
 }
 
 function bestInParty(
@@ -697,10 +712,15 @@ export function resolveOutgoingRaid(
       ),
     );
     if (captured > 0) {
-      const heritage = targetHeritageFor(targetFaction, rng);
-      addThralls(state, 'idle', captured, heritage, heritageGroup(heritage));
+      // Held on the expedition, not `state.thralls`, until it actually
+      // reaches home — `resolveHomecoming` in expeditions.ts applies it,
+      // same as cargo/silver.
+      const targetDef = expedition.destination ? ctx.locationDefs.get(expedition.destination) : undefined;
+      const heritage = targetHeritageFor(targetFaction, targetDef, rng);
+      expedition.thrallsCaptured = captured;
+      expedition.thrallsCapturedHeritage = heritage;
       log.push(
-        `${captured} of ${raid.targetName}'s people are marched home as thralls, tagged ${heritage}.`,
+        `${captured} of ${raid.targetName}'s people are bound and marched with the party, tagged ${heritage}.`,
       );
     }
   } else if (goalId === 'rescue') {
@@ -936,12 +956,4 @@ export function resolveIncomingRaid(
 
   state.pendingRaid = null;
   return { direction: 'incoming', outcome, log, gameOver };
-}
-
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-function signed(n: number): string {
-  return n >= 0 ? `+${n}` : `${n}`;
 }

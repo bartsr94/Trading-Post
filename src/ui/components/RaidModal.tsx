@@ -9,7 +9,7 @@ import {
   defenderForceBreakdown,
   raidingForceBreakdown,
 } from '../../engine/raids';
-import { heroesAtPost } from '../../engine/types';
+import { cap, heroesAtPost } from '../../engine/types';
 import type {
   ExpeditionState,
   GameState,
@@ -43,10 +43,6 @@ const MANEUVERS: { id: RaidManeuver; label: string; hint: string }[] = [
   { id: 'evade', label: 'Evade', hint: 'Give ground, strike gaps. Beats a skirmish.' },
 ];
 
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 function formatScore(value: number): string {
   return Number.isInteger(value) ? `${value}` : value.toFixed(1);
 }
@@ -61,7 +57,7 @@ function resultHeading(direction: 'incoming' | 'outgoing', outcome: string): str
   if (outcome === 'bloodied') return 'Blood Paid in Kind';
   if (outcome === 'cowed') return 'Tribute is Won';
   if (outcome === 'rescued') return 'Brought Home';
-  if (outcome === 'enslaved') return 'Captives Marched Home';
+  if (outcome === 'enslaved') return 'Captives Bound for Home';
   return 'The Raid Lands';
 }
 

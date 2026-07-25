@@ -12,7 +12,9 @@ import {
   manumitThralls,
   reallocateThralls,
   restivenessBand,
+  thrallHeritageCount,
   thrallOutputMultiplier,
+  thrallTagCounts,
   thrallTotal,
   updateRestiveness,
 } from '../thralls';
@@ -156,5 +158,27 @@ describe('thralls', () => {
     addThralls(s, 'farmers', 2);
     expect(manumitThralls(s, 'farmers', 10)).toBe(2);
     expect(s.thralls.roles.farmers).toBe(0);
+  });
+
+  // thrallHeritageCount/thrallTagCounts back the Outpost Overview's Makeup/
+  // Origins rows for thralls (ResidentsPanel.tsx), mirroring residents.ts's
+  // heritageCount/residentTagCounts (2026-07-24).
+  it('thrallHeritageCount tallies homeland/native heads held as thralls', () => {
+    const s = testState();
+    addThralls(s, 'farmers', 3, 'goblin', 'native');
+    addThralls(s, 'idle', 2, undefined, 'homeland');
+    expect(thrallHeritageCount(s, 'native')).toBe(3);
+    expect(thrallHeritageCount(s, 'homeland')).toBe(2);
+  });
+
+  it('thrallTagCounts returns non-zero flavor tags largest first, empty with no tags', () => {
+    const s = testState();
+    expect(thrallTagCounts(s)).toEqual([]);
+    addThralls(s, 'farmers', 2, 'goblin', 'native');
+    addThralls(s, 'hunters', 5, 'orc', 'native');
+    expect(thrallTagCounts(s)).toEqual([
+      ['orc', 5],
+      ['goblin', 2],
+    ]);
   });
 });

@@ -50,6 +50,38 @@ describe('Beastfolk taxonomy', () => {
     expect(camp).toBeDefined();
     expect(camp!.faction).toBeUndefined();
     expect(camp!.tags).toContain('beastfolk');
+    expect(camp!.tags).toContain('orc');
+  });
+
+  it('the Tangle (goblin_wilds) mirrors the Gnawback Camp: discoverable wilds content, not a diplomacy seat', () => {
+    const camp = LOCATIONS.find((l) => l.id === 'goblin_wilds');
+    expect(camp).toBeDefined();
+    expect(camp!.faction).toBeUndefined();
+    expect(camp!.hasMarket).toBe(false);
+    expect(camp!.tags).toContain('beastfolk');
+    expect(camp!.tags).toContain('goblin');
+  });
+});
+
+describe('locationDiscoveryAny condition (BEASTFOLK_CAMPS_SPEC.md §7)', () => {
+  it('is true once either listed location reaches the threshold, false if neither does', () => {
+    const s = testState();
+    const cond = {
+      type: 'locationDiscoveryAny' as const,
+      locations: ['beast_wilds', 'goblin_wilds'],
+      atLeast: 'visited' as const,
+    };
+    expect(evalConditions(s, [cond])).toBe(false);
+
+    s.locations.beast_wilds.discovery = 'visited';
+    expect(evalConditions(s, [cond])).toBe(true);
+
+    s.locations.beast_wilds.discovery = 'rumored';
+    s.locations.goblin_wilds.discovery = 'visited';
+    expect(evalConditions(s, [cond])).toBe(true);
+
+    s.locations.beast_wilds.discovery = 'visited';
+    expect(evalConditions(s, [cond])).toBe(true); // both — still true
   });
 });
 
@@ -126,6 +158,7 @@ describe('the beastfolk match events require a male hero', () => {
   it('an unmarried female hero is not eligible for either match event', () => {
     const s = testState();
     s.locations.beast_wilds.discovery = 'visited';
+    s.locations.goblin_wilds.discovery = 'visited';
     s.factions.BEASTFOLK.standing = 50;
     for (const hero of s.heroes) hero.gender = 'female';
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(false);
@@ -135,6 +168,7 @@ describe('the beastfolk match events require a male hero', () => {
   it('an unmarried male hero is still eligible', () => {
     const s = testState();
     s.locations.beast_wilds.discovery = 'visited';
+    s.locations.goblin_wilds.discovery = 'visited';
     s.factions.BEASTFOLK.standing = 50;
     getHero(s, 'p1').gender = 'male';
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(true);
@@ -171,35 +205,65 @@ describe('save migration v9 -> v10', () => {
 
 // CHAIN_EVENTS_SPEC.md §2: all 5 pre-existing events used to gate on
 // BEASTFOLK standing alone, so they could in principle fire before the
-// player had ever found the Gnawback Camp. Confirms the discovery gate
-// added to each is load-bearing, not decorative.
+// player had ever found either camp. Confirms the discovery gate added to
+// each is load-bearing, not decorative. BEASTFOLK_CAMPS_SPEC.md split
+// beast_wilds (Gnawback Camp, now orc-only) from a new goblin_wilds
+// location, so each heritage's tribute/match event is gated on its own
+// camp's discovery, independently of the other.
 describe('Beastfolk discovery gating', () => {
-  it('tribute events are ineligible before beast_wilds is discovered, even though starting standing already qualifies', () => {
+  it('the orc tribute event needs beast_wilds specifically, not goblin_wilds', () => {
     const s = testState();
     expect(s.locations.beast_wilds.discovery).toBe('rumored');
     expect(s.factions.BEASTFOLK.standing).toBeLessThanOrEqual(-20);
 
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_tribute')!)).toBe(false);
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_tribute')!)).toBe(false);
-
+    s.locations.goblin_wilds.discovery = 'visited';
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_tribute')!)).toBe(false);
     s.locations.beast_wilds.discovery = 'visited';
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_tribute')!)).toBe(true);
+  });
+
+  it('the goblin tribute event needs goblin_wilds specifically, not beast_wilds', () => {
+    const s = testState();
+    expect(s.locations.goblin_wilds.discovery).toBe('rumored');
+    expect(s.factions.BEASTFOLK.standing).toBeLessThanOrEqual(-20);
+
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_tribute')!)).toBe(false);
+    s.locations.beast_wilds.discovery = 'visited';
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_tribute')!)).toBe(false);
+    s.locations.goblin_wilds.discovery = 'visited';
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_tribute')!)).toBe(true);
   });
 
-  it('match and settlement events are ineligible before discovery, even once standing qualifies', () => {
+  it('match events are ineligible before their own camp is discovered, even once standing qualifies', () => {
     const s = testState();
     s.factions.BEASTFOLK.standing = 50;
     expect(s.locations.beast_wilds.discovery).toBe('rumored');
+    expect(s.locations.goblin_wilds.discovery).toBe('rumored');
 
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(false);
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(false);
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_settlement')!)).toBe(false);
 
     s.locations.beast_wilds.discovery = 'visited';
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(true);
+    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(false);
+
+    s.locations.goblin_wilds.discovery = 'visited';
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(true);
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_settlement')!)).toBe(true);
+  });
+
+  it('the settlement event (both peoples, no heritage split) is eligible once either camp is discovered', () => {
+    const s = testState();
+    s.factions.BEASTFOLK.standing = 50;
+    const event = TEST_CONTENT.events.get('beastfolk_settlement')!;
+    expect(isEligible(s, event)).toBe(false);
+
+    s.locations.goblin_wilds.discovery = 'visited';
+    expect(isEligible(s, event)).toBe(true); // goblin camp alone is enough
+
+    s.locations.goblin_wilds.discovery = 'rumored';
+    s.locations.beast_wilds.discovery = 'visited';
+    expect(isEligible(s, event)).toBe(true); // orc camp alone is enough too
   });
 });
 
@@ -487,5 +551,89 @@ describe('travel_beastfolk_toll', () => {
     applyOutcomes(s, event.choices[0].outcomes.success.outcomes, outcomeCtx(TEST_CONTENT, 'p1'));
     expect(s.silver).toBe(silverBefore - 8);
     expect(s.factions.BEASTFOLK.standing).toBe(standingBefore + 1);
+  });
+});
+
+// Heritage-weighted birth rate (Bartosz, 2026-07-24): orc ~1.5x, goblin ~2x
+// the baseline family_first_child, via weight alone on two new events gated
+// by the heroSpouseHeritage/heroSpouseNotHeritage conditions — no engine
+// mechanism beyond that condition pair (GAME_FEATURES.md §8).
+describe('heritage-weighted birth rate', () => {
+  it('heroSpouseHeritage is true only once a spouse of that heritage exists', () => {
+    const s = testState();
+    expect(
+      evalConditions(s, [{ type: 'heroSpouseHeritage', heritage: 'orc' }], { heroId: 'p1' }),
+    ).toBe(false);
+    formUnion(s, 'p1', { source: 'alliance', heritage: 'orc', name: 'Agra' });
+    expect(
+      evalConditions(s, [{ type: 'heroSpouseHeritage', heritage: 'orc' }], { heroId: 'p1' }),
+    ).toBe(true);
+    expect(
+      evalConditions(s, [{ type: 'heroSpouseHeritage', heritage: 'goblin' }], { heroId: 'p1' }),
+    ).toBe(false);
+  });
+
+  it('heroSpouseNotHeritage requires a spouse to be true, and is false once one matches', () => {
+    const s = testState();
+    // Unmarried: there is no spouse of any heritage, so "not this heritage" is
+    // vacuously false rather than true — the base family_first_child event
+    // still needs its own heroHasSpouse gate to exclude the unmarried case.
+    expect(
+      evalConditions(s, [{ type: 'heroSpouseNotHeritage', heritage: 'orc' }], { heroId: 'p1' }),
+    ).toBe(false);
+    formUnion(s, 'p1', { source: 'alliance', heritage: 'kiswani', name: 'Nia' });
+    expect(
+      evalConditions(s, [{ type: 'heroSpouseNotHeritage', heritage: 'orc' }], { heroId: 'p1' }),
+    ).toBe(true);
+    expect(
+      evalConditions(s, [{ type: 'heroSpouseNotHeritage', heritage: 'kiswani' }], { heroId: 'p1' }),
+    ).toBe(false);
+  });
+
+  function readyForBirth(spouseHeritage: 'kiswani' | 'orc' | 'goblin') {
+    const s = testState();
+    s.axes.communal = 3;
+    s.residents.contentment = 5;
+    formUnion(s, 'p1', { source: 'alliance', heritage: spouseHeritage, name: 'Partner' });
+    return s;
+  }
+
+  it('an orc spouse makes only the orc variant eligible, at 1.5x the baseline weight', () => {
+    const s = readyForBirth('orc');
+    const base = TEST_CONTENT.events.get('family_first_child')!;
+    const orcEvent = TEST_CONTENT.events.get('family_first_child_orc')!;
+    const goblinEvent = TEST_CONTENT.events.get('family_first_child_goblin')!;
+    expect(isEligible(s, base)).toBe(false);
+    expect(isEligible(s, orcEvent)).toBe(true);
+    expect(isEligible(s, goblinEvent)).toBe(false);
+    expect(orcEvent.weight).toBe((base.weight as number) * 1.5);
+  });
+
+  it('a goblin spouse makes only the goblin variant eligible, at 2x the baseline weight', () => {
+    const s = readyForBirth('goblin');
+    const base = TEST_CONTENT.events.get('family_first_child')!;
+    const orcEvent = TEST_CONTENT.events.get('family_first_child_orc')!;
+    const goblinEvent = TEST_CONTENT.events.get('family_first_child_goblin')!;
+    expect(isEligible(s, base)).toBe(false);
+    expect(isEligible(s, orcEvent)).toBe(false);
+    expect(isEligible(s, goblinEvent)).toBe(true);
+    expect(goblinEvent.weight).toBe((base.weight as number) * 2);
+  });
+
+  it('a non-beastfolk spouse leaves only the baseline event eligible', () => {
+    const s = readyForBirth('kiswani');
+    expect(isEligible(s, TEST_CONTENT.events.get('family_first_child')!)).toBe(true);
+    expect(isEligible(s, TEST_CONTENT.events.get('family_first_child_orc')!)).toBe(false);
+    expect(isEligible(s, TEST_CONTENT.events.get('family_first_child_goblin')!)).toBe(false);
+  });
+
+  it('a birth fired from either heritage-weighted event still produces a child (matrilineal-pure, female)', () => {
+    const s = readyForBirth('goblin');
+    const event = TEST_CONTENT.events.get('family_first_child_goblin')!;
+    resolveChoice(s, TEST_CONTENT, event, 0, 'p1');
+    const child = s.dependants.find((d) => d.kind === 'child');
+    expect(child).toBeDefined();
+    expect(nodePeoples(child!)).toEqual(['goblin']);
+    expect(child!.gender).toBe('female');
   });
 });

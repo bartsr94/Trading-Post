@@ -5,7 +5,7 @@ import { CONTENT } from '../../content/registry';
 import { TRAIT_DEFS } from '../../content/traits';
 import { dominantHeritage, isHeroNode, spousesOf } from '../../engine/family';
 import { activateError, benchError, dependantsOf } from '../../engine/roster';
-import { SKILL_IDS, STAT_IDS } from '../../engine/types';
+import { cap, SKILL_IDS, STAT_IDS } from '../../engine/types';
 import type { Dependant, Hero, Heritage } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from '../components/ConditionBars';
@@ -187,7 +187,7 @@ export function HeroSheet({ hero }: { hero: Hero }) {
         <div className="skill-grid">
           {STAT_IDS.map((s) => (
             <div key={s}>
-              {s.charAt(0).toUpperCase() + s.slice(1)} <b>{hero.stats[s]}</b>
+              {cap(s)} <b>{hero.stats[s]}</b>
             </div>
           ))}
         </div>
@@ -196,7 +196,7 @@ export function HeroSheet({ hero }: { hero: Hero }) {
         <div className="skill-grid">
           {SKILL_IDS.map((s) => (
             <div key={s} className={hero.skillMarks.includes(s) ? 'marked' : ''}>
-              {s.charAt(0).toUpperCase() + s.slice(1)} <b>{hero.skills[s]}</b>
+              {cap(s)} <b>{hero.skills[s]}</b>
               {hero.skillMarks.includes(s) && ' ✦'}
             </div>
           ))}

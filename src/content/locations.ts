@@ -108,14 +108,25 @@ export const LOCATIONS: LocationDef[] = [
   },
   {
     id: 'beast_wilds',
-    name: 'The Gnawback Camp', // working name (BEASTFOLK_SPEC.md §9) — Bartosz to confirm/replace
+    name: 'The Gnawback Camp',
     blurb:
-      'A scatter of bone-hung stakes and cook-fire smoke where the broken causeways give out into deep scrub. Orc war-bands and goblin clans hold this stretch of the wilds; no chief speaks for all of it, and no map agrees where it ends. Deliberately not a diplomacy seat — nobody here answers for the rest.',
+      'A scatter of bone-hung stakes and cook-fire smoke where the broken causeways give out into deep scrub. Orc war-bands hold this stretch of the wilds; no chief speaks for all of them, and no map agrees where the camp truly ends. Deliberately not a diplomacy seat — nobody here answers for the rest.',
     hasMarket: false,
     initialDiscovery: 'rumored',
-    tags: ['wilds', 'beastfolk', 'danger'],
-    mapPoint: { x: 0.35, y: 0.43 },
-    mapRegion: 'western_interior',
+    tags: ['wilds', 'beastfolk', 'orc', 'danger'],
+    mapPoint: { x: 0.4488, y: 0.1588 },
+    mapRegion: 'stormwall',
+  },
+  {
+    id: 'goblin_wilds',
+    name: 'The Tangle',
+    blurb:
+      'A snarl of deadfall and briar dragged into makeshift walls, laced with snares too clever to walk through carelessly. Goblin clans hold this ground and reshape it season to season; no elder speaks for all of it, and the traps outrun any map that tries to fix them. Deliberately not a diplomacy seat — nobody here answers for the rest.',
+    hasMarket: false,
+    initialDiscovery: 'rumored',
+    tags: ['wilds', 'beastfolk', 'goblin', 'danger'],
+    mapPoint: { x: 0.4572, y: 0.2543 },
+    mapRegion: 'charter_corridor',
   },
   {
     id: 'drowned_ruins',

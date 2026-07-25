@@ -13,13 +13,10 @@ import {
   spousesOf,
 } from '../../engine/family';
 import type { FamilyNode } from '../../engine/family';
+import { cap } from '../../engine/types';
 import type { Dependant, GameState, Heritage } from '../../engine/types';
 import { pickDependantPortraitKey, portraitUrl } from '../portraits';
 import { Portrait } from './Portrait';
-
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 function peopleLabel(peoples: Heritage[]): string {
   if (peoples.length <= 2) return peoples.map(cap).join(' × ');

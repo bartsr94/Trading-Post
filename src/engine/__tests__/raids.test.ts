@@ -15,8 +15,10 @@ import {
   resolveOutgoingRaid,
   tributeFor,
 } from '../raids';
+import { advanceExpeditions } from '../expeditions';
 import { addResidents } from '../residents';
 import { Rng } from '../rng';
+import { thrallTotal } from '../thralls';
 import type { GameState, PendingIncomingRaid } from '../types';
 import { GOOD_IDS } from '../types';
 import { TEST_CONTENT, testState } from './helpers';
@@ -25,6 +27,7 @@ const RAID_CTX = {
   goodDefs: TEST_CONTENT.goodDefs,
   goodNames: TEST_CONTENT.goodNames,
   buildingNames: TEST_CONTENT.buildingNames,
+  locationDefs: TEST_CONTENT.locationDefs,
 };
 
 /** A hostile Beastfolk neighbour past the grace period — an eligible aggressor. */
@@ -277,6 +280,121 @@ describe('outgoing raid encounters', () => {
     expect(s.pendingRaid).toBeNull();
     expect(s.expeditions[0].leg).toBe('returning');
     expect(s.expeditions[0].turnsLeft).toBeGreaterThan(0);
+  });
+
+  // Two bugs fixed together (2026-07-24): the captured heritage used to be a
+  // faction-level coinflip that ignored which beastfolk camp was actually
+  // raided (goblin_wilds/"The Tangle" could yield 'orc'), and the heads were
+  // added to state.thralls immediately at battle resolution rather than at
+  // homecoming, unlike every other kind of raid loot.
+  it('an enslave raid tags thralls by the raided camp and only seats them on homecoming', () => {
+    function raidAndEnslave(destination: string, expectedHeritage: string) {
+      const s = testState(910);
+      for (const id of ['p1', 'p2']) {
+        const hero = s.heroes.find((h) => h.id === id)!;
+        hero.skills.combat = 5;
+        hero.skills.leadership = 5;
+        hero.skills.stealth = 5;
+        hero.stats.might = 5;
+        hero.stats.agility = 5;
+        hero.stats.resolve = 5;
+      }
+      const def = TEST_CONTENT.locationDefs.get(destination)!;
+      const expedition = {
+        id: 'exp_1',
+        kind: 'raid' as const,
+        destination,
+        target: def.mapPoint,
+        pace: 'normal' as const,
+        legTurns: 2,
+        heroIds: ['p1', 'p2'],
+        leg: 'outbound' as const,
+        turnsLeft: 0,
+        cargo: {},
+        silver: 0,
+        buyOrders: {},
+        residentEscort: { guards: 2 },
+        raidGoal: 'enslave' as const,
+        raidManeuver: 'skirmish' as const,
+        raidRally: true,
+      };
+      s.expeditions.push(expedition);
+      s.pendingRaid = createOutgoingRaid(s, expedition, def, new Rng(3));
+      expect(s.pendingRaid?.kind).toBe('outgoing');
+
+      const res = resolveOutgoingRaid(
+        s,
+        s.pendingRaid!,
+        { goal: 'enslave', maneuver: 'skirmish', rally: true },
+        new Rng(4),
+        RAID_CTX,
+      );
+      expect(res.outcome).toBe('enslaved');
+
+      // Captured, but not yet home: expedition holds the count/heritage,
+      // state.thralls is untouched, and the expedition is on its way back.
+      expect(s.expeditions[0].thrallsCaptured).toBeGreaterThan(0);
+      expect(s.expeditions[0].thrallsCapturedHeritage).toBe(expectedHeritage);
+      expect(thrallTotal(s)).toBe(0);
+      expect(s.expeditions[0].leg).toBe('returning');
+
+      const captured = s.expeditions[0].thrallsCaptured!;
+      const rng = new Rng(5);
+      while (s.expeditions.length > 0) advanceExpeditions(s, TEST_CONTENT, rng, () => undefined);
+
+      // Home now: state.thralls reflects the capture, tagged correctly.
+      expect(thrallTotal(s)).toBe(captured);
+      expect(s.thralls.tags[expectedHeritage]).toBe(captured);
+    }
+
+    // goblin_wilds ("The Tangle") must always yield goblin thralls, never a
+    // 50/50 orc/goblin coinflip — and beast_wilds ("The Gnawback Camp") orc.
+    raidAndEnslave('goblin_wilds', 'goblin');
+    raidAndEnslave('beast_wilds', 'orc');
+  });
+
+  it('an enslave raid on a seated faction location tags thralls by that seat, not the faction default', () => {
+    const s = testState(910);
+    for (const id of ['p1', 'p2']) {
+      const hero = s.heroes.find((h) => h.id === id)!;
+      hero.skills.combat = 5;
+      hero.skills.leadership = 5;
+      hero.skills.stealth = 5;
+      hero.stats.might = 5;
+      hero.stats.agility = 5;
+      hero.stats.resolve = 5;
+    }
+    const def = TEST_CONTENT.locationDefs.get('river_meet')!;
+    const expedition = {
+      id: 'exp_1',
+      kind: 'raid' as const,
+      destination: 'river_meet',
+      target: def.mapPoint,
+      pace: 'normal' as const,
+      legTurns: 2,
+      heroIds: ['p1', 'p2'],
+      leg: 'outbound' as const,
+      turnsLeft: 0,
+      cargo: {},
+      silver: 0,
+      buyOrders: {},
+      residentEscort: { guards: 2 },
+      raidGoal: 'enslave' as const,
+      raidManeuver: 'skirmish' as const,
+      raidRally: true,
+    };
+    s.expeditions.push(expedition);
+    s.pendingRaid = createOutgoingRaid(s, expedition, def, new Rng(3));
+
+    const res = resolveOutgoingRaid(
+      s,
+      s.pendingRaid!,
+      { goal: 'enslave', maneuver: 'skirmish', rally: true },
+      new Rng(4),
+      RAID_CTX,
+    );
+    expect(res.outcome).toBe('enslaved');
+    expect(s.expeditions[0].thrallsCapturedHeritage).toBe('kiswani');
   });
 });
 

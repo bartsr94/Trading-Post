@@ -22,6 +22,7 @@ import {
   RAID_SEVERITIES,
   RESIDENT_ROLES,
   TRANSIENT_KINDS,
+  cap,
   heritageGroup,
   livingHeroes,
 } from '../../engine/types';
@@ -53,10 +54,6 @@ const TRANSIENT_LABELS: Record<TransientKind, string> = {
   supplierCrew: 'Supplier Crew',
   beastfolkVisitors: 'Beastfolk Visitors',
 };
-
-function cap(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 
 export function CheatConsole({ game, onClose }: { game: GameState; onClose: () => void }) {
   const applyOutcomes = useGameStore((s) => s.applyCheatOutcomes);

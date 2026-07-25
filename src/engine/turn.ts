@@ -4,8 +4,8 @@
 
 import { TUNING } from '../content/tuning';
 import {
-  bestGoverningStat,
   checkBreakdown,
+  heroCheck,
   isSuccess,
   markSkill,
   resolveCheck,
@@ -632,16 +632,17 @@ function resolveActivity(
   switch (activity) {
     case 'trade': {
       const eco = TUNING.economy;
-      const stat = bestGoverningStat(hero, 'bargain');
-      const mods = traitModifiers(hero, ctx.traitDefs, 'bargain', ['trade']);
-      const check = resolveCheck(rng, hero, 'bargain', stat, eco.tradeCheckDifficulty, mods);
+      const check = heroCheck(rng, hero, ctx.traitDefs, {
+        skill: 'bargain',
+        difficulty: eco.tradeCheckDifficulty,
+        tags: ['trade'],
+      });
       const prosMult =
         1 + prosperity(state, ctx.goodDefs) * eco.prosperityTradeBonus +
         buildingEffect(state, 'tradeIncomeBonus');
       let income = 0;
       if (isSuccess(check.tier)) {
         income = Math.round(eco.tradeBaseIncome * prosMult + check.margin * eco.tradeMarginSilver);
-        markSkill(hero, 'bargain');
       } else if (check.tier === 'failure') {
         income = Math.round(
           eco.tradeBaseIncome * prosMult * eco.tradeFailureIncomeMultiplier,
@@ -653,13 +654,14 @@ function resolveActivity(
     }
     case 'provision': {
       const prov = TUNING.provision;
-      const stat = bestGoverningStat(hero, 'survival');
-      const mods = traitModifiers(hero, ctx.traitDefs, 'survival', ['hunting']);
-      const check = resolveCheck(rng, hero, 'survival', stat, prov.checkDifficulty, mods);
+      const check = heroCheck(rng, hero, ctx.traitDefs, {
+        skill: 'survival',
+        difficulty: prov.checkDifficulty,
+        tags: ['hunting'],
+      });
       let yieldGrain: number = prov.failureYield;
       if (check.tier === 'critSuccess') yieldGrain = prov.critYield;
       else if (check.tier === 'success') yieldGrain = prov.successYield;
-      if (isSuccess(check.tier)) markSkill(hero, 'survival');
       state.goods.grain += yieldGrain;
       report('🏹', `${hero.name} hunts and forages: ${checkBreakdown(check)}. +${yieldGrain} food.`);
       break;
@@ -690,15 +692,16 @@ function resolveActivity(
     }
     case 'diplomacy': {
       const dip = TUNING.diplomacy;
-      const stat = bestGoverningStat(hero, 'diplomacy');
-      const mods = traitModifiers(hero, ctx.traitDefs, 'diplomacy', ['diplomacy', 'CHARTER_COMPANY']);
-      const check = resolveCheck(rng, hero, 'diplomacy', stat, dip.atPostCheckDifficulty, mods);
+      const check = heroCheck(rng, hero, ctx.traitDefs, {
+        skill: 'diplomacy',
+        difficulty: dip.atPostCheckDifficulty,
+        tags: ['diplomacy', 'CHARTER_COMPANY'],
+      });
       let delta = 0;
       if (check.tier === 'critSuccess') delta = dip.atPostStandingGainCrit;
       else if (check.tier === 'success') delta = dip.atPostStandingGainSuccess;
       else if (check.tier === 'failure') delta = -dip.atPostStandingLossFailure;
       else delta = -dip.atPostStandingLossCritFailure;
-      if (isSuccess(check.tier)) markSkill(hero, 'diplomacy');
       const charterSeat = ctx.locationDefs.get('charter_landing');
       if (charterSeat) applyDiplomacyShift(state, ctx.locationDefs, charterSeat.id, delta);
       else {
@@ -718,12 +721,13 @@ function resolveActivity(
         report('🔨', `${hero.name} has no project to build — start one on the Post screen.`);
         break;
       }
-      const stat = bestGoverningStat(hero, 'craft');
-      const mods = traitModifiers(hero, ctx.traitDefs, 'craft', ['build']);
-      const check = resolveCheck(rng, hero, 'craft', stat, b.buildCheckDifficulty, mods);
+      const check = heroCheck(rng, hero, ctx.traitDefs, {
+        skill: 'craft',
+        difficulty: b.buildCheckDifficulty,
+        tags: ['build'],
+      });
       const gain = b.buildProgressYield[check.tier] ?? 0;
       addBuildProgress(state, gain);
-      if (isSuccess(check.tier)) markSkill(hero, 'craft');
       const name = ctx.buildingNames.get(state.construction.building) ?? state.construction.building;
       report('🔨', `${hero.name} works the ${name}: ${checkBreakdown(check)}. +${gain} progress.`);
       break;

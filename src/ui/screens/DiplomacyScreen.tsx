@@ -16,6 +16,7 @@ import { journeyTurns } from '../../engine/map';
 import { discoveryAtLeast, heroesAtPost, stanceOf } from '../../engine/types';
 import type { ExpeditionPace, GameState, GoodId } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
+import { clampInt } from '../inputs';
 
 type DiplomacyMissionChoice = 'talks' | 'gift' | 'alliance' | 'peace' | 'ransom' | 'thralls';
 
@@ -91,8 +92,7 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
   const setGiftQty = (good: GoodId, raw: string) => {
     setError(null);
     const held = game.goods[good] ?? 0;
-    const qty = Math.max(0, Math.min(held, Math.floor(Number(raw) || 0)));
-    setGiftGoods((current) => ({ ...current, [good]: qty }));
+    setGiftGoods((current) => ({ ...current, [good]: clampInt(raw, 0, held) }));
   };
 
   const send = () => {
@@ -226,7 +226,7 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
                       min={1}
                       value={companyThrallCount}
                       onChange={(event) =>
-                        setCompanyThrallCount(Math.max(1, Math.floor(Number(event.target.value) || 1)))
+                        setCompanyThrallCount(clampInt(event.target.value, 1))
                       }
                     />
                   </label>
@@ -298,7 +298,7 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
                       max={game.silver}
                       value={giftSilver}
                       onChange={(event) =>
-                        setGiftSilver(Math.max(0, Math.min(game.silver, Math.floor(Number(event.target.value) || 0))))
+                        setGiftSilver(clampInt(event.target.value, 0, game.silver))
                       }
                     />
                   </label>
@@ -329,7 +329,7 @@ export function DiplomacyScreen({ game }: { game: GameState }) {
                     min={1}
                     value={thrallCount}
                     onChange={(event) =>
-                      setThrallCount(Math.max(1, Math.floor(Number(event.target.value) || 1)))
+                      setThrallCount(clampInt(event.target.value, 1))
                     }
                   />
                   <span className="dim" style={{ fontSize: '0.75rem' }}>

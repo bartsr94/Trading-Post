@@ -196,6 +196,7 @@ function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
             goodDefs: TEST_CONTENT.goodDefs,
             goodNames: TEST_CONTENT.goodNames,
             buildingNames: TEST_CONTENT.buildingNames,
+            locationDefs: TEST_CONTENT.locationDefs,
           },
         );
       } else {
@@ -208,6 +209,7 @@ function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
             goodDefs: TEST_CONTENT.goodDefs,
             goodNames: TEST_CONTENT.goodNames,
             buildingNames: TEST_CONTENT.buildingNames,
+            locationDefs: TEST_CONTENT.locationDefs,
           },
         );
       }

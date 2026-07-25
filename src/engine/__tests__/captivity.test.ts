@@ -18,6 +18,7 @@ const RAID_CTX = {
   goodDefs: TEST_CONTENT.goodDefs,
   goodNames: TEST_CONTENT.goodNames,
   buildingNames: TEST_CONTENT.buildingNames,
+  locationDefs: TEST_CONTENT.locationDefs,
 };
 
 function withGenders(seed = 1): GameState {

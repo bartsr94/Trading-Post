@@ -189,8 +189,13 @@ cross-reference.
   `HeritageGroup` bucket without asking (a locked call — see §9).
 - **Beastfolk** (see `docs/GAME_FEATURES.md` §10): added as a near-total
   content-only extension of the existing Heritage/faction/family
-  machinery — no new engine mechanism. This is the pattern to follow for
-  any future non-human or non-seated people.
+  machinery. This is the pattern to follow for any future non-human or
+  non-seated people. A later pass split the single shared discovery node
+  into one camp per people (`beast_wilds`/`goblin_wilds`) and needed one
+  generic engine addition for it — `locationDiscoveryAny`, a `Condition`
+  true once any of several listed locations clears a discovery threshold —
+  the first "any of N locations" condition the engine has needed; reach for
+  it before inventing a second one.
 - **Chain events** (see `docs/GAME_FEATURES.md` §3): `EventPanel.tsx`/
   `advancePendingEvent` needed no change for `continueChain` since both
   already just operate on `pendingEvents[0]`. `ConditionContext` gained one
@@ -253,7 +258,20 @@ cross-reference.
   just don't re-derive these): `activeHeroesById`/`isActiveHeroId` (not a
   fresh copy of the "resolve ids to living active heroes" filter) and
   `clampStanding` (not a raw `clamp(x, -100, 100)`), both in `types.ts`.
-  Several enum-like unions are named `const` arrays with derived types
+  `types.ts` also holds the tiny shared string/number utils — `cap`,
+  `signed`, and the `isPositiveInt`/`isNonNegativeInt` input predicates
+  (reach for these instead of re-spelling `!Number.isFinite(x) ||
+  !Number.isInteger(x) || x < 1` or a local `s.charAt(0).toUpperCase()…`).
+  For a hero skill check, call `heroCheck(rng, hero, traitDefs, opts)` in
+  `checks.ts` (picks the governing stat, gathers trait mods, rolls, and
+  marks the skill on success) rather than hand-wiring
+  `bestGoverningStat`/`traitModifiers`/`resolveCheck`/`markSkill` again;
+  expedition arrivals use the `expeditionCheck` wrapper in `expeditions.ts`
+  that also folds in escort/pace mods. The one variant left hand-rolled on
+  purpose is the raid rally check (`raids.ts`) — no trait mods, never marks.
+  UI number inputs clamp through `clampInt(raw, min?, max?)` in
+  `ui/inputs.ts`. Several enum-like unions are named `const` arrays with
+  derived types
   (`AXIS_IDS`, `GENDERS`, `BLOODLINES`, `HERO_STATUSES`, `PHASES`,
   `GAME_OVER_KINDS`, `EXPEDITION_KINDS`/`_PACES`/`_LEGS`, `CHECK_TIERS` in
   `checks.ts`) so `saveValidation.ts` imports them instead of hand-copying —

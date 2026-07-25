@@ -3,7 +3,7 @@
 
 import { TUNING } from '../content/tuning';
 import { buildingEffect } from './buildings';
-import { clamp, seasonOfTurn } from './types';
+import { clamp, isPositiveInt, seasonOfTurn } from './types';
 import type { GameState, GoodId, LocationDef, MarketGoodState, Season } from './types';
 import type { Rng } from './rng';
 
@@ -83,7 +83,7 @@ export function prosperity(state: GameState, goodDefs: ReadonlyMap<GoodId, GoodD
 
 /** Buy at the post market. Returns false if silver is short. */
 export function buyGood(state: GameState, def: GoodDef, qty: number): boolean {
-  if (!Number.isFinite(qty) || !Number.isInteger(qty) || qty <= 0) return false;
+  if (!isPositiveInt(qty)) return false;
   const cost = priceOf(state, def) * qty;
   if (state.silver < cost) return false;
   state.silver -= cost;
@@ -93,7 +93,7 @@ export function buyGood(state: GameState, def: GoodDef, qty: number): boolean {
 
 /** Sell at the post market. Returns false if stock is short. */
 export function sellGood(state: GameState, def: GoodDef, qty: number): boolean {
-  if (!Number.isFinite(qty) || !Number.isInteger(qty) || qty <= 0) return false;
+  if (!isPositiveInt(qty)) return false;
   if (state.goods[def.id] < qty) return false;
   state.goods[def.id] -= qty;
   state.silver += priceOf(state, def) * qty;

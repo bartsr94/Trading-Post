@@ -369,6 +369,17 @@ export interface ExpeditionState {
   /** Headcount asked for on a `thralls`-mission envoy, set at dispatch
    *  (THRALLS_SPEC.md Acquisition §3). */
   thrallPurchaseCount?: number;
+  /**
+   * Thralls captured (an `enslave` raid) or purchased (a `thralls`-mission
+   * envoy), rolled at arrival — held on the expedition like `cargo`/`silver`
+   * and only added to `state.thralls` on homecoming (`resolveHomecoming`),
+   * not at arrival; lost with the rest of the haul if the party never makes
+   * it home. `thrallsCapturedHeritage` is omitted only if no heritage could
+   * be resolved (should not happen in practice — `targetHeritageFor`/the
+   * purchase mission's seat lookup always fall back to `'imanian'`).
+   */
+  thrallsCaptured?: number;
+  thrallsCapturedHeritage?: Heritage;
   /** Survey knowledge carried home by an exploration party. */
   surveyResult?: SurveyResult;
 }
@@ -964,4 +975,24 @@ export function clamp(value: number, min: number, max: number): number {
 /** Standing (faction/diplomacy-seat) is always bounded to this range. */
 export function clampStanding(value: number): number {
   return clamp(value, -100, 100);
+}
+
+/** A finite, whole number ≥ 1 (headcounts, asks, quantities that need one). */
+export function isPositiveInt(n: number): boolean {
+  return Number.isFinite(n) && Number.isInteger(n) && n >= 1;
+}
+
+/** A finite, whole number ≥ 0 (quantities that may legitimately be zero). */
+export function isNonNegativeInt(n: number): boolean {
+  return Number.isFinite(n) && Number.isInteger(n) && n >= 0;
+}
+
+/** Capitalizes the first letter — for turning ids/skills into display text. */
+export function cap(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/** Signed decimal string: `+3`, `-2`, `+0`. */
+export function signed(n: number): string {
+  return n >= 0 ? `+${n}` : `${n}`;
 }

@@ -33,7 +33,7 @@ import {
 import { addThralls, adjustRestiveness, loseThralls } from '../thralls';
 import { departCharacter, recruitCharacter } from '../roster';
 import { Rng } from '../rng';
-import { clamp, getHero, livingHeroes, nextDiscovery, oppositeGender } from '../types';
+import { clamp, getHero, livingHeroes, nextDiscovery, oppositeGender, signed } from '../types';
 import type {
   ActiveEvent,
   BuildingId,
@@ -70,6 +70,15 @@ export interface OutcomeContext {
   rng?: Rng;
 }
 
+/** The seat a community outcome targets: an explicit `location`, else the
+ *  first-contact seat, else the current expedition's destination. */
+function resolveOutcomeLocation(
+  outcome: { location?: LocationId },
+  ctx: OutcomeContext,
+): LocationId | undefined {
+  return outcome.location ?? ctx.locationId ?? ctx.expedition?.destination;
+}
+
 export function applyOutcomes(
   state: GameState,
   outcomes: readonly Outcome[],
@@ -99,7 +108,7 @@ export function applyOutcomes(
         break;
       }
       case 'communityStanding': {
-        const location = outcome.location ?? ctx.locationId ?? ctx.expedition?.destination;
+        const location = resolveOutcomeLocation(outcome, ctx);
         if (!location) break;
         const def = ctx.locationDefs.get(location);
         if (!def?.faction) break;
@@ -110,7 +119,7 @@ export function applyOutcomes(
         break;
       }
       case 'communityGrievance': {
-        const location = outcome.location ?? ctx.locationId ?? ctx.expedition?.destination;
+        const location = resolveOutcomeLocation(outcome, ctx);
         if (!location) break;
         const seat = diplomacySeatStateById(state, location);
         if (!seat) break;
@@ -122,7 +131,7 @@ export function applyOutcomes(
         break;
       }
       case 'communityPact': {
-        const location = outcome.location ?? ctx.locationId ?? ctx.expedition?.destination;
+        const location = resolveOutcomeLocation(outcome, ctx);
         if (!location) break;
         const seat = diplomacySeatStateById(state, location);
         if (!seat) break;
@@ -538,8 +547,4 @@ export function applyOutcomes(
   }
 
   return log;
-}
-
-function signed(n: number): string {
-  return n >= 0 ? `+${n}` : `${n}`;
 }
