@@ -174,7 +174,10 @@ export type Outcome =
    *  (CHAIN_EVENTS_SPEC.md §3), read back later via the `chainVar` condition. */
   | { type: 'setChainVar'; key: string; value: ChainVarValue }
   | { type: 'setFlag'; flag: string; value?: boolean }
-  | { type: 'priceShock'; good: GoodId; mod: number }
+  /** Push a market price shock (TRADING_ECONOMY_SPEC §3c). `lead` turns of
+   *  rumor (no price effect) precede `duration` turns of the live `mod` on
+   *  eventMod at `location`'s market. Generalizes the old post-only priceShock. */
+  | { type: 'marketShock'; location: LocationId; good: GoodId; mod: number; lead?: number; duration: number }
   | {
       type: 'addResidents';
       role: ResidentRole | 'idle';

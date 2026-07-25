@@ -148,6 +148,12 @@ export function migrate(save: GameState, ctx?: MigrationContext): GameState {
       case 24:
         current = migrateV24toV25(current);
         break;
+      case 25:
+        current = migrateV25toV26(current);
+        break;
+      case 26:
+        current = migrateV26toV27(current);
+        break;
       default:
         throw new Error(`No migration path from save version ${current.saveVersion}.`);
     }
@@ -617,6 +623,29 @@ function migrateV24toV25(save: GameState): GameState {
     ...save,
     saveVersion: 25,
     thralls: freshThralls(),
+  };
+}
+
+/** v26 adds the price-intel layer (TRADING_ECONOMY_SPEC §4): an optional
+ *  per-market `priceIntel` observation record on each `LocationState`. No old
+ *  save ever observed a price, so every location simply leaves it absent —
+ *  undefined is the honest "never seen" value, no backfill needed. */
+function migrateV25toV26(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 26,
+  };
+}
+
+/** v27 adds telegraphed market shocks (TRADING_ECONOMY_SPEC §3c): a new
+ *  `marketShocks` list, empty on every old save since nothing before this could
+ *  hold one. eventMod is now owned by resolveShocks, so any stray non-1 eventMod
+ *  a shock-less old save carries self-corrects on the first turn. */
+function migrateV26toV27(save: GameState): GameState {
+  return {
+    ...save,
+    saveVersion: 27,
+    marketShocks: [],
   };
 }
 

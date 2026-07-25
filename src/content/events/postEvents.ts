@@ -12,7 +12,7 @@ export const POST_EVENTS: GameEvent[] = [
     text: 'The timber is cut and stacked, the storehouse holds, and there is coin enough in the strongbox at last. What stands now is a clearing with walls half-imagined; what could stand by first frost is a Post — gated, named, marked on the maps that matter. {hero} paces the line where the wall will run, and the work wants a hand that knows how timber and tired people are made to hold together.',
     conditions: [{ type: 'canAdvanceTier' }],
     weight: 40,
-    cooldownTurns: 4,
+    cooldownTurns: 2,
     binding: { type: 'highestSkill', skill: 'leadership' },
     choices: [
       {
@@ -65,7 +65,7 @@ export const POST_EVENTS: GameEvent[] = [
     text: "The trade hall does steady business, the workshop's forge never quite goes cold, and the common house is loud most nights with people who no longer sleep in tents. This is not a Post anymore — not really. It wants a charter, a proper name on the Company's ledgers, and someone willing to stand behind both. {hero} has the standing to make the case.",
     conditions: [{ type: 'canAdvanceTier' }],
     weight: 40,
-    cooldownTurns: 4,
+    cooldownTurns: 2,
     binding: { type: 'highestSkill', skill: 'leadership' },
     factions: ['CHARTER_COMPANY'],
     choices: [
@@ -123,7 +123,7 @@ export const POST_EVENTS: GameEvent[] = [
     text: 'Three days of rain, and on the fourth {hero} finds water running under the stockpile tarps. The grain sacks on the bottom are darkening. Everything you own sits under canvas and prayer — and the sky has more to give.',
     conditions: [{ type: 'goodAtLeast', good: 'grain', qty: 5 }],
     weight: 10,
-    cooldownTurns: 8,
+    cooldownTurns: 4,
     binding: { type: 'highestSkill', skill: 'craft' },
     choices: [
       {
@@ -177,7 +177,7 @@ export const POST_EVENTS: GameEvent[] = [
     text: 'Four canoes ground on the mud below the post, low in the water with bales of winter furs. Njaro-Matu has decided you are worth a look. Their trade-speaker waits at the fire, studying your tents, your goods, your faces — pricing all of it.',
     conditions: [{ type: 'communityStandingAtMost', location: 'river_meet', value: 80 }],
     weight: 12,
-    cooldownTurns: 5,
+    cooldownTurns: 3,
     binding: { type: 'highestSkill', skill: 'bargain' },
     factions: ['RIVER_CLANS'],
     peoples: ['kiswani'],
@@ -252,7 +252,7 @@ export const POST_EVENTS: GameEvent[] = [
     text: 'The dogs will not settle. Out past the woodpile, green eyes catch the firelight — a wolf pack, bold with hunger, drawn by your smokehouse and your horses. Tonight they watch. Tomorrow they will try something. {hero} already has a spear in hand.',
     conditions: [],
     weight: 8,
-    cooldownTurns: 8,
+    cooldownTurns: 4,
     binding: { type: 'highestSkill', skill: 'combat' },
     choices: [
       {
@@ -306,9 +306,9 @@ export const POST_EVENTS: GameEvent[] = [
     illustration: 'wax_seal',
     title: 'A Letter Under Seal',
     text: 'A boat up from Thornwatch leaves mail: one letter, heavy paper, the Ansberry Company’s seal in blue wax. The Directors "note with interest" your establishment and "anticipate the first remittance of proceeds." Between the courtesies sits a blade: they are counting weeks. {hero} reads it twice and sets it down carefully.',
-    conditions: [{ type: 'minTurn', value: 3 }],
+    conditions: [{ type: 'minTurn', value: 2 }],
     weight: 10,
-    cooldownTurns: 7,
+    cooldownTurns: 4,
     binding: { type: 'highestSkill', skill: 'diplomacy' },
     factions: ['CHARTER_COMPANY'],
     loreRef: ['Ansberry Company.md'],
@@ -525,9 +525,9 @@ export const POST_EVENTS: GameEvent[] = [
     illustration: 'sickbed',
     title: 'Marsh Fever',
     text: 'It starts with the youngest laborer shivering at midday, and by week’s end half the post moves like sleepwalkers — the sweating sickness the rivermen warned about. The homeland remedies do nothing. {hero} has the best chance of finding what will.',
-    conditions: [{ type: 'minTurn', value: 2 }],
+    conditions: [{ type: 'minTurn', value: 1 }],
     weight: 7,
-    cooldownTurns: 10,
+    cooldownTurns: 5,
     binding: { type: 'highestSkill', skill: 'lore' },
     factions: ['RIVER_CLANS'],
     peoples: ['kiswani'],
@@ -586,9 +586,9 @@ export const POST_EVENTS: GameEvent[] = [
     illustration: 'night_fire',
     title: 'Fire in the Night',
     text: 'A shout, then the bell. A cook-fire ember has found the woodpile, and the woodpile leans against the store tent. Flame climbs faster than thought. The whole post is a ring of running shadows and thrown water, and {hero} is closest to the burning canvas.',
-    conditions: [{ type: 'minTurn', value: 2 }],
+    conditions: [{ type: 'minTurn', value: 1 }],
     weight: 6,
-    cooldownTurns: 10,
+    cooldownTurns: 5,
     binding: { type: 'highestStat', stat: 'might' },
     choices: [
       {
@@ -632,11 +632,11 @@ export const POST_EVENTS: GameEvent[] = [
     title: 'A Crew Passing Through',
     text: 'A supplier crew out of Thornwatch makes camp at your gate — a dozen weathered hands with pack-frames and a foreman who reads a ledger by firelight. They are bound downriver, but their contract is loose and their backs are for hire. If you feed them a few nights, {hero} is told, they will haul whatever you need hauled while they linger.',
     conditions: [
-      { type: 'minTurn', value: 3 },
+      { type: 'minTurn', value: 2 },
       { type: 'silverAtLeast', value: 30 },
     ],
     weight: 8,
-    cooldownTurns: 10,
+    cooldownTurns: 5,
     binding: { type: 'highestSkill', skill: 'bargain' },
     choices: [
       {
@@ -647,21 +647,21 @@ export const POST_EVENTS: GameEvent[] = [
             text: '{hero} talks them into a full week and a fair price. The foreman shakes on it and puts his whole crew at your disposal — anything that leaves the post leaves heavier and comes back fuller.',
             outcomes: [
               { type: 'silver', delta: -8 },
-              { type: 'addTransient', kind: 'supplierCrew', count: 3, turns: 4 },
+              { type: 'addTransient', kind: 'supplierCrew', count: 3, turns: 2 },
             ],
           },
           success: {
             text: 'A few nights of board and a handful of silver, and the crew agrees to lend their backs to your caravans before they move on.',
             outcomes: [
               { type: 'silver', delta: -12 },
-              { type: 'addTransient', kind: 'supplierCrew', count: 2, turns: 3 },
+              { type: 'addTransient', kind: 'supplierCrew', count: 2, turns: 2 },
             ],
           },
           failure: {
             text: 'The foreman drives a hard bargain and {hero} pays more than the help is worth. Still, extra hands are extra hands, for the little while they stay.',
             outcomes: [
               { type: 'silver', delta: -20 },
-              { type: 'addTransient', kind: 'supplierCrew', count: 1, turns: 2 },
+              { type: 'addTransient', kind: 'supplierCrew', count: 1, turns: 1 },
             ],
           },
         },

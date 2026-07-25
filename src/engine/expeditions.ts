@@ -16,7 +16,7 @@ import {
   setDiplomacyPact,
 } from './diplomacy';
 import type { TravelContext } from './events/types';
-import { priceAt } from './economy';
+import { priceAt, recordPriceIntel } from './economy';
 import type { GoodDef } from './economy';
 import { addClaim } from './claim';
 import { buildingEffect } from './buildings';
@@ -682,6 +682,9 @@ export function advanceExpeditions(
         exp.turnsLeft = Math.max(1, exp.legTurns);
         continue;
       } else if (exp.kind === 'courtship' && def) resolveCourtshipArrival(state, exp, def, report);
+      // Any party that reaches a market sees its prices — record intel for the
+      // Ledger (TRADING_ECONOMY_SPEC §4), whatever the errand.
+      if (def?.hasMarket) recordPriceIntel(state, def, ctx.goodDefs);
       exp.leg = 'returning';
       exp.turnsLeft = Math.max(1, exp.legTurns);
     } else {

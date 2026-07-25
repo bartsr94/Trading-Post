@@ -494,7 +494,7 @@ describe('coming of age', () => {
       rand: () => rng.next(),
     })!;
     child.bornTurn = 0;
-    s.turn = TUNING.family.comeOfAgeTurns; // old enough, and a season end (48 % 6 === 0)
+    s.turn = TUNING.family.comeOfAgeTurns; // old enough, and a season end (24 % 3 === 0)
     s.phase = 'report';
     const lines = advanceTurn(s);
     expect(s.dependants.find((d) => d.id === child.id)!.kind).toBe('kin');

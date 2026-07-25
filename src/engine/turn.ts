@@ -25,7 +25,7 @@ import {
   wildlandTrickle,
 } from './claim';
 import { applyDiplomacyShift } from './diplomacy';
-import { driftMarket, priceOf, prosperity } from './economy';
+import { driftMarket, priceOf, prosperity, resolveShocks } from './economy';
 import type { GoodDef } from './economy';
 import { advanceExpeditions, travelContextFor } from './expeditions';
 import { createIncomingRaid, raidChance, raidEligible } from './raids';
@@ -135,8 +135,9 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   state.report = { turn: state.turn, lines: [], silverDelta: 0, goodsDelta: {} };
   const report = (icon: string, text: string) => state.report.lines.push({ icon, text });
 
-  // 1. Economy tick: price drift, then food + upkeep + the Charter quota.
+  // 1. Economy tick: price drift + shocks, then food + upkeep + the Charter quota.
   driftMarket(state, rng);
+  resolveShocks(state);
   const missedFood = payUpkeep(state, ctx, report);
   settleTributes(state, ctx, report);
 

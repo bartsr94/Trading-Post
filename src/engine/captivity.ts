@@ -52,7 +52,7 @@ export function maybeQueueKinArrival(
   if (rng.next() >= a.familyArrivalChance) return;
   state.queuedEvents.push({
     eventId: 'captive_kin_arrival',
-    fireOnTurn: state.turn + 6 + rng.int(0, 6),
+    fireOnTurn: state.turn + 3 + rng.int(0, 3),
     heroId: hero.id,
     vars: { faction, captorHeritage: captorHeritageFor(faction, rng) },
   });

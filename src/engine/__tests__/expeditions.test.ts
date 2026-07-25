@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TUNING } from '../../content/tuning';
 import { MAP_REGIONS } from '../../content/map';
 import { regionAt, validMapPoint } from '../map';
-import { priceAt, priceOf } from '../economy';
+import { buyGood, priceAt, priceOf } from '../economy';
 import { advanceExpeditions, dispatchError, dispatchExpedition } from '../expeditions';
 import { selectEvents } from '../events/selection';
 import { resolveOutgoingRaid, tributeFor } from '../raids';
@@ -153,6 +153,42 @@ describe('expedition lifecycle', () => {
     expect(s.expeditions).toHaveLength(0);
     expect(s.silver).toBeGreaterThan(before);
     expect(heroesAtPost(s).map((h) => h.id)).toContain('p1');
+  });
+
+  // TRADING_ECONOMY_SPEC §6: a full, informed run should clear the opportunity
+  // cost of parking two heroes on at-post trade (~144 silver over ~6 turns) with
+  // room to spare — "strong side income", not a windfall and not a wash. Buying
+  // furs at the neutral post and selling them at Thornwatch (furs bias 1.6) is
+  // the canonical route the structural pass is meant to create.
+  it('a stocked furs run to a high-demand Company market clears a healthy profit', () => {
+    const furs = TEST_CONTENT.goodDefs.get('furs')!;
+    const cargo = 40; // 2 heroes × cargoCapacityPerHero(20)
+    const runs = 8;
+    let totalNet = 0;
+    for (let seed = 1; seed <= runs; seed++) {
+      const s = testState(seed);
+      s.silver = 3000;
+      const before = s.silver;
+      expect(buyGood(s, furs, cargo)).toBe(true);
+      expect(
+        dispatchExpedition(
+          s,
+          { kind: 'caravan', destination: 'charter_landing', heroIds: ['p1', 'p2'], cargo: { furs: cargo } },
+          DEFS,
+        ),
+      ).toBe(true);
+      const rng = new Rng(seed * 13 + 1);
+      let guard = 0;
+      while (s.expeditions.length > 0 && guard++ < 60) {
+        advanceExpeditions(s, TEST_CONTENT, rng, () => undefined);
+      }
+      const net = s.silver - before;
+      expect(net).toBeGreaterThan(0); // every run turns a profit on this route
+      // The arrival recorded live prices into the Ledger's intel.
+      expect(s.locations.charter_landing.priceIntel?.furs).toBeDefined();
+      totalNet += net;
+    }
+    expect(totalNet / runs).toBeGreaterThan(150);
   });
 
   it('explore commits spatial survey and place discovery on homecoming', () => {

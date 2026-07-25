@@ -40,6 +40,40 @@ describe('saves', () => {
     expect(() => deserialize(JSON.stringify(withBadVars))).toThrow(/vars/);
   });
 
+  it('round-trips price intel and market shocks', () => {
+    const s = testState(2024);
+    s.locations.river_meet.priceIntel = {
+      furs: { price: 8, turnSeen: 3 },
+      salt: { price: 11, turnSeen: 5 },
+    };
+    s.marketShocks = [
+      { locationId: 'charter_landing', goodId: 'salt', mod: 1.8, leadLeft: 2, turnsLeft: 5 },
+      { locationId: 'river_meet', goodId: 'herbs', mod: 0.5, leadLeft: 0, turnsLeft: 3 },
+    ];
+    const restored = deserialize(serialize(s));
+    expect(restored).toEqual(s);
+  });
+
+  it('rejects a market shock naming an unknown good', () => {
+    const bad = JSON.parse(serialize(testState())) as Record<string, unknown>;
+    (bad.marketShocks as unknown[]).push({
+      locationId: 'river_meet',
+      goodId: 'unobtainium',
+      mod: 1.5,
+      leadLeft: 0,
+      turnsLeft: 2,
+    });
+    expect(() => deserialize(JSON.stringify(bad))).toThrow(/good/);
+  });
+
+  it('rejects a price observation with a non-integer turn seen', () => {
+    const bad = JSON.parse(serialize(testState())) as {
+      locations: Record<string, { priceIntel?: unknown }>;
+    };
+    bad.locations.river_meet.priceIntel = { furs: { price: 8, turnSeen: 1.5 } };
+    expect(() => deserialize(JSON.stringify(bad))).toThrow(/turnSeen/);
+  });
+
   it('rejects garbage', () => {
     expect(() => deserialize('{"hello":"world"}')).toThrow();
     expect(() => deserialize('not json')).toThrow();
@@ -102,7 +136,7 @@ describe('saves', () => {
     v1.silver = 123;
 
     const migrated = deserialize(JSON.stringify(v1), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.silver).toBe(123);
     expect(migrated.expeditions).toEqual([]);
     expect(migrated.locations.river_meet.discovery).toBe('visited');
@@ -137,7 +171,7 @@ describe('saves', () => {
     v2.silver = 77;
 
     const migrated = deserialize(JSON.stringify(v2), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.silver).toBe(77);
     expect(migrated.charterMissedStreak).toBe(0);
     expect(migrated.residents.contentment).toBeGreaterThan(0);
@@ -157,7 +191,7 @@ describe('saves', () => {
     v3.silver = 88;
 
     const migrated = deserialize(JSON.stringify(v3), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.silver).toBe(88);
     expect(migrated.residents.idle).toBe(0);
     expect(migrated.nextTransientId).toBe(1);
@@ -174,7 +208,7 @@ describe('saves', () => {
     v4.silver = 99;
 
     const migrated = deserialize(JSON.stringify(v4), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.silver).toBe(99);
     expect(migrated.activePartyIds).toEqual(migrated.heroes.map((h) => h.id));
     expect(migrated.dependants).toEqual([]);
@@ -189,7 +223,7 @@ describe('saves', () => {
     v5.silver = 111;
 
     const migrated = deserialize(JSON.stringify(v5), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.silver).toBe(111);
     expect(migrated.buildings).toEqual([]);
     expect(migrated.construction).toBeNull();
@@ -216,7 +250,7 @@ describe('saves', () => {
       locationDefs: TEST_LOCATIONS,
       heroHeritage,
     });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.axes.culture).toBe(0);
     expect(migrated.charterCompromisedStreak).toBe(0);
     // Pre-feature residents are treated as homeland founders.
@@ -247,7 +281,7 @@ describe('saves', () => {
       locationDefs: TEST_LOCATIONS,
       heroGender,
     });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.nextCharacterId).toBe(1);
     // Gender from the injected map; unknown ids default to male.
     expect(migrated.heroes.find((h) => h.id === 'p2')!.gender).toBe('female');
@@ -284,7 +318,7 @@ describe('saves', () => {
     ];
 
     const migrated = deserialize(JSON.stringify(v8), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     // Knights of Saint Eirwen seeded neutral.
     expect(migrated.factions.KNIGHTS_EIRWEN.standing).toBe(0);
     // Dustwalker folds into the Hanjoda people; the tribe survives as subPeople.
@@ -309,7 +343,7 @@ describe('saves', () => {
     residents.tags = ['kiswani', 'orc'];
 
     const migrated = deserialize(JSON.stringify(v10), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.residents.tags).toEqual({ kiswani: 1, orc: 1 });
   });
 
@@ -333,7 +367,7 @@ describe('saves', () => {
       mapRegionDefs: MAP_REGIONS,
       mapFeatureDefs: MAP_FEATURES,
     });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.mapKnowledge.surveyedCells.length).toBeGreaterThan(0);
     expect(migrated.expeditions[0].target).toEqual(LOCATION_DEFS.get('river_meet')!.mapPoint);
     expect(migrated.expeditions[0].pace).toBe('normal');
@@ -351,7 +385,7 @@ describe('saves', () => {
       mapRegionDefs: MAP_REGIONS,
       mapFeatureDefs: MAP_FEATURES,
     });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.locations.shackle_station.discovery).toBe('known');
     expect(migrated.mapKnowledge.surveyedCells.length).toBeGreaterThan(0);
   });
@@ -362,7 +396,7 @@ describe('saves', () => {
     delete (v14 as Partial<GameState>).tributes;
 
     const migrated = deserialize(JSON.stringify(v14), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.tributes).toEqual([]);
   });
 
@@ -376,7 +410,7 @@ describe('saves', () => {
       mapRegionDefs: MAP_REGIONS,
       mapFeatureDefs: MAP_FEATURES,
     });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.mapKnowledge.surveyedCells).toContain(mapCellIndex({ x: 0.9, y: 0.4 }));
     expect(migrated.mapKnowledge.surveyedCells).not.toContain(mapCellIndex({ x: 0.25, y: 0.4 }));
   });
@@ -398,7 +432,7 @@ describe('saves', () => {
       mapRegionDefs: MAP_REGIONS,
       mapFeatureDefs: MAP_FEATURES,
     });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.mapKnowledge.surveyedCells).not.toContain(mapCellIndex({ x: 0.5, y: 0.1 }));
     expect(migrated.mapKnowledge.surveyedCells).toContain(mapCellIndex({ x: 0.9, y: 0.4 }));
   });
@@ -416,7 +450,7 @@ describe('saves', () => {
     };
 
     const migrated = deserialize(JSON.stringify(v15), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.pendingRaid).toEqual({
       kind: 'incoming',
       faction: 'BEASTFOLK',
@@ -433,7 +467,7 @@ describe('saves', () => {
     v21.saveVersion = 21;
 
     const migrated = migrate(v21 as unknown as GameState);
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     // No pre-v22 save ever had spouseIds — nothing to backfill.
     expect(migrated.heroes.every((h) => h.spouseIds === undefined)).toBe(true);
   });
@@ -443,7 +477,7 @@ describe('saves', () => {
     v22.saveVersion = 22;
 
     const migrated = migrate(v22 as unknown as GameState);
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     // No pre-v23 save ever had a captive hero — nothing to backfill.
     expect(migrated.heroes.every((h) => h.captivity === undefined && h.status !== 'captive')).toBe(
       true,
@@ -456,7 +490,7 @@ describe('saves', () => {
     delete (v23.residents as Record<string, unknown>).friction;
 
     const migrated = migrate(v23 as unknown as GameState);
-    expect(migrated.saveVersion).toBe(25);
+    expect(migrated.saveVersion).toBe(27);
     expect(migrated.residents.friction).toEqual({});
   });
 

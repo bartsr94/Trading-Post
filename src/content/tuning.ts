@@ -5,7 +5,7 @@ import type { BuildingDefData, FactionId, Heritage, TierRequirement } from '../e
 
 export const TUNING = {
   save: {
-    version: 25,
+    version: 27,
     autosaveKey: 'trading-post-save',
     /** Manual import guard; current saves are far smaller than five MiB. */
     maxImportBytes: 5 * 1024 * 1024,
@@ -29,8 +29,8 @@ export const TUNING = {
   },
 
   time: {
-    turnsPerSeason: 6,
-    turnsPerYear: 24,
+    turnsPerSeason: 3,
+    turnsPerYear: 12,
   },
 
   checks: {
@@ -58,18 +58,22 @@ export const TUNING = {
     grainPerHeroPerTurn: 1,
     /** Silver upkeep per turn for the post itself (tier 1). */
     postUpkeepSilver: 4,
-    /** Turns of unpaid upkeep before the post goes under. */
-    bankruptcyTurns: 3,
+    /** Turns of unpaid upkeep before the post goes under. Halved alongside
+     *  turnsPerYear (TURN_CADENCE_SPEC.md §4.2) to keep the same fictional
+     *  grace period — already a tight window, so this makes recovery
+     *  meaningfully harder in turn-count terms; revisit if it plays too harsh. */
+    bankruptcyTurns: 2,
     /** Stress added to every hero on a missed-upkeep turn. */
     missedUpkeepStress: 2,
-    /** Supply/demand random-walk band and step. */
-    supplyDemandMin: 0.6,
-    supplyDemandMax: 1.6,
+    /** Supply/demand drift band, step, and mean-reversion pull toward 1.0.
+     *  Reversion keeps structural priceBias spreads (TRADING_ECONOMY_SPEC §3b)
+     *  the dominant long-run signal, so this layer is short-run texture and the
+     *  band is deliberately narrow — the big swings come from shocks, not here. */
+    supplyDemandMin: 0.75,
+    supplyDemandMax: 1.35,
     supplyDemandStep: 0.1,
-    /** Event price modifiers decay toward 1 by this factor each turn. */
-    eventModDecay: 0.5,
-    /** Snap a nearly-decayed event modifier back to exactly 1 inside this distance. */
-    eventModSnapThreshold: 0.05,
+    /** Fraction of the gap to 1.0 that supplyDemandMod closes each turn. */
+    supplyDemandReversion: 0.25,
     /** Trade assignment: base silver income before prosperity and margin. */
     tradeBaseIncome: 12,
     tradeCheckDifficulty: 10,
@@ -96,7 +100,7 @@ export const TUNING = {
     /** Events fired per turn: always at least min, at most max (travel events are extra). */
     minPerTurn: 1,
     maxPerTurn: 2,
-    defaultCooldown: 6,
+    defaultCooldown: 3,
     /** Chance per expedition per en-route turn that a travel event fires. */
     travelEventChance: 0.5,
   },
@@ -110,11 +114,13 @@ export const TUNING = {
     cargoCapacityPerHero: 20,
     /** Arrival Bargain check at a destination market. */
     caravanCheckDifficulty: 10,
-    /** Sale/purchase price swing per point of check margin (1 ± margin × this). */
-    caravanMarginRate: 0.02,
+    /** Sale/purchase price swing per point of check margin (1 ± margin × this).
+     *  Steep enough that a skilled Bargain hero (margin ~10) noticeably beats a
+     *  poor one and an exceptional roll reaches the cap (TRADING_ECONOMY_SPEC §5). */
+    caravanMarginRate: 0.03,
     /** Best/worst price multiplier from the arrival check. */
-    caravanPriceMultMax: 1.3,
-    caravanPriceMultMin: 0.75,
+    caravanPriceMultMax: 1.5,
+    caravanPriceMultMin: 0.7,
     /** Standing gained with a faction whose seat hosts a successful trade. */
     caravanStandingGain: 1,
     /** Explore progress check at the destination. */
@@ -231,8 +237,11 @@ export const TUNING = {
     startingRoles: { farmers: 2, guards: 2 } as Partial<Record<string, number>>,
     /** Grain eaten per resident per turn (heroes eat separately). */
     grainPerResidentPerTurn: 1,
-    /** Silver wage per resident, paid at each season end (Charter cadence). */
-    seasonWagePerResident: 6,
+    /** Silver wage per resident, paid at each season end (Charter cadence).
+     *  Halved alongside turnsPerSeason (6→3, TURN_CADENCE_SPEC.md §4.1) —
+     *  season end now falls twice as often per year, so halving keeps the
+     *  annual total unchanged. */
+    seasonWagePerResident: 3,
     contentment: {
       start: 7,
       min: 0,
@@ -277,7 +286,10 @@ export const TUNING = {
     axisGrowth: {
       integrationThreshold: 4,
       communalThreshold: 4,
-      /** Residents added per qualifying axis at each season end. */
+      /** Residents added per qualifying axis at each season end. Not halved
+       *  with the other season-end constants (TURN_CADENCE_SPEC.md §4.1) —
+       *  already at the smallest meaningful unit (1 resident); left as-is,
+       *  so this one source of organic arrivals doubles per year. */
       arrivalsPerSeason: 1,
     },
     /** Transient outsiders (Phase B): live effects + engine-spawn parameters. */
@@ -296,7 +308,7 @@ export const TUNING = {
       >,
       /** A faction honour-guard that rides back with a successful envoy. */
       visitorGuardCount: 3,
-      visitorGuardTurns: 3,
+      visitorGuardTurns: 2,
       /** Inspectors posted (indefinitely) while the Charter quota goes unmet. */
       companyAgentCount: 1,
     },
@@ -362,8 +374,11 @@ export const TUNING = {
      *  of acquisition channel (THRALLS_SPEC.md's "Standing / Company judgment"
      *  lever) — deliberately not tracked per-origin-faction. */
     holding: {
-      nativeStandingLossPerSeason: 1,
-      cultureNudgePerSeason: 1,
+      // Halved alongside turnsPerSeason (TURN_CADENCE_SPEC.md §4.1) — season
+      // end now falls twice as often per year, so halving keeps the annual
+      // holding cost unchanged.
+      nativeStandingLossPerSeason: 0.5,
+      cultureNudgePerSeason: 0.5,
       nativeFactions: ['RIVER_CLANS', 'HILL_TRIBES', 'OLD_PEOPLE', 'BEASTFOLK'] as FactionId[],
     },
     /** Freeing thralls back into free residents — the counter-play to holding. */
@@ -600,8 +615,11 @@ export const TUNING = {
   },
 
   charter: {
-    /** Silver shipment the Company expects every season end (spec §8). */
-    quotaSilver: 120,
+    /** Silver shipment the Company expects every season end (spec §8).
+     *  Halved alongside turnsPerSeason (TURN_CADENCE_SPEC.md §4.1) — season
+     *  end now falls twice as often per year, so halving keeps the annual
+     *  quota unchanged. */
+    quotaSilver: 60,
     /** Standing lost on a missed quota, before streak escalation. */
     standingLossPerMiss: 8,
     /** Multiplies the standing loss for each additional consecutive miss. */
@@ -644,8 +662,11 @@ export const TUNING = {
     hireAxisNudge: 0.4,
 
     // Axis drift (season end)
-    /** Max culture step toward the tally-implied target each season. */
-    axisDriftPerSeason: 1,
+    /** Max culture step toward the tally-implied target each season. Halved
+     *  alongside turnsPerSeason (TURN_CADENCE_SPEC.md §4.1) — season end now
+     *  falls twice as often per year, so halving keeps the annual drift cap
+     *  unchanged. */
+    axisDriftPerSeason: 0.5,
     /** Minimum absolute culture drift worth calling out in the turn report. */
     axisDriftReportThreshold: 0.5,
     /** culture ≥ this → native settlers drift in via applyAxisArrivals. */
@@ -658,10 +679,13 @@ export const TUNING = {
     compromiseThreshold: 5,
     /** culture ≤ this reads as "loyal". */
     loyalThreshold: -5,
-    /** Standing lost per point past compromiseThreshold, per season. */
-    compromiseStandingLoss: 1.5,
-    /** Standing gained per season while loyal. */
-    loyalStandingGain: 2,
+    /** Standing lost per point past compromiseThreshold, per season. Halved
+     *  alongside turnsPerSeason (TURN_CADENCE_SPEC.md §4.1) — season end now
+     *  falls twice as often per year, so halving keeps the annual total
+     *  unchanged. */
+    compromiseStandingLoss: 0.75,
+    /** Standing gained per season while loyal. Halved for the same reason. */
+    loyalStandingGain: 1,
     /** Compromised-AND-hostile seasons before the charter is revoked. */
     revokeStreak: 3,
 
@@ -670,8 +694,11 @@ export const TUNING = {
     partyLoyalShare: 0.6,
     /** CHARTER_COMPANY gain + compromise-loss dampener from a loyal party. */
     partyReassureStanding: 2,
-    /** Standing a mixed party earns with each non-hostile native faction. */
-    nativeRelationsGainPerSeason: 1,
+    /** Standing a mixed party earns with each non-hostile native faction.
+     *  Halved alongside turnsPerSeason (TURN_CADENCE_SPEC.md §4.1) — season
+     *  end now falls twice as often per year, so halving keeps the annual
+     *  total unchanged. */
+    nativeRelationsGainPerSeason: 0.5,
   },
 
   // Marriage, partners, children & the family line (FAMILY_SPEC.md §13). All
@@ -697,8 +724,8 @@ export const TUNING = {
     unionCultureNudge: { homeland: -2, alliance: 2, informal: 1, party: 0 } as Record<string, number>,
 
     // Children & the line (Phase B)
-    /** Turns from bornTurn to coming of age (2 years at 24 turns/yr). */
-    comeOfAgeTurns: 48,
+    /** Turns from bornTurn to coming of age (2 years at 12 turns/yr). */
+    comeOfAgeTurns: 24,
     /** Soft cap on one union's children; the post-wide count stays uncapped. */
     maxChildrenPerUnion: 4,
     /** Odds a coming-of-age child is offered as a named recruit rather than grown kin. */
@@ -720,10 +747,10 @@ export const TUNING = {
   raid: {
     // --- The notoriety arc: when raids become possible (RAIDING_SPEC.md §6) ---
     /** No incoming raid may trigger before this turn — the post is too new to
-     *  be a known target (24 turns/yr, so ~1.5 years of grace). */
-    graceTurns: 36,
+     *  be a known target (12 turns/yr, so ~1.5 years of grace). */
+    graceTurns: 18,
     /** Minimum turns between incoming raids, so they stay a periodic threat. */
-    minTurnsBetweenRaids: 8,
+    minTurnsBetweenRaids: 4,
     /** A faction at/below this standing is an eligible aggressor. */
     hostileStandingThreshold: -30,
     /** Beastfolk are always an eligible aggressor once grace elapses (no seat). */
@@ -950,7 +977,7 @@ export const TUNING = {
       /** …and at/below this combined silver + stock value. */
       wealthFloor: 60,
       /** A prior sack within this many turns makes the next sack fatal. */
-      cascadeWindow: 6,
+      cascadeWindow: 3,
     },
   },
 
@@ -993,18 +1020,18 @@ export const TUNING = {
      *  by captor faction. Everyone else falls into the "held" bucket. */
     quickReleaseChance: { RIVER_CLANS: 0.55, BEASTFOLK: 0.1 } as Record<string, number>,
     quickReleaseMinTurns: 1,
-    quickReleaseMaxTurns: 4,
+    quickReleaseMaxTurns: 2,
 
     /** Turns held before the one-time grim-warning check-in fires. */
-    grimWarningThresholdTurns: 10,
+    grimWarningThresholdTurns: 5,
     /** A single further passive check this long after the warning, giving a
      *  long-odds chance of release even if the player never acts. */
-    passiveFollowUpTurns: 40,
+    passiveFollowUpTurns: 20,
     passiveReleaseChance: 0.15,
 
-    /** ~1 in-game year (24 turns/yr). Past this, a ransom/rescue attempt
+    /** ~1 in-game year (12 turns/yr). Past this, a ransom/rescue attempt
      *  risks the hero refusing to return instead of freeing them. */
-    refuseReturnThresholdTurns: 24,
+    refuseReturnThresholdTurns: 12,
     refusesReturnChance: 0.25,
 
     /** Rolled once on a successful recovery of a long-held captive

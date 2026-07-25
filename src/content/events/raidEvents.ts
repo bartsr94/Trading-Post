@@ -19,7 +19,7 @@ export const RAID_EVENTS: GameEvent[] = [
       { type: 'raidReady' },
     ],
     weight: 8,
-    cooldownTurns: 10,
+    cooldownTurns: 5,
     binding: { type: 'highestSkill', skill: 'leadership' },
     factions: ['BEASTFOLK'],
     peoples: ['orc'],
@@ -89,9 +89,9 @@ export const RAID_EVENTS: GameEvent[] = [
     illustration: 'raid_aftermath',
     title: 'After the Raiders',
     text: 'The raiders are gone and the counting has begun — what was carried off, what was burned, who is not answering the roll. The post looks to {hero} to say what the days after will be: heads down and rebuild, or a hard word that this will not be borne a second time.',
-    conditions: [{ type: 'raidedRecently', turns: 4 }],
+    conditions: [{ type: 'raidedRecently', turns: 2 }],
     weight: 6,
-    cooldownTurns: 12,
+    cooldownTurns: 6,
     binding: { type: 'highestStat', stat: 'resolve' },
     choices: [
       {

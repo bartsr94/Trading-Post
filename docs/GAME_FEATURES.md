@@ -21,9 +21,10 @@ file is the authoritative doc for *what the game does* — read both.
 
 ## 1. Core loop & turn structure
 
-One turn = two weeks; 24 turns/year in 4 seasons of 6 turns each. The player
-sets standing-order assignments per hero that persist between turns rather
-than requiring re-entry each time.
+One turn = one month; 12 turns/year in 4 seasons of 3 turns each (shortened
+2026-07-25 from 2 weeks/24 turns/6-per-season — see `TURN_CADENCE_SPEC.md`).
+The player sets standing-order assignments per hero that persist between
+turns rather than requiring re-entry each time.
 
 `resolveTurn` (`src/engine/turn.ts`) resolves, in order: market price drift →
 food/upkeep/bankruptcy check → Charter quota (season end) → resident wages
@@ -32,7 +33,7 @@ craftsfolk passive build progress → construction completion → event
 selection. `GameState.phase` is `'assignment' | 'event' | 'report' |
 'gameover'` (`PHASES` in `types.ts`). The player resolves `pendingEvents` one
 at a time via `resolveChoice` + `advancePendingEvent`, then a report phase,
-then `advanceTurn` (season-end skill growth every 6th turn).
+then `advanceTurn` (season-end skill growth every 3rd turn).
 
 Six assignment activities: `trade`, `explore`, `diplomacy`, `build`,
 `provision`, `rest`, plus `unassigned` for returning heroes.
@@ -128,11 +129,48 @@ livestock-thief chase, and the orc's-dare challenge — all bind by
 
 9 goods (furs, hides, grain [displayed as **"Food"**, id unchanged], salt,
 tools, cloth, timber, amber, herbs), each with seasonal price modifiers
-(`src/content/goods.ts`). Per-market price drift: `basePrice × seasonalMod ×
-supply/demand × event mod`. The post's own market lives on `GameState.market`;
-each `LocationState` carries its own independent `market`. The `trade`
-activity buys/sells at the post; caravans (an `ExpeditionKind`) carry goods to
-other markets over multiple turns.
+(`src/content/goods.ts`). Price = `basePrice × seasonalMod × supplyDemandMod ×
+eventMod × priceBias` (`engine/economy.ts`). The post's own market lives on
+`GameState.market`; each `LocationState` carries its own independent `market`.
+The `trade` activity buys/sells at the post; caravans (an `ExpeditionKind`)
+carry goods to other markets over multiple turns.
+
+**Trading as a viable income (TRADING_ECONOMY_SPEC).** The four multipliers
+have distinct, legible jobs so a deliberate trade route is a "strong side
+income", not a rounding error:
+- **Structural identity** — `LocationDef.priceBias` (permanent, ~0.5–1.7):
+  each market clearly produces some goods cheap and pays dear for others
+  (native furs/hides ↔ Company garrisons; Company/Weri tools & cloth ↔
+  natives; Bejasi amber & Greyleaf ↔ Company). Known once a market is
+  discovered. This is *where* to trade.
+- **Drift** — `supplyDemandMod` mean-reverts toward 1.0 each turn
+  (`TUNING.economy.supplyDemandReversion`) then jitters, so structural spreads
+  stay the reliable signal and this layer is just short-run texture.
+- **Shocks** — `GameState.marketShocks: MarketShock[]` drive `eventMod`
+  entirely (`resolveShocks` in `economy.ts`, called from `resolveTurn`; the
+  old exponential `eventMod` decay is retired). A shock is rumored for `lead`
+  turns (no price effect, shown on the Ledger) then bites for `duration` turns.
+  Content spawns them via the generic `marketShock` **outcome** (generalizes
+  the old post-only `priceShock`); the `market_*` events in
+  `content/events/marketEvents.ts` are the first batch (garrison salt
+  shortage, fur glut, hill-tribe tool demand, river-fever Greyleaf spike,
+  Shackle amber craze, badland grain dearth). This is *when* to trade.
+- **Bargain ceiling** — the caravan arrival check swings the sale/purchase
+  price by up to `caravanPriceMultMax` (1.5) at `caravanMarginRate` (0.03/margin
+  point), so a skilled trader hero matters.
+
+Calibration target (checked by a route-profitability test in
+`expeditions.test.ts`): a full informed run (2 heroes, full load, no shock)
+nets well above the ~144-silver opportunity cost of parking those heroes on
+at-post `trade`; a caught shock is a bigger payday.
+
+**The Ledger** (`ui/screens/LedgerScreen.tsx`, its own nav screen) is the
+price-intel board: a goods × markets grid of the last prices parties actually
+saw, recorded at any market arrival into `LocationState.priceIntel` and
+coloured against the live post price (green = sells dear, red = cheap to buy).
+Observations dim as they age; a market known only by character (never priced in
+person) shows a `~` structural estimate (`structuralPrice`); active/rumored
+shocks flag affected cells (▲/▼, faded `?` while only rumored).
 
 ## 5. Factions, diplomacy & the Charter quota
 
@@ -674,9 +712,9 @@ A fixed, full-viewport app shell (`App.tsx`) renders only once a game is
 active; `PartySelect`/`GameOver` use a separate centered layout. Four
 regions:
 - **Sidebar** (`Sidebar.tsx`): title, then icon+label nav — Outpost,
-  Assignments, Diplomacy, Characters, Buildings, Map, Market — plus Export
-  Save / Abandon / Settings (cheat-mode toggle) pinned to the bottom. Icons
-  are single-color stroke SVGs (`Icon.tsx`), never emoji.
+  Assignments, Diplomacy, Characters, Buildings, Map, Market, Ledger — plus
+  Export Save / Abandon / Settings (cheat-mode toggle) pinned to the bottom.
+  Icons are single-color stroke SVGs (`Icon.tsx`), never emoji.
 - **Top bar:** season/turn + silver chips.
 - **Content pane:** the one nominally-scrollable region — but **no screen is
   actually allowed to scroll**, a hard design rule. `e2e/no-scroll.spec.ts`
@@ -697,7 +735,8 @@ value and the nav item was removed. The Buildings screen is unaffected and
 remains its own dedicated screen for construction. `MarketScreen` keeps its
 own separate 3-column layout (`.overview-grid-3`, still its own CSS class —
 not shared with the Outpost Overview's 4-column grid despite the similar
-name).
+name). **The Ledger** (`LedgerScreen.tsx`) is its own screen too — the
+read-only price-intel board (§4); the Market screen stays where you *act*.
 
 **Portraits** (`ui/portraits.ts`, `Portrait.tsx`): art lives in
 `src/assets/portraits/<race>/<race>_<gender>_<NN>.webp`, globbed at build
@@ -745,13 +784,15 @@ mechanism as originally specced.
 
 `saveVersion` + migrations live in `engine/save.ts`; any `GameState` shape
 change bumps `TUNING.save.version` and adds a migration case (tests enforce
-unknown versions throw). Current version: **v25**. Rough history: v5 roster/
+unknown versions throw). Current version: **v27**. Rough history: v5 roster/
 reserve split; v6 buildings; v7 heritage/culture; v8 gender/family; v9
 peoples restructure (Hanjoda/Weri, KNIGHTS_EIRWEN); v10 Beastfolk; v11
 resident tag counts fixed; v13→v16 raiding; v19→v20 diplomacy discovery;
 v20→v21 the Concession (claim/herd, hard cap removed); v22 hero-to-hero
 marriage (`spouseIds`/`temperament`); v23 captivity (§17); v24 resident
-integration friction (§7, §10); v25 thralls/indentured labor (§18).
+integration friction (§7, §10); v25 thralls/indentured labor (§18); v26
+price intel (`LocationState.priceIntel`, the Ledger, §4); v27 market shocks
+(`GameState.marketShocks`, §4).
 
 ## 17. Captivity — abduction & ransom
 

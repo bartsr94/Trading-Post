@@ -874,6 +874,10 @@ table.market th {
 table.market td { padding: 5px 6px; border-bottom: 1px solid rgba(61, 52, 42, 0.5); }
 table.market td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: bold; }
 
+/* Ledger: the live post-price reference row the market rows are read against. */
+table.ledger tr.ledger-ref td { border-bottom: 1px solid var(--border); color: var(--text); }
+table.ledger tr.ledger-ref td:first-child { color: var(--text-dim); }
+
 .faction-row {
   display: flex;
   justify-content: space-between;

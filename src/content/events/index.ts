@@ -7,6 +7,7 @@ import { CAPTIVE_EVENTS } from './captiveEvents';
 import { DIPLOMACY_EVENTS } from './diplomacyEvents';
 import { FAMILY_EVENTS } from './familyEvents';
 import { GENERIC_HERO_EVENTS, HERO_EVENTS } from './heroEvents';
+import { MARKET_EVENTS } from './marketEvents';
 import { POST_EVENTS } from './postEvents';
 import { RAID_EVENTS } from './raidEvents';
 import { RECRUIT_EVENTS } from './recruitEvents';
@@ -17,6 +18,7 @@ import { uniqueIdMap } from '../uniqueIdMap';
 
 export const ALL_EVENTS: GameEvent[] = [
   ...POST_EVENTS,
+  ...MARKET_EVENTS,
   ...HERO_EVENTS,
   ...GENERIC_HERO_EVENTS,
   ...RECRUIT_EVENTS,

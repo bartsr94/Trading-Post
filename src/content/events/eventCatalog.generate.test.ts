@@ -18,6 +18,7 @@ import { CAPTIVE_EVENTS } from './captiveEvents';
 import { DIPLOMACY_EVENTS } from './diplomacyEvents';
 import { FAMILY_EVENTS } from './familyEvents';
 import { GENERIC_HERO_EVENTS, HERO_EVENTS } from './heroEvents';
+import { MARKET_EVENTS } from './marketEvents';
 import { POST_EVENTS } from './postEvents';
 import { RAID_EVENTS } from './raidEvents';
 import { RECRUIT_EVENTS } from './recruitEvents';
@@ -46,6 +47,7 @@ const ENGINE_TRIGGERED_EVENT_IDS = new Set([
 // with that file if a new event group is ever added.
 const GROUPS: { label: string; events: readonly GameEvent[] }[] = [
   { label: 'postEvents.ts', events: POST_EVENTS },
+  { label: 'marketEvents.ts', events: MARKET_EVENTS },
   { label: 'heroEvents.ts (HERO_EVENTS)', events: HERO_EVENTS },
   { label: 'heroEvents.ts (GENERIC_HERO_EVENTS)', events: GENERIC_HERO_EVENTS },
   { label: 'recruitEvents.ts', events: RECRUIT_EVENTS },

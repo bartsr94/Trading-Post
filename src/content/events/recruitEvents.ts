@@ -13,13 +13,13 @@ export const RECRUIT_EVENTS: GameEvent[] = [
     title: 'A Name Comes Upriver',
     text: 'A well-dressed stranger steps off the supply boat as though he owns it, and half of Thornwatch would swear he nearly does. Odren — the trader whose ventures rivals whisper about — has heard of your little post at the edge of the map, and pronounces himself intrigued. He is not offering charity. He wants a share, a free hand at the ledger, and a signing sum that would insult a lesser man to omit.',
     conditions: [
-      { type: 'minTurn', value: 8 },
+      { type: 'minTurn', value: 4 },
       { type: 'silverAtLeast', value: 60 },
       { type: 'rosterBelow', scope: 'living', value: 9 },
     ],
     weight: 14,
     once: true,
-    cooldownTurns: 6,
+    cooldownTurns: 3,
     binding: { type: 'highestSkill', skill: 'bargain' },
     choices: [
       {
@@ -85,7 +85,7 @@ export const RECRUIT_EVENTS: GameEvent[] = [
     ],
     weight: 12,
     once: true,
-    cooldownTurns: 6,
+    cooldownTurns: 3,
     binding: { type: 'highestSkill', skill: 'diplomacy' },
     factions: ['RIVER_CLANS'],
     peoples: ['kiswani'],

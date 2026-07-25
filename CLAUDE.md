@@ -281,7 +281,9 @@ cross-reference.
 
 - Content event ids are prefixed by category: `post_`, `hero_`, `season_`,
   `travel_`, `beastfolk_`, `family_`, `raid_`, `recruit_`, `captive_`,
-  `thrall_` (one file per prefix under `content/events/`). Travel events
+  `thrall_`, `market_` (one file per prefix under `content/events/`; the
+  `market_` shock events carry `category: 'post'` since `EventCategory` has no
+  `market` — the id prefix names the file, not the enum). Travel events
   typically gate on `destinationTag`/`expeditionKind`/`expeditionLeg` rather
   than a specific location id, so they fire at any matching node.
 - **New hero-personal events should not lock to one pool hero.** A handful of

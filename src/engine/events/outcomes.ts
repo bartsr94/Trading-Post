@@ -228,10 +228,21 @@ export function applyOutcomes(
         state.flags[outcome.flag] = outcome.value ?? true;
         break;
       }
-      case 'priceShock': {
-        state.market[outcome.good].eventMod = outcome.mod;
+      case 'marketShock': {
+        const lead = Math.max(0, outcome.lead ?? 0);
+        state.marketShocks.push({
+          locationId: outcome.location,
+          goodId: outcome.good,
+          mod: outcome.mod,
+          leadLeft: lead,
+          turnsLeft: Math.max(1, outcome.duration),
+        });
+        const where = ctx.locationNames.get(outcome.location) ?? outcome.location;
+        const good = ctx.goodNames.get(outcome.good) ?? outcome.good;
         log.push(
-          `${ctx.goodNames.get(outcome.good) ?? outcome.good} prices ${outcome.mod > 1 ? 'surge' : 'slump'}`,
+          lead > 0
+            ? `Word of a ${good} ${outcome.mod > 1 ? 'shortage' : 'glut'} at ${where}`
+            : `${good} prices ${outcome.mod > 1 ? 'surge' : 'slump'} at ${where}`,
         );
         break;
       }

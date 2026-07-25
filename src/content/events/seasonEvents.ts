@@ -11,7 +11,7 @@ export const SEASON_EVENTS: GameEvent[] = [
     text: 'Snowmelt from the Stormwall Mountains arrives all at once. The river climbs its banks overnight, brown and fast and full of whole trees. The lower stores stand a hand-span from the waterline and the water is still coming. The river towns are already gone to high ground — they knew to the day.',
     conditions: [{ type: 'season', value: 'spring' }],
     weight: 10,
-    cooldownTurns: 12,
+    cooldownTurns: 6,
     binding: { type: 'highestSkill', skill: 'craft' },
     choices: [
       {
@@ -72,7 +72,7 @@ export const SEASON_EVENTS: GameEvent[] = [
     text: 'For one week at midsummer, the river meadows fill with boats and tents: the clans gather to marry, feud, race, and trade, as they have since before the homeland had ships. A polite runner brings word that the strangers of the post may attend — as guests, watched but welcome. Everyone hears the invitation is a test.',
     conditions: [{ type: 'season', value: 'summer' }],
     weight: 12,
-    cooldownTurns: 12,
+    cooldownTurns: 6,
     binding: { type: 'highestSkill', skill: 'diplomacy' },
     factions: ['RIVER_CLANS'],
     peoples: ['kiswani'],
@@ -131,7 +131,7 @@ export const SEASON_EVENTS: GameEvent[] = [
     text: 'It comes early: a hard white morning and the marsh grass standing stiff as spears. Winter has sent its notice. Everyone counts the same things silently — grain sacks, firewood, blankets, the gaps in the tent seams. What the post has when the snow settles is what the post will have until thaw.',
     conditions: [{ type: 'season', value: 'autumn' }],
     weight: 10,
-    cooldownTurns: 12,
+    cooldownTurns: 6,
     binding: { type: 'highestSkill', skill: 'leadership' },
     choices: [
       {

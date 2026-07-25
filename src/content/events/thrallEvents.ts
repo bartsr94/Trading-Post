@@ -19,7 +19,7 @@ export const THRALL_EVENTS: GameEvent[] = [
       { type: 'locationDiscovery', location: 'river_meet', atLeast: 'visited' },
     ],
     weight: 6,
-    cooldownTurns: 10,
+    cooldownTurns: 5,
     binding: { type: 'highestSkill', skill: 'bargain' },
     factions: ['RIVER_CLANS'],
     peoples: ['kiswani'],
@@ -84,7 +84,7 @@ export const THRALL_EVENTS: GameEvent[] = [
       { type: 'thrallRestivenessAtLeast', value: 7 },
     ],
     weight: 9,
-    cooldownTurns: 6,
+    cooldownTurns: 3,
     binding: { type: 'highestSkill', skill: 'leadership' },
     choices: [
       {

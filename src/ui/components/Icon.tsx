@@ -12,6 +12,7 @@ export type IconName =
   | 'people'
   | 'map'
   | 'market'
+  | 'ledger'
   | 'caravan'
   | 'explore'
   | 'diplomacy'
@@ -72,6 +73,16 @@ const PATHS: Record<IconName, ReactElement> = {
       <path d="M5 7 L2 13 A3 3 0 0 0 8 13 Z" />
       <path d="M19 7 L16 13 A3 3 0 0 0 22 13 Z" />
       <line x1="8" y1="21" x2="16" y2="21" />
+    </>
+  ),
+  ledger: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="1" />
+      <line x1="12" y1="4" x2="12" y2="20" />
+      <line x1="6.5" y1="9" x2="9.5" y2="9" />
+      <line x1="6.5" y1="13" x2="9.5" y2="13" />
+      <line x1="14.5" y1="9" x2="17.5" y2="9" />
+      <line x1="14.5" y1="13" x2="17.5" y2="13" />
     </>
   ),
   caravan: (

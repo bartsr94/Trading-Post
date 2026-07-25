@@ -30,7 +30,7 @@ async function clickMap(page: Page, x: number, y: number): Promise<void> {
   await page.mouse.click(box.x + box.width * x, box.y + box.height * y);
 }
 
-const SCREENS = ['Outpost', 'Assignments', 'Characters', 'Buildings', 'Map', 'Market'];
+const SCREENS = ['Outpost', 'Assignments', 'Characters', 'Buildings', 'Map', 'Market', 'Ledger'];
 
 test('no in-shell screen scrolls at the 1280x720 floor', async ({ page }) => {
   await page.setViewportSize(FLOOR);

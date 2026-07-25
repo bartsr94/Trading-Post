@@ -239,12 +239,12 @@ function playTurns(state: GameState, turns: number, choiceRng: Rng): void {
 }
 
 describe('full-season simulation', () => {
-  it('plays the first season (6 turns) across many seeds without crashing', () => {
+  it('plays the first season (3 turns) across many seeds without crashing', () => {
     for (let seed = 1; seed <= 25; seed++) {
       const s = testState(seed);
-      playTurns(s, 6, new Rng(seed * 31));
+      playTurns(s, 3, new Rng(seed * 31));
       if (!s.gameOver) {
-        expect(s.turn).toBe(7);
+        expect(s.turn).toBe(4);
         expect(s.phase).toBe('assignment');
       }
       // Invariants that must hold whatever happened:
@@ -297,11 +297,11 @@ describe('full-season simulation', () => {
     }
   });
 
-  it('survives a full year (24 turns) on at least some seeds', () => {
+  it('survives a full year (12 turns) on at least some seeds', () => {
     let survived = 0;
     for (let seed = 100; seed < 112; seed++) {
       const s = testState(seed);
-      playTurns(s, 24, new Rng(seed));
+      playTurns(s, 12, new Rng(seed));
       if (!s.gameOver) survived++;
     }
     expect(survived).toBeGreaterThan(0);
@@ -310,7 +310,7 @@ describe('full-season simulation', () => {
   it('identical seeds and choices give identical year-long runs', () => {
     const run = () => {
       const s = testState(4242);
-      playTurns(s, 24, new Rng(4242));
+      playTurns(s, 12, new Rng(4242));
       return s;
     };
     expect(run()).toEqual(run());

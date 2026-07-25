@@ -157,6 +157,19 @@ function validateMarket(value: unknown, path: string): void {
   }
 }
 
+/** Optional per-market last-observed prices (TRADING_ECONOMY_SPEC §4). Partial:
+ *  a good is present only once seen, so unknown keys are rejected but missing
+ *  ones are fine. */
+function validatePriceIntel(value: unknown, path: string): void {
+  const obj = record(value, path);
+  for (const key of Object.keys(obj)) {
+    if (!(GOOD_IDS as readonly string[]).includes(key)) invalid(`${path}.${key}`, 'is an unknown good');
+    const obs = record(obj[key], `${path}.${key}`);
+    finite(obs.price, `${path}.${key}.price`);
+    integer(obs.turnSeen, `${path}.${key}.turnSeen`);
+  }
+}
+
 function validateMapPoint(value: unknown, path: string): void {
   const point = record(value, path);
   const x = finite(point.x, `${path}.x`);
@@ -334,8 +347,22 @@ export function validateGameState(value: unknown): GameState {
     const location = record(locationValue, `save.locations.${id}`);
     enumValue(location.discovery, DISCOVERY_STATES, `save.locations.${id}.discovery`);
     if (location.market !== undefined) validateMarket(location.market, `save.locations.${id}.market`);
+    if (location.priceIntel !== undefined)
+      validatePriceIntel(location.priceIntel, `save.locations.${id}.priceIntel`);
   }
   const locationIds = new Set(Object.keys(locations));
+
+  const shocks = array(state.marketShocks, 'save.marketShocks');
+  shocks.forEach((raw, i) => {
+    const shock = record(raw, `save.marketShocks[${i}]`);
+    if (!locationIds.has(shock.locationId as string))
+      invalid(`save.marketShocks[${i}].locationId`, 'is an unknown location');
+    if (!(GOOD_IDS as readonly string[]).includes(shock.goodId as string))
+      invalid(`save.marketShocks[${i}].goodId`, 'is an unknown good');
+    finite(shock.mod, `save.marketShocks[${i}].mod`);
+    nonNegativeInteger(shock.leadLeft, `save.marketShocks[${i}].leadLeft`);
+    nonNegativeInteger(shock.turnsLeft, `save.marketShocks[${i}].turnsLeft`);
+  });
 
   const maxCell = TUNING.map.fogGrid.width * TUNING.map.fogGrid.height;
   const knowledge = record(state.mapKnowledge, 'save.mapKnowledge');

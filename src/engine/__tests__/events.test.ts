@@ -23,10 +23,10 @@ const NAME_CTX = {
 describe('condition evaluation', () => {
   it('evaluates turn, silver, goods, season conditions', () => {
     const s = testState();
-    s.turn = 5;
+    s.turn = 2;
     s.silver = 50;
-    expect(evalCondition(s, { type: 'minTurn', value: 5 })).toBe(true);
-    expect(evalCondition(s, { type: 'minTurn', value: 6 })).toBe(false);
+    expect(evalCondition(s, { type: 'minTurn', value: 2 })).toBe(true);
+    expect(evalCondition(s, { type: 'minTurn', value: 3 })).toBe(false);
     expect(evalCondition(s, { type: 'silverAtLeast', value: 50 })).toBe(true);
     expect(evalCondition(s, { type: 'silverBelow', value: 50 })).toBe(false);
     expect(evalCondition(s, { type: 'goodAtLeast', good: 'grain', qty: 30 })).toBe(true);
@@ -235,6 +235,25 @@ describe('outcome application', () => {
     expect(s.axes.integration).toBe(2);
     expect(s.heroes.find((h) => h.id === 'p1')!.traits).toContain('shaken');
     expect(log.length).toBeGreaterThan(0);
+  });
+
+  it('marketShock outcome queues a telegraphed shock at the named market', () => {
+    const s = testState();
+    const log = applyOutcomes(
+      s,
+      [{ type: 'marketShock', location: 'charter_landing', good: 'salt', mod: 1.8, lead: 2, duration: 5 }],
+      { heroId: 'p1', ...NAME_CTX },
+    );
+    expect(s.marketShocks).toHaveLength(1);
+    expect(s.marketShocks[0]).toMatchObject({
+      locationId: 'charter_landing',
+      goodId: 'salt',
+      mod: 1.8,
+      leadLeft: 2,
+      turnsLeft: 5,
+    });
+    // A rumored shock's log line warns rather than announcing a live move.
+    expect(log.join(' ').toLowerCase()).toContain('word of');
   });
 
   it('kills a hero at 0 health, permanently', () => {

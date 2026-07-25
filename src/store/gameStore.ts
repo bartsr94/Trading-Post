@@ -58,7 +58,8 @@ export type Screen =
   | 'characters'
   | 'buildings'
   | 'map'
-  | 'market';
+  | 'market'
+  | 'ledger';
 
 const MIGRATION_CTX = {
   locationDefs: LOCATIONS,

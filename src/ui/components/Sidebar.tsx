@@ -16,6 +16,7 @@ const NAV_ITEMS: { screen: Screen; icon: IconName; label: string }[] = [
   { screen: 'buildings', icon: 'build', label: 'Buildings' },
   { screen: 'map', icon: 'map', label: 'Map' },
   { screen: 'market', icon: 'market', label: 'Market' },
+  { screen: 'ledger', icon: 'ledger', label: 'Ledger' },
 ];
 
 export function Sidebar({ game }: { game: GameState }) {

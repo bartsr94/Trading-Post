@@ -282,6 +282,29 @@ export interface LocationState {
   discovery: DiscoveryState;
   /** Per-good market state; only for locations with a market (not the post — that's `GameState.market`). */
   market?: Record<GoodId, MarketGoodState>;
+  /** Last-observed prices, recorded when a party visits (TRADING_ECONOMY_SPEC
+   *  §4). Undefined per-good = never observed. Goes stale; the Ledger dims old
+   *  data. Distinct from `market`: what the *player knows*, not the live state. */
+  priceIntel?: Partial<Record<GoodId, PriceObservation>>;
+}
+
+export interface PriceObservation {
+  /** The price a good sold at, the turn a party last saw this market. */
+  price: number;
+  turnSeen: number;
+}
+
+export interface MarketShock {
+  /** Which market the shock hits (may be the post itself). */
+  locationId: LocationId;
+  goodId: GoodId;
+  /** Multiplier on eventMod while live — >1 a demand spike, <1 a glut. */
+  mod: number;
+  /** Turns of forewarning left before it bites; while >0 the shock is only
+   *  rumored and does NOT move price (TRADING_ECONOMY_SPEC §3c). */
+  leadLeft: number;
+  /** Turns the shock stays live once it bites. */
+  turnsLeft: number;
 }
 
 export const EXPEDITION_KINDS = [
@@ -791,7 +814,7 @@ export interface GameState {
   saveVersion: number;
   seed: number;
   rngState: number;
-  turn: number; // 1-based; 24 turns per year, 6 per season
+  turn: number; // 1-based; 12 turns per year, 3 per season
   phase: GamePhase;
   heroes: Hero[];
   /**
@@ -805,6 +828,8 @@ export interface GameState {
   goods: Record<GoodId, number>;
   market: Record<GoodId, MarketGoodState>;
   locations: Record<LocationId, LocationState>;
+  /** Active and rumored market price shocks (TRADING_ECONOMY_SPEC §3c). */
+  marketShocks: MarketShock[];
   /** Spatial terrain knowledge, distinct from per-location discovery. */
   mapKnowledge: MapKnowledge;
   expeditions: ExpeditionState[];
@@ -847,7 +872,7 @@ export interface GameState {
   queuedEvents: QueuedEvent[];
   /** Events selected this turn, resolved one at a time in the event phase. */
   pendingEvents: ActiveEvent[];
-  /** Consecutive turns upkeep went unpaid; 3 = bankruptcy. */
+  /** Consecutive turns upkeep went unpaid; TUNING.economy.bankruptcyTurns = bankruptcy. */
   bankruptcyClock: number;
   /** Consecutive seasons the Charter Company's profit quota went unmet. */
   charterMissedStreak: number;

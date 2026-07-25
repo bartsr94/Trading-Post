@@ -2,8 +2,45 @@ import { describe, expect, it } from 'vitest';
 import { TUNING } from '../../content/tuning';
 import { advancePendingEvent, advanceTurn, resolveChoice, resolveTurn } from '../turn';
 import { freshResidents } from '../residents';
-import { livingHeroes } from '../types';
+import { isSeasonEnd, livingHeroes, seasonOfTurn, yearOfTurn } from '../types';
 import { TEST_CONTENT, testState } from './helpers';
+
+describe('turn cadence (TUNING.time)', () => {
+  it('turnsPerSeason/turnsPerYear are 3/12', () => {
+    expect(TUNING.time.turnsPerSeason).toBe(3);
+    expect(TUNING.time.turnsPerYear).toBe(12);
+  });
+
+  it('walks spring/summer/autumn/winter in 3-turn blocks across a year', () => {
+    const expected = [
+      'spring', 'spring', 'spring',
+      'summer', 'summer', 'summer',
+      'autumn', 'autumn', 'autumn',
+      'winter', 'winter', 'winter',
+    ];
+    for (let turn = 1; turn <= 12; turn++) {
+      expect(seasonOfTurn(turn)).toBe(expected[turn - 1]);
+    }
+  });
+
+  it('rolls over into year 2 at turn 13, repeating the season cycle', () => {
+    expect(yearOfTurn(12)).toBe(1);
+    expect(yearOfTurn(13)).toBe(2);
+    expect(seasonOfTurn(13)).toBe('spring');
+    expect(seasonOfTurn(24)).toBe('winter');
+    expect(yearOfTurn(24)).toBe(2);
+    expect(yearOfTurn(25)).toBe(3);
+  });
+
+  it('isSeasonEnd is true only on the 3rd turn of each season', () => {
+    expect(isSeasonEnd(1)).toBe(false);
+    expect(isSeasonEnd(2)).toBe(false);
+    expect(isSeasonEnd(3)).toBe(true);
+    expect(isSeasonEnd(4)).toBe(false);
+    expect(isSeasonEnd(6)).toBe(true);
+    expect(isSeasonEnd(12)).toBe(true);
+  });
+});
 
 describe('turn resolution pipeline', () => {
   it('consumes grain for the party and pays post upkeep', () => {
@@ -29,7 +66,7 @@ describe('turn resolution pipeline', () => {
     }
   });
 
-  it('three missed upkeeps end the game in bankruptcy', () => {
+  it('bankruptcyTurns missed upkeeps end the game in bankruptcy', () => {
     const s = testState();
     s.silver = 0;
     s.goods.grain = 0;
@@ -157,7 +194,7 @@ describe('turn advance & skill growth', () => {
 
   it('does not roll growth mid-season', () => {
     const s = testState();
-    s.turn = 3;
+    s.turn = 2;
     const hero = livingHeroes(s)[0];
     hero.skillMarks = ['bargain'];
     advanceTurn(s);

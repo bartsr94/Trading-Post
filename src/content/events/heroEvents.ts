@@ -17,7 +17,7 @@ export const HERO_EVENTS: GameEvent[] = [
     illustration: 'stranger_scar',
     title: 'The Sergeant’s Debt',
     text: 'The stranger walks in with a soldier’s bearing and asks for Berrin by his old rank. They served together; there was a retreat, a bridge, and money owed to dead men’s widows that Berrin swore to pay. The stranger has spent four years finding him. "Twenty-five silver," he says. "Or I tell the story everywhere between here and home."',
-    conditions: [{ type: 'heroInParty', heroId: 'p1' }, { type: 'minTurn', value: 2 }],
+    conditions: [{ type: 'heroInParty', heroId: 'p1' }, { type: 'minTurn', value: 1 }],
     weight: 14,
     once: true,
     binding: { type: 'specific', heroId: 'p1' },
@@ -171,7 +171,7 @@ export const HERO_EVENTS: GameEvent[] = [
     text: 'Caravan guards, a lantern, a blanket, bone dice — and Jusk, drawn across the yard like iron to a lodestone. He’s already sitting down. He looks up at {hero} with the particular innocence of a man about to wager the company’s goodwill, and possibly its silver. "Small stakes," he says. It is never small stakes.',
     conditions: [{ type: 'heroInParty', heroId: 'p7' }],
     weight: 9,
-    cooldownTurns: 8,
+    cooldownTurns: 4,
     binding: { type: 'specific', heroId: 'p7' },
     choices: [
       {
@@ -225,7 +225,7 @@ export const HERO_EVENTS: GameEvent[] = [
     text: 'It has been building for weeks — the frontier grinds everyone’s edges against everyone else’s. Tonight it breaks: {hero} and another of the company, on their feet across the fire, voices carrying to the treeline. The rest of the company is carefully looking elsewhere. Somebody needs to end this before it becomes a habit, or a knife.',
     conditions: [{ type: 'anyHeroStressAtLeast', value: 5 }, { type: 'partySizeAtLeast', value: 2 }],
     weight: 9,
-    cooldownTurns: 6,
+    cooldownTurns: 3,
     binding: { type: 'highestStress' },
     choices: [
       {
@@ -310,7 +310,7 @@ export const GENERIC_HERO_EVENTS: GameEvent[] = [
     illustration: 'stranger_dusk',
     title: 'An Old Reckoning',
     text: 'A stranger asks after {hero} by a name from years back — before the frontier, before the Company. There was a debt left unpaid, the kind that does not shrink just because the years have passed. "Twenty-five silver," they say, "is the least of what\'s owed." But silver is only what they came to collect.',
-    conditions: [{ type: 'minTurn', value: 2 }],
+    conditions: [{ type: 'minTurn', value: 1 }],
     weight: 10,
     once: true,
     binding: { type: 'highestStat', stat: 'resolve' },
@@ -462,7 +462,7 @@ export const GENERIC_HERO_EVENTS: GameEvent[] = [
     text: 'Caravan guards, a lantern, a blanket, bone dice — and {hero} drawn in like iron to a lodestone before anyone can stop it. "Small stakes," they say. It is never small stakes.',
     conditions: [{ type: 'partySizeAtLeast', value: 1 }],
     weight: 9,
-    cooldownTurns: 8,
+    cooldownTurns: 4,
     binding: { type: 'highestSkill', skill: 'bargain' },
     choices: [
       {

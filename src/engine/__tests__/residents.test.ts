@@ -395,9 +395,9 @@ describe('resident upkeep in the turn pipeline', () => {
     s.turn = 6; // season end
     s.silver = 1000;
     s.residents = freshResidents();
-    s.residents.roles.farmers = 2; // total 2 → 12 silver in wages
+    s.residents.roles.farmers = 2; // total 2 → 6 silver in wages
     resolveTurn(s, TEST_CONTENT);
     const wageLine = s.report.lines.find((l) => l.text.includes('wages'));
-    expect(wageLine?.text).toContain('12 silver');
+    expect(wageLine?.text).toContain('6 silver');
   });
 });

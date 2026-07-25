@@ -20,7 +20,7 @@ export const FAMILY_EVENTS: GameEvent[] = [
     ],
     weight: 10,
     once: true,
-    cooldownTurns: 8,
+    cooldownTurns: 4,
     binding: { type: 'highestStat', stat: 'charm' },
     factions: ['RIVER_CLANS'],
     peoples: ['kiswani'],
@@ -69,7 +69,7 @@ export const FAMILY_EVENTS: GameEvent[] = [
     ],
     weight: 8,
     once: true,
-    cooldownTurns: 10,
+    cooldownTurns: 5,
     binding: { type: 'highestStat', stat: 'charm' },
     factions: ['RIVER_CLANS'],
     peoples: ['kiswani'],
@@ -112,7 +112,7 @@ export const FAMILY_EVENTS: GameEvent[] = [
     text: 'It has crept up on {hero} the way these things do — some ordinary hour of shared work, and the sudden realization that one particular face in the company has become the one worth watching for. Nothing has been said. Everyone else at the post, of course, has already noticed.',
     conditions: [{ type: 'heroUnmarried' }, { type: 'partnerAvailable' }],
     weight: 6,
-    cooldownTurns: 12,
+    cooldownTurns: 6,
     binding: { type: 'random' },
     choices: [
       {
@@ -207,7 +207,7 @@ export const FAMILY_EVENTS: GameEvent[] = [
       { type: 'heroSpouseNotHeritage', heritage: 'goblin' },
     ],
     weight: 8,
-    cooldownTurns: 10,
+    cooldownTurns: 5,
     binding: { type: 'highestStat', stat: 'resolve' },
     choices: [
       {
@@ -242,7 +242,7 @@ export const FAMILY_EVENTS: GameEvent[] = [
       { type: 'heroSpouseHeritage', heritage: 'orc' },
     ],
     weight: 12,
-    cooldownTurns: 10,
+    cooldownTurns: 5,
     binding: { type: 'highestStat', stat: 'resolve' },
     peoples: ['orc'],
     choices: [
@@ -274,7 +274,7 @@ export const FAMILY_EVENTS: GameEvent[] = [
       { type: 'heroSpouseHeritage', heritage: 'goblin' },
     ],
     weight: 16,
-    cooldownTurns: 10,
+    cooldownTurns: 5,
     binding: { type: 'highestStat', stat: 'resolve' },
     peoples: ['goblin'],
     choices: [

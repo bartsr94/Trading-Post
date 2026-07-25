@@ -88,6 +88,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     goods,
     market: freshMarket(),
     locations: createLocationStates(options.locationDefs ?? []),
+    marketShocks: [],
     mapKnowledge: { surveyedCells: [] },
     expeditions: [],
     nextExpeditionId: 1,

@@ -8,6 +8,7 @@ import { DiplomacyScreen } from './ui/screens/DiplomacyScreen';
 import { EventPanel } from './ui/screens/EventPanel';
 import { GameOver } from './ui/screens/GameOver';
 import { HeroSheet } from './ui/screens/HeroSheet';
+import { LedgerScreen } from './ui/screens/LedgerScreen';
 import { MapScreen } from './ui/screens/MapScreen';
 import { MarketScreen } from './ui/screens/MarketScreen';
 import { PartySelect } from './ui/screens/PartySelect';
@@ -79,6 +80,7 @@ export function App() {
           {screen === 'buildings' && <BuildingsScreen game={game} />}
           {screen === 'map' && <MapScreen game={game} />}
           {screen === 'market' && <MarketScreen game={game} />}
+          {screen === 'ledger' && <LedgerScreen game={game} />}
         </div>
       </main>
 

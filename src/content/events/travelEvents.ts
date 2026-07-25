@@ -12,7 +12,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     text: 'The river you crossed dry-shod a season ago is brown and loud, and the ford stones are somewhere under all of it. A drowned birch sweeps past, roots first. {hero} walks the bank, looking for a line across, while the pack straps get double-checked behind you.',
     conditions: [{ type: 'destinationTag', tag: 'river' }],
     weight: 10,
-    cooldownTurns: 8,
+    cooldownTurns: 4,
     binding: { type: 'highestSkill', skill: 'survival' },
     choices: [
       {
@@ -65,7 +65,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     text: 'They are waiting where the trail narrows between two boulders — five Dustwalkers with spears grounded, not raised. Their leader holds up a flat palm: the old sign for toll. This is their country, the gesture says, and your goods move through it at their pleasure.',
     conditions: [{ type: 'destinationTag', tag: 'hills' }],
     weight: 12,
-    cooldownTurns: 8,
+    cooldownTurns: 4,
     binding: { type: 'highestSkill', skill: 'diplomacy' },
     factions: ['HILL_TRIBES'],
     peoples: ['hanjoda'],
@@ -132,7 +132,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     text: 'The mules smell them first. Then the firelight finds the eyes — four pairs, five, patient at the edge of the dark. Winter has been long in the high country, and the pack has decided you are worth studying. {hero} slides a hand toward the axe without haste.',
     conditions: [{ type: 'season', value: 'winter' }],
     weight: 10,
-    cooldownTurns: 6,
+    cooldownTurns: 3,
     binding: { type: 'highestSkill', skill: 'combat' },
     choices: [
       {
@@ -187,7 +187,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     text: 'Once in a while the frontier is kind: dry ground, sweet water, dead pine down and seasoned as if stacked for you. The fire draws well. Supper tastes like more than it is, and for one evening the ledger, the quota, and the road all belong to someone else.',
     conditions: [],
     weight: 5,
-    cooldownTurns: 6,
+    cooldownTurns: 3,
     binding: { type: 'highestStress' },
     choices: [
       {
@@ -227,7 +227,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     text: 'A spark of orange where no camp ought to be. Coming closer: three travellers, native but not of any band you know, with worn packs and a kettle already on. One raises an open hand — peace, or the look of it. On the frontier, every fire is a question.',
     conditions: [],
     weight: 8,
-    cooldownTurns: 10,
+    cooldownTurns: 5,
     binding: { type: 'highestSkill', skill: 'diplomacy' },
     choices: [
       {
@@ -274,7 +274,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
       { type: 'cargoUnitsAtLeast', qty: 5 },
     ],
     weight: 10,
-    cooldownTurns: 8,
+    cooldownTurns: 4,
     binding: { type: 'highestSkill', skill: 'craft' },
     choices: [
       {
@@ -318,7 +318,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     text: 'Past midnight, {hero} shakes you awake without a word and points. Out over the black water, lights — pale green, moving slow and deliberate as lantern-bearers, where no path is. The native hands refuse to look at them. Somewhere far off, a bird calls that neither of you can name.',
     conditions: [{ type: 'destinationTag', tag: 'marsh' }],
     weight: 8,
-    cooldownTurns: 12,
+    cooldownTurns: 6,
     binding: { type: 'highestSkill', skill: 'lore' },
     choices: [
       {
@@ -365,7 +365,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     text: 'The trail bends around them as if the ground itself gives way: a ring of grey stones, shoulder-high, older than the trees that lean over them. Something is carved on the leeward faces, worn soft by rain. The Bejasi Hills folk leave offerings at such places. {hero} has already stopped walking.',
     conditions: [{ type: 'destinationTag', tag: 'ruin' }],
     weight: 8,
-    cooldownTurns: 12,
+    cooldownTurns: 6,
     binding: { type: 'highestSkill', skill: 'lore' },
     factions: ['OLD_PEOPLE'],
     peoples: ['kiswani'],
@@ -418,7 +418,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     text: 'From this ridge, on a clear day, you can just make out the smoke of home — a grey thread on the horizon that every eye in the party keeps finding without meaning to. The animals feel it too and lean into the pace. It would be easy to push on into the dark.',
     conditions: [{ type: 'expeditionLeg', leg: 'returning' }],
     weight: 6,
-    cooldownTurns: 10,
+    cooldownTurns: 5,
     binding: { type: 'random' },
     choices: [
       {
@@ -457,7 +457,7 @@ export const TRAVEL_EVENTS: GameEvent[] = [
     text: 'They don\'t wait at a narrow place the way the hill folk do — an orc and two goblins simply fall in alongside the party out of the scrub, matching pace, unhurried, until the orc names a price for the rest of the walk unmolested. No chief sent them and none will answer for them; this toll is theirs alone to keep or break.',
     conditions: [{ type: 'destinationTag', tag: 'beastfolk' }],
     weight: 10,
-    cooldownTurns: 8,
+    cooldownTurns: 4,
     binding: { type: 'highestSkill', skill: 'bargain' },
     factions: ['BEASTFOLK'],
     peoples: ['orc', 'goblin'],
