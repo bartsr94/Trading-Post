@@ -229,12 +229,15 @@ cross-reference.
   the exported `outcomeCtx` helper from `turn.ts`. Force-firing an event
   deliberately skips `once`/cooldown/`firedEvents` bookkeeping and excludes
   `category: 'travel'` events (no `TravelContext` available).
-- **Saves**: `saveVersion` + migrations in `engine/save.ts` (version
-  history: `docs/GAME_FEATURES.md` §16). Any `GameState` shape change bumps
-  `TUNING.save.version` and adds a migration case — tests enforce unknown
-  versions throw. Migrations that need content take an optional
-  `MigrationContext`; thread it through `deserialize`/`loadAutosave` call
-  sites when adding one.
+- **Saves**: `saveVersion` in `engine/save.ts` is a **schema guard, not a
+  migration system** — the game is pre-release and carries no save migrations
+  (removed 2026-07-26). `deserialize` just validates; `validateGameState`
+  rejects any save whose version isn't `TUNING.save.version`, so a stale
+  autosave simply fails to load (→ fresh start), never migrates. On any
+  `GameState` shape change, **bump `TUNING.save.version`** (currently 29) so
+  stale saves are cleanly rejected — do **not** add a migration function or
+  `MigrationContext` (both are gone). `serialize`/`deserialize`/`loadAutosave`
+  take no context.
 - **Captivity** (`engine/captivity.ts`; see `docs/GAME_FEATURES.md` §17):
   the pattern to follow for any future orthogonal `HeroStatus`-like value —
   two real engine bugs this surfaced, worth re-checking next time: the
@@ -280,8 +283,9 @@ cross-reference.
 ## Conventions
 
 - Content event ids are prefixed by category: `post_`, `hero_`, `season_`,
-  `travel_`, `beastfolk_`, `family_`, `raid_`, `recruit_`, `captive_`,
-  `thrall_`, `market_` (one file per prefix under `content/events/`; the
+  `travel_`, `beastfolk_`, `harpy_`, `family_`, `raid_`, `recruit_`,
+  `captive_`, `thrall_`, `market_` (one file per prefix under
+  `content/events/`; the
   `market_` shock events carry `category: 'post'` since `EventCategory` has no
   `market` — the id prefix names the file, not the enum). Travel events
   typically gate on `destinationTag`/`expeditionKind`/`expeditionLeg` rather

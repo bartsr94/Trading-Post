@@ -41,6 +41,15 @@ const NAMES: Pools = {
     male: ['Skarn', 'Grubbik', 'Nizzle', 'Rottick', 'Skreel'],
     female: ['Cazza', 'Fenka', 'Grizna', 'Ikka', 'Nettla', 'Ovka', 'Pikka', 'Skree', 'Tikra', 'Wretta'],
   },
+  harpy: {
+    // Harpies (TERRITORY_DISCOVERY_SPEC.md) are a female-led people of the
+    // crags; a harpy union partner is female by construction (formUnion
+    // assigns the opposite gender from the post hero). The male slice is read
+    // only for a mixed child whose dominant ancestry is harpy but whose
+    // rolled gender is male — sharp, wind-and-stone names either way.
+    male: ['Aello', 'Corvax', 'Draon', 'Kessek', 'Skael'],
+    female: ['Aellra', 'Celaeno', 'Harrai', 'Kyrra', 'Nyxa', 'Podra', 'Sirren', 'Skyrra', 'Vaela', 'Zephra'],
+  },
 };
 
 /**

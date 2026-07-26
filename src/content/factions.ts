@@ -53,6 +53,13 @@ export const FACTIONS: FactionDef[] = [
       'Orc war-bands and goblin clans of the deep wilds beyond the palisade — "Beastfolk" to those who study them, "Greenskins" to every frontier tongue that fears them. No chief speaks for them all; standing here reflects how the wilds as a whole have come to read your post.',
     startingStanding: -60,
   },
+  {
+    id: 'HARPY',
+    name: 'The Harpies',
+    blurb:
+      'Winged raiders of the high Stormwall crags, north beyond the pass — talked of more than seen, and seen more than survived. No aerie answers for another; standing here reflects how the heights as a whole have come to read your post. Seatless: there is no eyrie you can treat with as an equal, only reputation carried on the wind.',
+    startingStanding: -60,
+  },
 ];
 
 export const FACTION_DEFS: ReadonlyMap<FactionId, FactionDef> = uniqueIdMap('faction', FACTIONS);

@@ -1,5 +1,5 @@
 import { TUNING } from '../content/tuning';
-import { clampStanding, stanceOf } from './types';
+import { clampStanding, discoveryAtLeast, FACTION_IDS, stanceOf } from './types';
 import type {
   DiplomacySeatState,
   DiscoveryState,
@@ -42,6 +42,43 @@ export function queueFirstContact(state: GameState, def: LocationDef, heroId: st
 
 export function diplomacySeatDefs(defs: Iterable<LocationDef>): LocationDef[] {
   return [...defs].filter(isDiplomacySeat);
+}
+
+// ---- Faction discovery (TERRITORY_DISCOVERY_SPEC.md §5) -------------------
+// A faction is *known* once a location that reveals it has been visited: its
+// seat (`faction`), or — for a seatless people like the Beastfolk/Harpies — a
+// non-seat discovery node (`discoversFaction`). Pure and monotonic; the stored
+// `state.factionsKnown` is reconciled from location discovery each turn.
+
+export function factionRevealed(
+  state: GameState,
+  locationDefs: Iterable<LocationDef>,
+  faction: FactionId,
+): boolean {
+  for (const def of locationDefs) {
+    if (def.faction !== faction && def.discoversFaction !== faction) continue;
+    const discovery = state.locations[def.id]?.discovery ?? def.initialDiscovery;
+    if (discoveryAtLeast(discovery, 'visited')) return true;
+  }
+  return false;
+}
+
+export function isFactionKnown(state: GameState, faction: FactionId): boolean {
+  return state.factionsKnown.includes(faction);
+}
+
+/** Union into `state.factionsKnown` any faction now revealed by discovery. */
+export function reconcileFactionsKnown(
+  state: GameState,
+  locationDefs: Iterable<LocationDef>,
+): void {
+  const defs = [...locationDefs];
+  const known = new Set(state.factionsKnown);
+  const before = known.size;
+  for (const faction of FACTION_IDS) {
+    if (!known.has(faction) && factionRevealed(state, defs, faction)) known.add(faction);
+  }
+  if (known.size !== before) state.factionsKnown = [...known];
 }
 
 /** A fresh seat state for `faction`, at `standing` (0 if unspecified). */

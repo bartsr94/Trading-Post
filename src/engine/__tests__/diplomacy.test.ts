@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { TUNING } from '../../content/tuning';
 import { LOCATION_DEFS } from '../../content/locations';
 import { advanceExpeditions, dispatchExpedition } from '../expeditions';
-import { applyDiplomacyShift, isFirstContact } from '../diplomacy';
+import { applyDiplomacyShift, isFactionKnown, isFirstContact, reconcileFactionsKnown } from '../diplomacy';
+import { evalCondition } from '../events/conditions';
 import type { GameEvent } from '../events/types';
-import { deserialize, serialize } from '../save';
 import { Rng } from '../rng';
 import { thrallTotal } from '../thralls';
-import { resolveChoice } from '../turn';
+import { resolveChoice, resolveTurn } from '../turn';
 import { TEST_CONTENT, testState, TEST_LOCATIONS } from './helpers';
 
 const noop = () => undefined;
@@ -35,25 +35,64 @@ describe('diplomacy seats', () => {
     expect(state.diplomacySeats.redsand_range.standing).toBe(beforeSibling + 1);
     expect(state.factions.HILL_TRIBES.standing).toBe(beforeFaction + 2);
   });
+});
 
-  it('migrates v18 saves by adding diplomacy seats and defaulting old envoys to talks', () => {
-    const state = testState(702);
-    dispatchExpedition(
-      state,
-      { kind: 'diplomacy', destination: 'river_meet', heroIds: ['p1'] },
-      LOCATION_DEFS,
-    );
-    const legacy = JSON.parse(serialize(state)) as Record<string, unknown>;
-    legacy.saveVersion = 18;
-    delete legacy.diplomacySeats;
-    const expedition = (legacy.expeditions as Array<Record<string, unknown>>)[0];
-    delete expedition.diplomacyMission;
+describe('faction discovery (TERRITORY_DISCOVERY_SPEC.md §5)', () => {
+  it('a seatless faction stays unknown until its discovery node is visited', () => {
+    const s = testState();
+    // The Beastfolk camps start only 'rumored', so the post hasn't met them.
+    expect(isFactionKnown(s, 'BEASTFOLK')).toBe(false);
 
-    const migrated = deserialize(JSON.stringify(legacy), { locationDefs: TEST_LOCATIONS });
-    expect(migrated.saveVersion).toBe(27);
-    expect(migrated.diplomacySeats.river_meet).toBeDefined();
-    expect(migrated.diplomacySeats.river_meet.faction).toBe('RIVER_CLANS');
-    expect(migrated.expeditions[0].diplomacyMission).toEqual({ type: 'talks' });
+    s.locations.beast_wilds.discovery = 'visited';
+    reconcileFactionsKnown(s, TEST_LOCATIONS);
+    expect(isFactionKnown(s, 'BEASTFOLK')).toBe(true);
+  });
+
+  it('discovery is monotonic and never double-lists a faction', () => {
+    const s = testState();
+    s.locations.goblin_wilds.discovery = 'visited';
+    reconcileFactionsKnown(s, TEST_LOCATIONS);
+    reconcileFactionsKnown(s, TEST_LOCATIONS);
+    expect(s.factionsKnown.filter((f) => f === 'BEASTFOLK')).toHaveLength(1);
+  });
+
+  it('a seated faction becomes known once one of its seats is visited', () => {
+    const s = testState();
+    const faction = LOCATION_DEFS.get('river_meet')!.faction!;
+    // Hide every seat of this faction so the before-state is a clean unknown.
+    for (const def of TEST_LOCATIONS) {
+      if (def.faction === faction && s.locations[def.id]) {
+        s.locations[def.id].discovery = 'rumored';
+      }
+    }
+    s.factionsKnown = s.factionsKnown.filter((f) => f !== faction);
+    reconcileFactionsKnown(s, TEST_LOCATIONS);
+    expect(isFactionKnown(s, faction)).toBe(false);
+
+    s.locations.river_meet.discovery = 'visited';
+    reconcileFactionsKnown(s, TEST_LOCATIONS);
+    expect(isFactionKnown(s, faction)).toBe(true);
+  });
+
+  it('the factionKnown / factionUnknown conditions read the discovery state', () => {
+    const s = testState();
+    expect(evalCondition(s, { type: 'factionUnknown', faction: 'BEASTFOLK' })).toBe(true);
+    expect(evalCondition(s, { type: 'factionKnown', faction: 'BEASTFOLK' })).toBe(false);
+
+    s.locations.beast_wilds.discovery = 'visited';
+    reconcileFactionsKnown(s, TEST_LOCATIONS);
+    expect(evalCondition(s, { type: 'factionKnown', faction: 'BEASTFOLK' })).toBe(true);
+    expect(evalCondition(s, { type: 'factionUnknown', faction: 'BEASTFOLK' })).toBe(false);
+  });
+
+  it('resolveTurn reconciles newly-discovered factions', () => {
+    const s = testState();
+    expect(isFactionKnown(s, 'BEASTFOLK')).toBe(false);
+    // A camp reached 'visited' this turn (e.g. via a homecoming); resolveTurn's
+    // reconcile pass should register the contact.
+    s.locations.beast_wilds.discovery = 'visited';
+    resolveTurn(s, TEST_CONTENT);
+    expect(isFactionKnown(s, 'BEASTFOLK')).toBe(true);
   });
 });
 

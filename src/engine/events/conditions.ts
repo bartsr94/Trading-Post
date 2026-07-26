@@ -3,7 +3,7 @@ import { canAdvanceTier, hasBuilding } from '../buildings';
 import { isOverClaim } from '../claim';
 import { cargoUnits } from '../expeditions';
 import { eligiblePartners, isMarried, nodePeoples, spousesOf } from '../family';
-import { diplomacySeatStateById } from '../diplomacy';
+import { diplomacySeatStateById, isFactionKnown } from '../diplomacy';
 import { frictionFor, heritageCount, nativeShare, postDefense, residentCount } from '../residents';
 import { raidThreatActive } from '../raids';
 import { thrallCount } from '../thralls';
@@ -56,6 +56,10 @@ export function evalCondition(
       return state.factions[cond.faction].standing >= cond.value;
     case 'standingAtMost':
       return state.factions[cond.faction].standing <= cond.value;
+    case 'factionKnown':
+      return isFactionKnown(state, cond.faction);
+    case 'factionUnknown':
+      return !isFactionKnown(state, cond.faction);
     case 'communityStandingAtLeast':
       return (diplomacySeatStateById(state, cond.location)?.standing ?? 0) >= cond.value;
     case 'communityStandingAtMost':

@@ -6,6 +6,7 @@ import { BEASTFOLK_EVENTS } from './beastfolkEvents';
 import { CAPTIVE_EVENTS } from './captiveEvents';
 import { DIPLOMACY_EVENTS } from './diplomacyEvents';
 import { FAMILY_EVENTS } from './familyEvents';
+import { HARPY_EVENTS } from './harpyEvents';
 import { GENERIC_HERO_EVENTS, HERO_EVENTS } from './heroEvents';
 import { MARKET_EVENTS } from './marketEvents';
 import { POST_EVENTS } from './postEvents';
@@ -26,6 +27,7 @@ export const ALL_EVENTS: GameEvent[] = [
   ...SEASON_EVENTS,
   ...TRAVEL_EVENTS,
   ...BEASTFOLK_EVENTS,
+  ...HARPY_EVENTS,
   ...RAID_EVENTS,
   ...DIPLOMACY_EVENTS,
   ...CAPTIVE_EVENTS,

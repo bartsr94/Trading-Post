@@ -60,6 +60,11 @@ export type Condition =
   | { type: 'anyHeroSkillAtLeast'; skill: SkillId; value: number }
   | { type: 'standingAtLeast'; faction: FactionId; value: number }
   | { type: 'standingAtMost'; faction: FactionId; value: number }
+  /** Whether the post has made contact with a faction yet — a seated one once
+   *  a seat is visited, a seatless one (Beastfolk/Harpy) once its discovery
+   *  node is (TERRITORY_DISCOVERY_SPEC.md §5). */
+  | { type: 'factionKnown'; faction: FactionId }
+  | { type: 'factionUnknown'; faction: FactionId }
   | { type: 'communityStandingAtLeast'; location: LocationId; value: number }
   | { type: 'communityStandingAtMost'; location: LocationId; value: number }
   | { type: 'communityGrievanceAtLeast'; location: LocationId; value: number }

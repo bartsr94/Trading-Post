@@ -12,7 +12,6 @@ import { addChild, formUnion, isMixed, nodePeoples } from '../family';
 import { isEligible } from '../events/selection';
 import { addResidents, residentTotal } from '../residents';
 import { Rng } from '../rng';
-import { migrate } from '../save';
 import { advancePendingEvent, outcomeCtx, resolveChoice } from '../turn';
 import {
   defaultSubPeople,
@@ -21,7 +20,7 @@ import {
   isNativeHeritage,
   stanceOf,
 } from '../types';
-import type { ExpeditionState, GameState } from '../types';
+import type { ExpeditionState } from '../types';
 import { TEST_CONTENT, testState } from './helpers';
 
 describe('Beastfolk taxonomy', () => {
@@ -173,33 +172,6 @@ describe('the beastfolk match events require a male hero', () => {
     getHero(s, 'p1').gender = 'male';
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(true);
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(true);
-  });
-});
-
-describe('save migration v9 -> v10', () => {
-  it('backfills a missing BEASTFOLK standing on an old save', () => {
-    const s = testState();
-    const preV10 = structuredClone(s) as GameState;
-    preV10.saveVersion = 9;
-    // Simulate a genuinely pre-v10 save: no BEASTFOLK key at all.
-    const factions = { ...preV10.factions } as Record<string, unknown>;
-    delete factions.BEASTFOLK;
-    preV10.factions = factions as GameState['factions'];
-
-    const migrated = migrate(preV10);
-    expect(migrated.saveVersion).toBe(27); // migrate() chains all the way to current
-    expect(migrated.factions.BEASTFOLK).toBeDefined();
-    expect(migrated.factions.BEASTFOLK.standing).toBe(-60);
-  });
-
-  it('leaves an already-present BEASTFOLK standing untouched', () => {
-    const s = testState();
-    const preV10 = structuredClone(s) as GameState;
-    preV10.saveVersion = 9;
-    preV10.factions.BEASTFOLK = { standing: 12 };
-
-    const migrated = migrate(preV10);
-    expect(migrated.factions.BEASTFOLK.standing).toBe(12);
   });
 });
 

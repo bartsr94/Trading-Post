@@ -174,11 +174,24 @@ shocks flag affected cells (▲/▼, faded `?` while only rumored).
 
 ## 5. Factions, diplomacy & the Charter quota
 
-Six factions (`FACTION_IDS`): `RIVER_CLANS` ("The Tributary Towns"),
+Seven factions (`FACTION_IDS`): `RIVER_CLANS` ("The Tributary Towns"),
 `HILL_TRIBES` ("The Hanjoda Nomads"), `OLD_PEOPLE` ("The Bejasi Hills Folk"),
 `CHARTER_COMPANY` ("The Ansberry Company"), `KNIGHTS_EIRWEN` (seated at
-Pemba-Jasiri, an Imanian sub-power), and `BEASTFOLK` ("The Greenskins",
-seatless — see §10). Standing runs −100..+100 with stance bands.
+Pemba-Jasiri, an Imanian sub-power), `BEASTFOLK` ("The Greenskins",
+seatless — see §10), and `HARPY` ("The Harpies", seatless — see §19).
+Standing runs −100..+100 with stance bands.
+
+**Faction discovery** (TERRITORY_DISCOVERY_SPEC.md §5). `GameState.factionsKnown`
+tracks which factions the post has actually made contact with. A faction
+becomes known once a location that reveals it reaches `visited`: its seat
+(`LocationDef.faction`), or — for a seatless people (Beastfolk/Harpy) — a
+non-seat discovery node (`LocationDef.discoversFaction`, set on the two
+Beastfolk camps and the Harpy eyrie). It's pure and monotonic, reconciled from
+location discovery at game start and after each turn's homecomings
+(`reconcileFactionsKnown`/`isFactionKnown` in `engine/diplomacy.ts`); the
+`factionKnown`/`factionUnknown` conditions gate content on it. **Seatless
+factions stay hidden until met** — the Outpost Overview's faction list omits an
+undiscovered seatless faction (seated ones always show).
 
 Diplomacy splits the same way trade (post market) vs. caravans (travel)
 does: an at-post `diplomacy` **activity** hosts the Ansberry Company's
@@ -266,6 +279,17 @@ Calibrated anchors include Trading Post `(0.590, 0.164)`, Njaro-Matu
 0.491)`. Shackle Station starts known; the Black River corridor (`x ≥
 0.82`) starts surveyed while checkpoint-locked southern country stays
 fogged.
+
+**People/faction territories** (TERRITORY_DISCOVERY_SPEC.md §3). Each people
+holds a range on the map, traced from the artist's overlay
+(`src/assets/ui/The Ashmark - Racial distribution.jpg`, same 4:3 framing so
+normalized coords line up 1:1) into `content/map.ts` `MapFeatureDef` polygons
+tagged with a lowercase people tag (`orc`/`goblin`/`harpy`/`knights`/
+`kiswani`/`hanjoda`/`company`). Since `tagsAt` already feeds `destinationTag`,
+travel/exploration events gate to a people's own country for free — orc content
+only in orc range, etc. Orc and Goblin ranges both also keep the shared
+`beastfolk` tag (so the pooled `travel_beastfolk_toll` still fires); they
+replaced the single old `beast_wilds` overlay box.
 
 ## 7. Residents & the Concession (settlement and farming)
 
@@ -782,17 +806,18 @@ mechanism as originally specced.
 
 ## 16. Save versioning
 
-`saveVersion` + migrations live in `engine/save.ts`; any `GameState` shape
-change bumps `TUNING.save.version` and adds a migration case (tests enforce
-unknown versions throw). Current version: **v27**. Rough history: v5 roster/
-reserve split; v6 buildings; v7 heritage/culture; v8 gender/family; v9
-peoples restructure (Hanjoda/Weri, KNIGHTS_EIRWEN); v10 Beastfolk; v11
-resident tag counts fixed; v13→v16 raiding; v19→v20 diplomacy discovery;
-v20→v21 the Concession (claim/herd, hard cap removed); v22 hero-to-hero
-marriage (`spouseIds`/`temperament`); v23 captivity (§17); v24 resident
-integration friction (§7, §10); v25 thralls/indentured labor (§18); v26
-price intel (`LocationState.priceIntel`, the Ledger, §4); v27 market shocks
-(`GameState.marketShocks`, §4).
+`saveVersion` lives in `engine/save.ts` as a **schema guard only** — the game
+is pre-release and the **save-migration system was removed 2026-07-26** (it was
+never used against real saves). `deserialize` validates and nothing more;
+`validateGameState` rejects any save whose version isn't `TUNING.save.version`,
+so a stale autosave just fails to load and the player starts fresh. On any
+`GameState` shape change, **bump `TUNING.save.version`** so stale saves are
+cleanly rejected — there is no migration function to add, and no
+`MigrationContext`. Current version: **v29**. (Historic bumps once carried
+migrations — roster/reserve split, buildings, heritage/culture, gender/family,
+peoples restructure, Beastfolk, raiding, the Concession, captivity, thralls,
+price intel, market shocks; v28 the Harpies, v29 faction discovery — but those
+migration paths no longer exist, only the version numbers they landed at.)
 
 ## 17. Captivity — abduction & ransom
 
@@ -977,6 +1002,41 @@ by that seat, not the faction default" (river_meet → 'kiswani', not a bare
 faction-level lookup); `diplomacy.test.ts`'s "a thralls-purchase envoy only
 seats thralls on homecoming, not at arrival" covers the same timing fix for
 the purchase channel.
+
+## 19. Harpies — the crag people
+
+*(TERRITORY_DISCOVERY_SPEC.md — the newest people, built the same way the
+Beastfolk were: a near-total content extension of the existing Heritage/
+faction/family machinery, §10 is the template.)*
+
+The Ashmark's winged people of the high Stormwall crags. `Heritage` gains
+`harpy` (native group, like orc/goblin/weri; it hybridizes normally —
+`isMatrilinealPure` stays orc/goblin-only). A seatless `HARPY` faction ("The
+Harpies", starts −60) has **no map seat** — no Send-Envoy path, no local hire
+entry; standing moves only through events, exactly like `BEASTFOLK`.
+
+Discovered by exploring to **The Windward Crags** (`harpy_eyrie`), a non-market
+discovery node inside the Harpy territory and behind the `stormwall`
+checkpoint (`old_road` + `hill_fort` visited), so Harpies are a deep-frontier
+find. It starts `initialDiscovery: 'unknown'` and carries `discoversFaction:
+'HARPY'`, so reaching it makes the faction known (§5).
+
+Content (`content/events/harpyEvents.ts`, `harpy_` prefix) mirrors the
+Beastfolk standing arc gated on the eyrie's discovery: `harpy_tribute` (hostile
+band, pay/refuse), `harpy_match` (rising standing — a harpy comes down to wed a
+hero via `formUnion(source:'alliance', heritage:'harpy')` + the `wed_harpy`
+trait), `harpy_settlement` (high standing — a flight settles as guards/hunters,
+setting `friction` 7), and the `harpy_integration`/`_settled` friction arc.
+A `travel_harpy_toll` (`destinationTag: 'harpy'`) mirrors the beastfolk toll
+as an aerial sky-toll. Harpy names live in `content/names.ts`; the portrait
+pool (`src/assets/portraits/harpy/`) isn't painted yet, so harpy faces use the
+hash-tile fallback (§13) — dropping art in later needs no code.
+
+**Still open:** an in-fiction faction/eyrie name is placeholder-final ("The
+Harpies"/"The Windward Crags"); the Harpy raid profile uses the shared bases
+(no distinct `beastfolkAlwaysEligible`-style bypass or per-faction abduction
+identity yet); and lore (`docs/lore/`) + portrait art are deferred, so
+`harpy_` events carry no `loreRef`.
 
 ---
 

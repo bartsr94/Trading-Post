@@ -215,14 +215,63 @@ export const MAP_FEATURES: readonly MapFeatureDef[] = [
     ],
     tags: ['road', 'ruin'],
   },
+  // ---- People/faction territories (TERRITORY_DISCOVERY_SPEC.md §3) ----
+  // Traced from src/assets/ui/The Ashmark - Racial distribution.jpg (same 4:3
+  // framing as the base map, so these normalized coords line up 1:1). Lowercase
+  // people/faction tags gate travel & exploration events via `destinationTag`,
+  // so a group's content fires only in its own country. These supersede the old
+  // single `beast_wilds` box (now split into real Orc + Goblin ranges); both
+  // keep the `beastfolk` tag so the shared travel_beastfolk_toll still fires.
   {
-    id: 'beast_wilds',
-    polygon: [
-      { x: 0.41, y: 0.12 },
-      { x: 0.49, y: 0.12 },
-      { x: 0.49, y: 0.29 },
-      { x: 0.41, y: 0.29 },
-    ],
-    tags: ['wilds', 'beastfolk', 'danger'],
+    id: 'orc_range',
+    polygon: [{ x: 0.180, y: 0.000 }, { x: 0.460, y: 0.000 }, { x: 0.500, y: 0.060 }, { x: 0.545, y: 0.073 }, { x: 0.675, y: 0.053 }, { x: 0.680, y: 0.093 }, { x: 0.660, y: 0.127 }, { x: 0.605, y: 0.140 }, { x: 0.555, y: 0.100 }, { x: 0.500, y: 0.107 }, { x: 0.440, y: 0.193 }, { x: 0.405, y: 0.200 }, { x: 0.315, y: 0.180 }, { x: 0.300, y: 0.147 }, { x: 0.250, y: 0.120 }, { x: 0.185, y: 0.007 }],
+    tags: ['orc', 'beastfolk', 'wilds', 'danger'],
+  },
+  {
+    id: 'goblin_range',
+    polygon: [{ x: 0.410, y: 0.200 }, { x: 0.505, y: 0.213 }, { x: 0.540, y: 0.240 }, { x: 0.465, y: 0.247 }, { x: 0.425, y: 0.293 }, { x: 0.360, y: 0.273 }, { x: 0.315, y: 0.293 }, { x: 0.290, y: 0.280 }, { x: 0.310, y: 0.240 }, { x: 0.375, y: 0.247 }, { x: 0.405, y: 0.207 }],
+    tags: ['goblin', 'beastfolk', 'wilds', 'danger'],
+  },
+  {
+    id: 'goblin_range_east',
+    polygon: [{ x: 0.575, y: 0.273 }, { x: 0.605, y: 0.280 }, { x: 0.595, y: 0.333 }, { x: 0.465, y: 0.373 }, { x: 0.425, y: 0.340 }, { x: 0.570, y: 0.280 }],
+    tags: ['goblin', 'beastfolk', 'wilds', 'danger'],
+  },
+  {
+    id: 'harpy_range',
+    polygon: [{ x: 0.185, y: 0.047 }, { x: 0.225, y: 0.087 }, { x: 0.205, y: 0.100 }, { x: 0.230, y: 0.147 }, { x: 0.255, y: 0.133 }, { x: 0.250, y: 0.153 }, { x: 0.280, y: 0.153 }, { x: 0.305, y: 0.193 }, { x: 0.330, y: 0.187 }, { x: 0.345, y: 0.220 }, { x: 0.315, y: 0.213 }, { x: 0.295, y: 0.240 }, { x: 0.235, y: 0.193 }, { x: 0.175, y: 0.200 }, { x: 0.185, y: 0.133 }, { x: 0.145, y: 0.120 }, { x: 0.135, y: 0.087 }, { x: 0.145, y: 0.060 }, { x: 0.180, y: 0.053 }],
+    tags: ['harpy', 'wilds', 'danger'],
+  },
+  {
+    id: 'harpy_range_east',
+    polygon: [{ x: 0.530, y: 0.113 }, { x: 0.570, y: 0.127 }, { x: 0.535, y: 0.153 }, { x: 0.550, y: 0.233 }, { x: 0.510, y: 0.200 }, { x: 0.445, y: 0.187 }, { x: 0.480, y: 0.167 }, { x: 0.500, y: 0.120 }, { x: 0.525, y: 0.120 }],
+    tags: ['harpy', 'wilds', 'danger'],
+  },
+  {
+    id: 'knights_range',
+    polygon: [{ x: 0.470, y: 0.000 }, { x: 0.680, y: 0.020 }, { x: 0.685, y: 0.053 }, { x: 0.560, y: 0.053 }, { x: 0.520, y: 0.007 }, { x: 0.475, y: 0.007 }],
+    tags: ['knights'],
+  },
+  {
+    // The intentional Knights enclave in the goblin/harpy borderland
+    // (Bartosz-confirmed) — below the auto-tracer's noise floor, hand-placed.
+    id: 'knights_enclave',
+    polygon: [{ x: 0.345, y: 0.315 }, { x: 0.400, y: 0.315 }, { x: 0.400, y: 0.365 }, { x: 0.345, y: 0.365 }],
+    tags: ['knights'],
+  },
+  {
+    id: 'kiswani_range',
+    polygon: [{ x: 0.710, y: 0.147 }, { x: 0.750, y: 0.167 }, { x: 0.720, y: 0.213 }, { x: 0.765, y: 0.347 }, { x: 0.830, y: 0.353 }, { x: 0.865, y: 0.313 }, { x: 0.870, y: 0.253 }, { x: 0.885, y: 0.347 }, { x: 0.920, y: 0.360 }, { x: 0.945, y: 0.407 }, { x: 0.905, y: 0.467 }, { x: 0.875, y: 0.473 }, { x: 0.875, y: 0.507 }, { x: 0.915, y: 0.547 }, { x: 0.930, y: 0.600 }, { x: 0.915, y: 0.633 }, { x: 0.935, y: 0.660 }, { x: 0.935, y: 0.713 }, { x: 0.920, y: 0.727 }, { x: 0.935, y: 0.787 }, { x: 0.905, y: 0.753 }, { x: 0.915, y: 0.693 }, { x: 0.900, y: 0.673 }, { x: 0.900, y: 0.567 }, { x: 0.865, y: 0.513 }, { x: 0.870, y: 0.460 }, { x: 0.920, y: 0.407 }, { x: 0.910, y: 0.373 }, { x: 0.870, y: 0.340 }, { x: 0.830, y: 0.373 }, { x: 0.825, y: 0.407 }, { x: 0.695, y: 0.407 }, { x: 0.715, y: 0.260 }, { x: 0.700, y: 0.207 }, { x: 0.670, y: 0.180 }, { x: 0.630, y: 0.193 }, { x: 0.570, y: 0.267 }, { x: 0.455, y: 0.300 }, { x: 0.475, y: 0.267 }, { x: 0.555, y: 0.247 }, { x: 0.565, y: 0.193 }, { x: 0.705, y: 0.153 }],
+    tags: ['kiswani'],
+  },
+  {
+    id: 'hanjoda_range',
+    polygon: [{ x: 0.445, y: 0.293 }, { x: 0.445, y: 0.320 }, { x: 0.365, y: 0.353 }, { x: 0.360, y: 0.413 }, { x: 0.385, y: 0.480 }, { x: 0.345, y: 0.520 }, { x: 0.300, y: 0.520 }, { x: 0.275, y: 0.487 }, { x: 0.235, y: 0.480 }, { x: 0.190, y: 0.420 }, { x: 0.235, y: 0.320 }, { x: 0.260, y: 0.300 }, { x: 0.320, y: 0.320 }, { x: 0.345, y: 0.300 }, { x: 0.440, y: 0.300 }],
+    tags: ['hanjoda'],
+  },
+  {
+    id: 'company_range',
+    polygon: [{ x: 0.935, y: 0.580 }, { x: 0.955, y: 0.607 }, { x: 0.940, y: 0.740 }, { x: 0.965, y: 0.773 }, { x: 0.955, y: 0.787 }, { x: 0.930, y: 0.747 }, { x: 0.945, y: 0.707 }, { x: 0.925, y: 0.633 }, { x: 0.935, y: 0.587 }],
+    tags: ['company'],
   },
 ] as const;

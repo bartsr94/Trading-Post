@@ -146,15 +146,19 @@ describe('spatial Ashmark map', () => {
     }
   });
 
-  // BEASTFOLK_CAMPS_SPEC.md §5: the beast_wilds MapFeature was reshaped to
-  // bracket both camps' new coordinates (Gnawback Camp at 0.4488,0.1588 and
-  // The Tangle at 0.4572,0.2543) so free-coordinate exploring nearby still
-  // reads as beastfolk country, without leaking that flavor onto the
-  // nearby river-country locations.
-  it('the reshaped beast_wilds terrain feature covers ground near both camps but not the river towns', () => {
-    expect(tagsAt({ x: 0.45, y: 0.2 }, MAP_REGIONS, MAP_FEATURES)).toEqual(
-      expect.arrayContaining(['beastfolk', 'wilds', 'danger']),
-    );
+  // TERRITORY_DISCOVERY_SPEC.md §3: the old single beast_wilds box was split
+  // into real per-people ranges traced from the racial-distribution map. Each
+  // camp sits in its own people's range (orc/goblin), both still carry the
+  // shared 'beastfolk' tag, and neither flavor leaks onto the river towns.
+  it('the split Orc/Goblin ranges cover each camp with its own people tag, not the river towns', () => {
+    const orcCamp = tagsAt(LOCATION_DEFS.get('beast_wilds')!.mapPoint, MAP_REGIONS, MAP_FEATURES);
+    expect(orcCamp).toEqual(expect.arrayContaining(['orc', 'beastfolk']));
+    expect(orcCamp).not.toContain('goblin');
+
+    const goblinCamp = tagsAt(LOCATION_DEFS.get('goblin_wilds')!.mapPoint, MAP_REGIONS, MAP_FEATURES);
+    expect(goblinCamp).toEqual(expect.arrayContaining(['goblin', 'beastfolk']));
+    expect(goblinCamp).not.toContain('orc');
+
     for (const point of [
       LOCATION_DEFS.get('post')!.mapPoint,
       LOCATION_DEFS.get('river_meet')!.mapPoint,
@@ -162,5 +166,17 @@ describe('spatial Ashmark map', () => {
     ]) {
       expect(tagsAt(point, MAP_REGIONS, MAP_FEATURES)).not.toContain('beastfolk');
     }
+  });
+
+  // TERRITORY_DISCOVERY_SPEC.md §3: every people holds a tagged range, so
+  // travel/exploration events gate to a people's own country via destinationTag.
+  it('each people range carries its own tag at an interior point', () => {
+    const has = (point: { x: number; y: number }, tag: string) =>
+      expect(tagsAt(point, MAP_REGIONS, MAP_FEATURES)).toContain(tag);
+    has({ x: 0.565, y: 0.025 }, 'knights');
+    has({ x: 0.33, y: 0.39 }, 'hanjoda');
+    has({ x: 0.945, y: 0.685 }, 'company');
+    has({ x: 0.805, y: 0.405 }, 'kiswani');
+    has({ x: 0.21, y: 0.08 }, 'harpy');
   });
 });

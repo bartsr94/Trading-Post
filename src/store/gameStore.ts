@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import { STARTING_STANDINGS } from '../content/factions';
-import { HERO_POOL, createHero, genderOf, heritageOf, subPeopleOf } from '../content/heroes';
+import { HERO_POOL, createHero } from '../content/heroes';
 import { LOCATIONS } from '../content/locations';
 import { MAP_FEATURES, MAP_REGIONS } from '../content/map';
 import { CONTENT } from '../content/registry';
@@ -60,15 +60,6 @@ export type Screen =
   | 'map'
   | 'market'
   | 'ledger';
-
-const MIGRATION_CTX = {
-  locationDefs: LOCATIONS,
-  mapRegionDefs: MAP_REGIONS,
-  mapFeatureDefs: MAP_FEATURES,
-  heroHeritage: new Map(HERO_POOL.map((t) => [t.id, heritageOf(t)] as const)),
-  heroGender: new Map(HERO_POOL.map((t) => [t.id, genderOf(t)] as const)),
-  heroSubPeople: new Map(HERO_POOL.map((t) => [t.id, subPeopleOf(t)] as const)),
-};
 
 interface GameStore {
   game: GameState | null;
@@ -234,7 +225,7 @@ export const useGameStore = create<GameStore>((set, get) => {
   cheatModeEnabled: typeof localStorage !== 'undefined' && localStorage.getItem(CHEAT_MODE_KEY) === 'true',
   cheatConsoleOpen: false,
 
-  hasAutosave: () => loadAutosave(MIGRATION_CTX) !== null,
+  hasAutosave: () => loadAutosave() !== null,
 
   newGame: (heroIds) => {
     const heroes = heroIds
@@ -256,7 +247,7 @@ export const useGameStore = create<GameStore>((set, get) => {
   },
 
   continueGame: () => {
-    const game = loadAutosave(MIGRATION_CTX);
+    const game = loadAutosave();
     if (game) set({ game, screen: 'post', lastResolution: null, growthLines: [] });
   },
 
@@ -272,7 +263,7 @@ export const useGameStore = create<GameStore>((set, get) => {
 
   importSave: (json) => {
     try {
-      const game = deserialize(json, MIGRATION_CTX);
+      const game = deserialize(json);
       autosave(game);
       set({ game, screen: 'post', lastResolution: null, growthLines: [] });
       return null;

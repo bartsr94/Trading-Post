@@ -3,7 +3,7 @@
 
 import { TUNING } from '../content/tuning';
 import { freshClaim, freshHerd } from './claim';
-import { createDiplomacySeatStates } from './diplomacy';
+import { createDiplomacySeatStates, reconcileFactionsKnown } from './diplomacy';
 import { freshResidents } from './residents';
 import { freshThralls } from './thralls';
 import { mapKnowledgeFromDiscovery } from './map';
@@ -93,6 +93,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     expeditions: [],
     nextExpeditionId: 1,
     factions,
+    factionsKnown: [],
     diplomacySeats: createDiplomacySeatStates(options.locationDefs ?? [], options.startingStandings),
     dependants: [],
     nextDependantId: 1,
@@ -128,5 +129,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     options.mapRegionDefs ?? [],
     options.mapFeatureDefs ?? [],
   );
+  // Any faction whose seat/camp already starts discovered is known from turn 1.
+  reconcileFactionsKnown(state, options.locationDefs ?? []);
   return state;
 }

@@ -50,6 +50,7 @@ export const FACTION_IDS = [
   'CHARTER_COMPANY',
   'KNIGHTS_EIRWEN',
   'BEASTFOLK',
+  'HARPY',
 ] as const;
 export type FactionId = (typeof FACTION_IDS)[number];
 
@@ -85,8 +86,10 @@ export type AxisId = (typeof AXIS_IDS)[number];
  *  Redsand; Tributary/Bejasi Hills) is the separate free-form `subPeople`
  *  flavor, not an enum the engine branches on. Orcs and Goblins are distinct
  *  *species* (not sub-tribes of one people), so they get their own values
- *  here rather than a shared `beastfolk` value + subPeople. */
-export const HERITAGES = ['imanian', 'kiswani', 'hanjoda', 'weri', 'orc', 'goblin'] as const;
+ *  here rather than a shared `beastfolk` value + subPeople. Harpies
+ *  (TERRITORY_DISCOVERY_SPEC.md) are a full settleable people too, seatless
+ *  like the Beastfolk. */
+export const HERITAGES = ['imanian', 'kiswani', 'hanjoda', 'weri', 'orc', 'goblin', 'harpy'] as const;
 export type Heritage = (typeof HERITAGES)[number];
 
 /** The coarse origin split the culture axis & Company care about. */
@@ -122,6 +125,8 @@ export function defaultSubPeople(h: Heritage): string {
       return 'orc';
     case 'goblin':
       return 'goblin';
+    case 'harpy':
+      return 'harpy';
   }
 }
 
@@ -265,6 +270,10 @@ export interface LocationDef {
   blurb: string;
   /** Faction seat, if any — standing there gates trade and events. */
   faction?: FactionId;
+  /** A non-seat discovery node that, on reaching `visited`, marks a seatless
+   *  faction *known* (TERRITORY_DISCOVERY_SPEC.md §5) — e.g. a Beastfolk camp
+   *  or the Harpy eyrie. Distinct from `faction` (a diplomacy seat). */
+  discoversFaction?: FactionId;
   /** Seat-level standing override at game start; falls back to the faction default (spec §8). */
   startingStanding?: number;
   hasMarket: boolean;
@@ -836,6 +845,11 @@ export interface GameState {
   /** Monotonic counter for expedition ids. */
   nextExpeditionId: number;
   factions: Record<FactionId, FactionState>;
+  /** Factions the post has actually made contact with — a seated faction once
+   *  any of its seats is visited, a seatless one (Beastfolk/Harpy) once its
+   *  discovery node is (TERRITORY_DISCOVERY_SPEC.md §5). Monotonic; reconciled
+   *  from location discovery each turn. Gates content/UI on "have we met them". */
+  factionsKnown: FactionId[];
   /** Per-community diplomacy state for authored seats with a faction. */
   diplomacySeats: Record<LocationId, DiplomacySeatState>;
   /** Named family attached to characters (CHARACTERS_SPEC.md §3). */

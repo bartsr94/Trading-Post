@@ -8,10 +8,11 @@ import outpostBg from '../../assets/ui/outpost_background.jpg';
 import { BUILDING_NAMES } from '../../content/buildings';
 import { FACTION_DEFS, FACTIONS } from '../../content/factions';
 import { GOODS } from '../../content/goods';
-import { LOCATION_NAMES } from '../../content/locations';
+import { LOCATION_DEFS, LOCATION_NAMES } from '../../content/locations';
 import { CONTENT } from '../../content/registry';
 import { TUNING } from '../../content/tuning';
 import { canAdvanceTier, tierRequirement } from '../../engine/buildings';
+import { isFactionKnown } from '../../engine/diplomacy';
 import { prosperity } from '../../engine/economy';
 import { postDefense } from '../../engine/residents';
 import { stanceOf } from '../../engine/types';
@@ -22,6 +23,12 @@ import { Icon } from '../components/Icon';
 import type { IconName } from '../components/Icon';
 
 const TIER_NAMES = ['The Clearing', 'Palisade Post', 'Established Post', 'Thriving Settlement'];
+
+// Factions with a map seat are always listed; seatless ones (Beastfolk/Harpy)
+// stay hidden until the post has actually made contact (TERRITORY_DISCOVERY_SPEC.md §5).
+const SEATED_FACTIONS = new Set(
+  [...LOCATION_DEFS.values()].map((def) => def.faction).filter((f): f is NonNullable<typeof f> => !!f),
+);
 
 const EXPEDITION_KIND_ICONS: Record<ExpeditionState['kind'], IconName> = {
   caravan: 'caravan',
@@ -126,7 +133,7 @@ export function PostOverview({ game }: { game: GameState }) {
           </button>
 
           <h4 style={{ marginTop: 14 }}>Factions</h4>
-          {FACTIONS.map((f) => {
+          {FACTIONS.filter((f) => SEATED_FACTIONS.has(f.id) || isFactionKnown(game, f.id)).map((f) => {
             const standing = game.factions[f.id].standing;
             return (
               <div key={f.id} className="faction-row" title={f.blurb}>

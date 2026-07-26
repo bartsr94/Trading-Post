@@ -25,6 +25,7 @@ const HERITAGE_LABEL: Record<Heritage, string> = {
   weri: 'Weri',
   orc: 'Orc',
   goblin: 'Goblin',
+  harpy: 'Harpy',
 };
 
 /** Tribe/region → display label (PEOPLES_SPEC.md §2). Unknown keys title-case. */
@@ -39,6 +40,7 @@ const SUBPEOPLE_LABEL: Record<string, string> = {
   weri: 'Weri',
   orc: 'Orc',
   goblin: 'Goblin',
+  harpy: 'Harpy',
 };
 
 /** "People — Tribe/Region", omitting a redundant or default sub-identity. */

@@ -305,7 +305,7 @@ function validateExpedition(
   return { id, heroIds: party };
 }
 
-/** Validate a migrated current-version save before it enters the store. */
+/** Validate a current-version save before it enters the store. */
 export function validateGameState(value: unknown): GameState {
   const state = record(value, 'save');
   if (integer(state.saveVersion, 'save.saveVersion') !== TUNING.save.version) {
@@ -382,6 +382,10 @@ export function validateGameState(value: unknown): GameState {
     const entry = record(factions[faction], `save.factions.${faction}`);
     finite(entry.standing, `save.factions.${faction}.standing`);
   }
+
+  const factionsKnown = stringArray(state.factionsKnown, 'save.factionsKnown');
+  factionsKnown.forEach((f, i) => enumValue(f, FACTION_IDS, `save.factionsKnown[${i}]`));
+  unique(factionsKnown, 'save.factionsKnown');
 
   const diplomacySeats = record(state.diplomacySeats, 'save.diplomacySeats');
   for (const [seatId, seatValue] of Object.entries(diplomacySeats)) {

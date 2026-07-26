@@ -212,6 +212,12 @@ export const TRAITS: TraitDef[] = [
     checkMods: [{ tag: 'BEASTFOLK', value: 2, label: 'Wed to a Goblin Clan' }],
   },
   {
+    id: 'wed_harpy',
+    name: 'Wed to an Aerie',
+    description: 'Married into a harpy aerie of the high crags — a bond the flatland factors have no word for and no love of.',
+    checkMods: [{ tag: 'HARPY', value: 2, label: 'Wed to an Aerie' }],
+  },
+  {
     id: 'wed_party',
     name: 'Wed Within the Company',
     description: 'Married another of the company\'s own — no outside kin gained, no outside kin lost.',

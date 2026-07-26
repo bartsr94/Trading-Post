@@ -24,7 +24,7 @@ import {
   resolveHarvest,
   wildlandTrickle,
 } from './claim';
-import { applyDiplomacyShift } from './diplomacy';
+import { applyDiplomacyShift, reconcileFactionsKnown } from './diplomacy';
 import { driftMarket, priceOf, prosperity, resolveShocks } from './economy';
 import type { GoodDef } from './economy';
 import { advanceExpeditions, travelContextFor } from './expeditions';
@@ -150,8 +150,10 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   payCharterQuota(state, report);
   const missedWages = payResidentWages(state, report);
 
-  // 2. Expeditions move (and may resolve) before at-post activities.
+  // 2. Expeditions move (and may resolve) before at-post activities. A
+  //    homecoming can newly discover a faction's seat/camp — note it as met.
   advanceExpeditions(state, ctx, rng, report);
+  reconcileFactionsKnown(state, ctx.locationDefs.values());
 
   // 3. Activity results for heroes present at the post.
   for (const hero of heroesAtPost(state)) {

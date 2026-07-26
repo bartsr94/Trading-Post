@@ -511,4 +511,66 @@ export const TRAVEL_EVENTS: GameEvent[] = [
       },
     ],
   },
+  {
+    id: 'travel_harpy_toll',
+    category: 'travel',
+    illustration: 'harpy_toll',
+    title: 'The Sky-Toll',
+    text: 'The first {hero} knows of them is the shadow — then two harpies drop onto a spur of rock just ahead, wings still wide, close enough that the mules shy. They do not block the trail so much as own the air above it. Their leader names a price for safe passage under her crags, unhurried, certain: no aerie sent her, and none will answer for her, but up here that hardly matters to a party on foot.',
+    conditions: [{ type: 'destinationTag', tag: 'harpy' }],
+    weight: 10,
+    cooldownTurns: 4,
+    binding: { type: 'highestSkill', skill: 'bargain' },
+    factions: ['HARPY'],
+    peoples: ['harpy'],
+    choices: [
+      {
+        label: 'Pay it and keep walking.',
+        outcomes: {
+          success: {
+            text: 'You count it out without breaking stride. She stoops, takes it in one foot, and is gone over the ridgeline before the coins have stopped ringing — the crags satisfied, this stretch of sky bought for a day.',
+            outcomes: [
+              { type: 'expeditionSilver', delta: -8 },
+              { type: 'standing', faction: 'HARPY', delta: 1 },
+            ],
+          },
+        },
+      },
+      {
+        label: 'Haggle — she is one flight, not a war-band, and she knows it.',
+        check: { skill: 'bargain', stat: 'wits', difficulty: 10, tags: ['HARPY'] },
+        outcomes: {
+          success: {
+            text: '{hero} points out, mildly, that a whole party with bows can make even the high air expensive. She tilts her head, weighs it, and settles for half — a price worth more to her than a fight she might not win.',
+            outcomes: [{ type: 'expeditionSilver', delta: -4 }],
+          },
+          failure: {
+            text: 'The argument reads as a threat rather than a bargain. She shrieks once, and the price for crossing her sky goes up, not down.',
+            outcomes: [
+              { type: 'expeditionSilver', delta: -16 },
+              { type: 'stress', delta: 1 },
+            ],
+          },
+        },
+      },
+      {
+        label: 'Refuse, and dare her to make good on it.',
+        check: { skill: 'combat', stat: 'might', difficulty: 11, tags: ['intimidation', 'HARPY'] },
+        outcomes: {
+          success: {
+            text: 'The party closes ranks and puts arrows to strings without slowing, and the harpy decides the open trail is not worth the risk today. She lifts off screaming insults, but she lifts off. Word of the refusal will reach the crags before you do.',
+            outcomes: [{ type: 'standing', faction: 'HARPY', delta: -3 }],
+          },
+          failure: {
+            text: 'She makes good on it — a diving pass of claws and wind that scatters the mules and leaves {hero} bloodied, and the party pays her price in the end anyway, with interest.',
+            outcomes: [
+              { type: 'health', delta: -2 },
+              { type: 'expeditionSilver', delta: -16 },
+              { type: 'standing', faction: 'HARPY', delta: -4 },
+            ],
+          },
+        },
+      },
+    ],
+  },
 ];
