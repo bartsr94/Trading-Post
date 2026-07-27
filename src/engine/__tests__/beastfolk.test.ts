@@ -8,7 +8,7 @@ import { LOCATIONS } from '../../content/locations';
 import { evalConditions } from '../events/conditions';
 import { applyOutcomes } from '../events/outcomes';
 import type { TravelContext } from '../events/types';
-import { addChild, formUnion, isMixed, nodePeoples } from '../family';
+import { addChild, formUnion, isMixed, nodePeoples, spouseCount, spousesOf } from '../family';
 import { isEligible } from '../events/selection';
 import { addResidents, residentTotal } from '../residents';
 import { Rng } from '../rng';
@@ -156,24 +156,26 @@ describe('Beastfolk unions — reuses formUnion/Ancestry/bloodline as-is', () =>
 describe('the beastfolk match events require a male hero', () => {
   it('an unmarried female hero is not eligible for either match event', () => {
     const s = testState();
+    s.buildings.push('palisade');
     s.locations.beast_wilds.discovery = 'visited';
     s.locations.goblin_wilds.discovery = 'visited';
     s.factions.BEASTFOLK.standing = 50;
     for (const hero of s.heroes) hero.gender = 'female';
     s.assignments['p1'] = 'provision';
     expect(isEligible(s, TEST_CONTENT.events.get('orc_match_watched')!)).toBe(false);
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(false);
+    expect(isEligible(s, TEST_CONTENT.events.get('goblin_match_skulking')!)).toBe(false);
   });
 
   it('an unmarried male hero assigned to Provisioning is still eligible', () => {
     const s = testState();
+    s.buildings.push('palisade');
     s.locations.beast_wilds.discovery = 'visited';
     s.locations.goblin_wilds.discovery = 'visited';
     s.factions.BEASTFOLK.standing = 50;
     getHero(s, 'p1').gender = 'male';
     s.assignments['p1'] = 'provision';
     expect(isEligible(s, TEST_CONTENT.events.get('orc_match_watched')!)).toBe(true);
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(true);
+    expect(isEligible(s, TEST_CONTENT.events.get('goblin_match_skulking')!)).toBe(true);
   });
 
   it('a male hero not assigned to Provisioning is not eligible for the orc match chain', () => {
@@ -219,6 +221,7 @@ describe('Beastfolk discovery gating', () => {
 
   it('match events are ineligible before their own camp is discovered, even once standing qualifies', () => {
     const s = testState();
+    s.buildings.push('palisade');
     s.factions.BEASTFOLK.standing = 50;
     getHero(s, 'p1').gender = 'male';
     s.assignments['p1'] = 'provision';
@@ -226,14 +229,14 @@ describe('Beastfolk discovery gating', () => {
     expect(s.locations.goblin_wilds.discovery).toBe('rumored');
 
     expect(isEligible(s, TEST_CONTENT.events.get('orc_match_watched')!)).toBe(false);
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(false);
+    expect(isEligible(s, TEST_CONTENT.events.get('goblin_match_skulking')!)).toBe(false);
 
     s.locations.beast_wilds.discovery = 'visited';
     expect(isEligible(s, TEST_CONTENT.events.get('orc_match_watched')!)).toBe(true);
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(false);
+    expect(isEligible(s, TEST_CONTENT.events.get('goblin_match_skulking')!)).toBe(false);
 
     s.locations.goblin_wilds.discovery = 'visited';
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(true);
+    expect(isEligible(s, TEST_CONTENT.events.get('goblin_match_skulking')!)).toBe(true);
   });
 
   it('the settlement event (both peoples, no heritage split) is eligible once either camp is discovered', () => {
@@ -619,5 +622,98 @@ describe('heritage-weighted birth rate', () => {
     expect(child).toBeDefined();
     expect(nodePeoples(child!)).toEqual(['goblin']);
     expect(child!.gender).toBe('female');
+  });
+});
+
+// GOBLIN_MATCH_CHAIN (2026-07-27): goblin_match_skulking → _intrusion → _offer,
+// replacing the old single-stage beastfolk_goblin_match. Stage-1 eligibility
+// (palisade/discovery/standing/gender/heroUnmarried) is covered above, in
+// "the beastfolk match events require a male hero" and "Beastfolk discovery
+// gating". These tests cover what's new: stage 2's building-gated hang loop,
+// stage 3's group-marriage payoff, and the new captureHero outcome's use on
+// stage 1's critFailure — all exercised directly against pendingEvents/
+// applyOutcomes rather than driving through check RNG, since the dice math
+// itself is already covered by checks.test.ts.
+describe('goblin match chain — stage 2 (the common_house hang loop)', () => {
+  function midChain(impression: 'strong' | 'weak' = 'strong') {
+    const s = testState();
+    const intrusion = TEST_CONTENT.events.get('goblin_match_intrusion')!;
+    s.pendingEvents = [{ eventId: intrusion.id, heroId: 'p1', vars: { impression } }];
+    return { s, intrusion };
+  }
+
+  it('locks the engage choice until common_house is built', () => {
+    const { s, intrusion } = midChain();
+    expect(() => resolveChoice(s, TEST_CONTENT, intrusion, 0, 'p1')).toThrow();
+    s.buildings.push('common_house');
+    expect(() => resolveChoice(s, TEST_CONTENT, intrusion, 0, 'p1')).not.toThrow();
+  });
+
+  it('the "let them linger" choice always requeues the same event, carrying chainVars forward', () => {
+    const { s, intrusion } = midChain();
+    const before = s.queuedEvents.length;
+    resolveChoice(s, TEST_CONTENT, intrusion, 1, 'p1');
+    expect(s.queuedEvents.length).toBe(before + 1);
+    const requeued = s.queuedEvents[s.queuedEvents.length - 1];
+    expect(requeued.eventId).toBe('goblin_match_intrusion');
+    expect(requeued.heroId).toBe('p1');
+    expect(requeued.vars?.impression).toBe('strong');
+  });
+
+  it('"throw them out" ends the chain — no further queueEvent', () => {
+    const { s, intrusion } = midChain();
+    const before = s.queuedEvents.length;
+    resolveChoice(s, TEST_CONTENT, intrusion, 2, 'p1');
+    expect(s.queuedEvents.length).toBe(before);
+  });
+});
+
+describe('goblin match chain — stage 3 (group marriage)', () => {
+  function midChain(impression: 'strong' | 'weak' = 'strong') {
+    const s = testState();
+    const offer = TEST_CONTENT.events.get('goblin_match_offer')!;
+    s.pendingEvents = [{ eventId: offer.id, heroId: 'p1', vars: { impression } }];
+    return { s, offer };
+  }
+
+  it('the marriage choice requires a strong impression', () => {
+    const weak = midChain('weak');
+    expect(() => resolveChoice(weak.s, TEST_CONTENT, weak.offer, 0, 'p1')).toThrow();
+    const strong = midChain('strong');
+    expect(() => resolveChoice(strong.s, TEST_CONTENT, strong.offer, 0, 'p1')).not.toThrow();
+  });
+
+  it('the marriage choice requires the hero still be unmarried', () => {
+    const { s, offer } = midChain();
+    formUnion(s, 'p1', { source: 'alliance', heritage: 'orc', name: 'Already Wed' });
+    expect(() => resolveChoice(s, TEST_CONTENT, offer, 0, 'p1')).toThrow();
+  });
+
+  it('marrying the group applies formUnion once per bride — three goblin spouses from one outcome list', () => {
+    const { s, offer } = midChain();
+    applyOutcomes(s, offer.choices[0].outcomes.success.outcomes, outcomeCtx(TEST_CONTENT, 'p1'));
+    expect(spouseCount(s, 'p1')).toBe(3);
+    expect(spousesOf(s, 'p1').every((spouse) => nodePeoples(spouse).includes('goblin'))).toBe(true);
+    expect(getHero(s, 'p1').traits).toContain('wed_goblin');
+  });
+
+  it('welcoming the group as residents instead has no requires gate and always works', () => {
+    const { s, offer } = midChain('weak');
+    const before = residentTotal(s);
+    resolveChoice(s, TEST_CONTENT, offer, 1, 'p1');
+    expect(residentTotal(s)).toBe(before + 3);
+  });
+});
+
+describe('goblin match chain — stage 1 abduction (the captureHero outcome in content)', () => {
+  it("either engage choice's critFailure tier abducts the hero via captureHero, not just a stress tick", () => {
+    const skulking = TEST_CONTENT.events.get('goblin_match_skulking')!;
+    for (const choice of [skulking.choices[0], skulking.choices[1]]) {
+      const fresh = testState();
+      applyOutcomes(fresh, choice.outcomes.critFailure!.outcomes, outcomeCtx(TEST_CONTENT, 'p1'));
+      const hero = getHero(fresh, 'p1');
+      expect(hero.status).toBe('captive');
+      expect(hero.captivity).toMatchObject({ faction: 'BEASTFOLK', source: 'event' });
+    }
   });
 });

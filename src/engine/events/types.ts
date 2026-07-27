@@ -247,6 +247,10 @@ export type Outcome =
   | { type: 'heroDeparts' }
   /** Clears captivity and returns a hero to 'active'; defaults to the bound hero. */
   | { type: 'freeCaptive'; heroId?: string }
+  /** Marks a hero captive via the existing captivity system (engine/captivity.ts),
+   *  generalizing capture beyond raids/expeditions to any event outcome.
+   *  Defaults to the bound hero. */
+  | { type: 'captureHero'; heroId?: string; faction: FactionId }
   /** Recruit a named character from a template (CHARACTERS_SPEC.md §6). */
   | { type: 'recruitCharacter'; templateId: string; toActive?: boolean }
   /** A named character leaves the frontier; defaults to the bound hero. */

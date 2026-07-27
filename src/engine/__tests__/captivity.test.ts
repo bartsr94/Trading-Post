@@ -7,6 +7,7 @@ import { dispatchError, dispatchExpedition, advanceExpeditions } from '../expedi
 import { resolveIncomingRaid, resolveOutgoingRaid } from '../raids';
 import { departCharacter } from '../roster';
 import { Rng } from '../rng';
+import { getHero } from '../types';
 import { outcomeCtx, resolveTurn, advanceTurn } from '../turn';
 import type { ExpeditionState, GameState, PendingIncomingRaid, PendingOutgoingRaid } from '../types';
 import { TEST_CONTENT, testState } from './helpers';
@@ -45,6 +46,40 @@ describe('captureHero', () => {
     expect(queued.heroId).toBe(hero.id);
     expect(['captive_quick_release', 'captive_check_in']).toContain(queued.eventId);
     expect(queued.fireOnTurn).toBeGreaterThan(s.turn);
+  });
+});
+
+describe('the captureHero event outcome', () => {
+  it('applies through applyOutcomes exactly like the raid/expedition triggers, tagged source "event"', () => {
+    const s = testState();
+    const before = s.queuedEvents.length;
+    applyOutcomes(
+      s,
+      [{ type: 'captureHero', faction: 'BEASTFOLK' }],
+      outcomeCtx(TEST_CONTENT, 'p1'),
+    );
+    const hero = getHero(s, 'p1');
+    expect(hero.status).toBe('captive');
+    expect(hero.captivity).toMatchObject({ faction: 'BEASTFOLK', source: 'event' });
+    expect(s.queuedEvents.length).toBe(before + 1);
+  });
+
+  it('defaults to the bound hero but honors an explicit heroId override', () => {
+    const s = testState();
+    applyOutcomes(
+      s,
+      [{ type: 'captureHero', heroId: 'p2', faction: 'BEASTFOLK' }],
+      outcomeCtx(TEST_CONTENT, 'p1'),
+    );
+    expect(getHero(s, 'p1').status).toBe('active');
+    expect(getHero(s, 'p2').status).toBe('captive');
+  });
+
+  it('advances state.rngState when no ctx.rng is supplied, so repeated calls do not roll the same result', () => {
+    const s = testState();
+    const rngBefore = s.rngState;
+    applyOutcomes(s, [{ type: 'captureHero', faction: 'BEASTFOLK' }], outcomeCtx(TEST_CONTENT, 'p1'));
+    expect(s.rngState).not.toBe(rngBefore);
   });
 });
 

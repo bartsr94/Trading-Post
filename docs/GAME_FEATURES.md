@@ -668,6 +668,47 @@ Exported array names followed (`BEASTFOLK_EVENTS` → `ORC_EVENTS`, etc.);
 event ids, the `BEASTFOLK` `FactionId`, and illustration keys were untouched
 — this was a pure directory/identifier rename, not a content change.
 
+**Goblin match reworked into a 3-stage group-marriage chain**
+(`goblin_match_skulking` → `_intrusion` → `_offer`, `content/events/goblin/
+match.ts`; the old single-stage `beastfolk_goblin_match` was retired
+outright, not kept as an alias — no save migration system to preserve it
+against, §16): mirrors `orc/match.ts`'s `queueEvent`/`sameHero`/`chainVar
+impression` shape, but diverges in two ways. First, it's a **group
+proposal**: a whole goblin band, not one suitor, joins the household at
+once by repeating the `formUnion` outcome (`source: 'informal'`) once per
+bride in stage 3's tier outcomes — `formUnion` already re-checks `canWed`
+independently on every call, so no engine change was needed to marry
+several spouses in one outcome list. The whole chain gates on
+`heroUnmarried` (not Orc's `heroCanMarry`) — goblin logic, per Bartosz: a
+hero with no existing wife has no reason to turn any of them down. Second,
+each stage is gated by a **Company building the goblins are impressed
+by**, not a goblin-built one: stage 1 (`goblin_match_skulking`) needs
+`palisade` as a normal top-level `conditions` entry (it's drawn from the
+weighted post pool, so that's checked every turn); stage 2
+(`goblin_match_intrusion`) needs `common_house`, but as a **choice-level
+`requires`** instead, since a chain-target event's top-level `conditions`
+are never re-evaluated once it's reached via `queueEvent` (confirmed
+against `selection.ts`'s queued-event branch). Stage 2 has a third,
+always-available "let them linger" choice that just re-queues itself —
+this is how the chain **hangs** until `common_house` goes up, rather than
+either firing dead or force-ending. Stage 1's `critFailure` on either
+check path can end in a real abduction rather than a stress tick — the
+first content to use the new `captureHero` outcome (§17).
+
+**New generic engine capability: the `captureHero` outcome** (`engine/
+events/outcomes.ts`, `engine/events/types.ts`): before this, no content
+event could capture a hero — `engine/captivity.ts`'s `captureHero()` was
+only ever called from two engine-internal sites (raid resolution,
+expedition arrival). The new `Outcome` variant `{ type: 'captureHero';
+heroId?; faction }` calls the same function with a widened `source` —
+`'raid' | 'expedition' | 'event'` (also widened on `Hero.captivity.source`
+and `saveValidation.ts`'s allow-list; bumped `TUNING.save.version` 29→30
+since a previously-invalid value becomes valid). The existing
+`captive_quick_release`/`captive_check_in` resolution chain needed no
+change — it doesn't branch on `source`. Any future event wanting to
+threaten/execute a capture should reach for this outcome rather than
+inventing a second mechanism.
+
 **The orc match event became a 3-stage courtship chain** (2026-07-27,
 `ORC_MATCH_CHAIN_SPEC.md`, now folded in here): `beastfolk_orc_match`
 (single-shot, decided in one roll) was replaced outright by
@@ -936,8 +977,9 @@ cleanly rejected — there is no migration function to add, and no
 `MigrationContext`. Current version: **v29**. (Historic bumps once carried
 migrations — roster/reserve split, buildings, heritage/culture, gender/family,
 peoples restructure, Beastfolk, raiding, the Concession, captivity, thralls,
-price intel, market shocks; v28 the Harpies, v29 faction discovery — but those
-migration paths no longer exist, only the version numbers they landed at.)
+price intel, market shocks; v28 the Harpies, v29 faction discovery, v30
+`Hero.captivity.source` widened to allow `'event'` — but those migration
+paths no longer exist, only the version numbers they landed at.)
 
 ## 17. Captivity — abduction & ransom
 
@@ -953,7 +995,7 @@ plumbing. An optional `Hero.captivity` (`{ faction, capturedTurn, source }`)
 is the only new state; severity/escalation is derived from
 `state.turn - capturedTurn` against `TUNING.abduction`, never stored.
 
-**Two triggers**, both in the new pure `engine/captivity.ts` (shared, so
+**Two rolled triggers**, both in the pure `engine/captivity.ts` (shared, so
 neither `raids.ts` nor `expeditions.ts` duplicates the logic): an incoming
 raid that sacks the post rolls capture *before* the ordinary wound/death
 branch for each qualifying hero (`raids.ts`); every expedition arrival at a
@@ -961,6 +1003,14 @@ risky-faction destination rolls the same way (`expeditions.ts`'s
 `advanceExpeditions`), with escorted guards reducing the chance — the
 player's lever for lowering risk. A `raidGoal: 'rescue'` raid skips its own
 roll (no minting a second captive en route to freeing the first).
+
+**A third, authored trigger** (added 2026-07-27 for the goblin match
+chain, §10): the `captureHero` `Outcome` (`engine/events/outcomes.ts`) lets
+any event choice's tier outcome capture a hero directly, rather than only
+via the two rolled triggers above — `source: 'event'` on `Hero.captivity`
+distinguishes it. Same underlying `captureHero()` function, same
+resolution chain; reach for this outcome before inventing a second
+event-driven capture mechanism.
 
 **Resolution reuses the existing chain-event mechanism** (§3) directly —
 `captureHero` hand-builds a `QueuedEvent` (there's no authored-event context

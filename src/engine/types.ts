@@ -533,7 +533,7 @@ export interface Hero {
   /** Set while `status === 'captive'`: who holds them and since when. Severity/
    *  escalation is derived from `state.turn - capturedTurn` against
    *  `TUNING.abduction`, not stored redundantly. Cleared on release/departure. */
-  captivity?: { faction: FactionId; capturedTurn: number; source?: 'raid' | 'expedition' };
+  captivity?: { faction: FactionId; capturedTurn: number; source?: 'raid' | 'expedition' | 'event' };
   /** Auto-appended log of notable events for the Hero Sheet. */
   history: string[];
 }

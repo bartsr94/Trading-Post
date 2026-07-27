@@ -22,6 +22,7 @@ import {
   removeDependant,
 } from '../family';
 import { addClaim, addHerd, setLandAllocation } from '../claim';
+import { captureHero } from '../captivity';
 import { createIncomingRaid, setTribute } from '../raids';
 import {
   addResidents,
@@ -383,6 +384,13 @@ export function applyOutcomes(
           delete target.captivity;
           log.push(`${target.name} returns to the post.`);
         }
+        break;
+      }
+      case 'captureHero': {
+        const target = outcome.heroId ? getHero(state, outcome.heroId) : hero;
+        const rng = ctx.rng ?? new Rng(state.rngState);
+        log.push(captureHero(state, target, outcome.faction, 'event', rng));
+        if (!ctx.rng) state.rngState = rng.getState();
         break;
       }
       case 'recruitCharacter': {

@@ -206,7 +206,7 @@ function validateHero(value: unknown, path: string): string {
     enumValue(captivity.faction, FACTION_IDS, `${path}.captivity.faction`);
     nonNegativeInteger(captivity.capturedTurn, `${path}.captivity.capturedTurn`);
     if (captivity.source !== undefined) {
-      enumValue(captivity.source, ['raid', 'expedition'], `${path}.captivity.source`);
+      enumValue(captivity.source, ['raid', 'expedition', 'event'], `${path}.captivity.source`);
     }
   }
   stringArray(hero.history, `${path}.history`);

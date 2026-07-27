@@ -72,7 +72,7 @@ export function captureHero(
   state: GameState,
   hero: Hero,
   faction: FactionId,
-  source: 'raid' | 'expedition',
+  source: 'raid' | 'expedition' | 'event',
   rng: Rng,
 ): string {
   const a = TUNING.abduction;
