@@ -430,6 +430,12 @@ h4 {
   color: rgba(255, 246, 224, 0.85);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
+.event-illustration-art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
 .event-body { padding: 18px 22px 22px; }
 .event-body .text { font-size: 1rem; margin-bottom: 16px; white-space: pre-line; }
 .choice-list { display: flex; flex-direction: column; gap: 8px; }
@@ -505,7 +511,8 @@ h4 {
   min-width: 0;
   border-right: 1px solid var(--border);
 }
-.raid-modal .event-illustration {
+.raid-modal .event-illustration,
+.raid-modal .event-illustration-art {
   height: 100%;
   min-height: 100%;
   aspect-ratio: auto;
@@ -635,7 +642,8 @@ h4 {
     border-right: none;
     border-bottom: 1px solid var(--border);
   }
-  .raid-modal .event-illustration {
+  .raid-modal .event-illustration,
+  .raid-modal .event-illustration-art {
     min-height: 180px;
     max-height: 26vh;
   }

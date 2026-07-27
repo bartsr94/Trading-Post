@@ -1,7 +1,8 @@
 // One-off/occasional asset pipeline pass (perf audit, 2026-07-23): source art
 // lands at full camera/render resolution (multi-MB PNGs/JPEGs) but only ever
-// displays in small fixed CSS boxes. Re-run this whenever new portrait art or
-// a new map background is dropped into src/assets/ before committing it.
+// displays in small fixed CSS boxes. Re-run this whenever new portrait art, a
+// new event illustration, or a new map background is dropped into src/assets/
+// before committing it.
 //
 // Usage: node scripts/optimize-images.mjs
 
@@ -11,6 +12,7 @@ import sharp from 'sharp';
 
 const ROOT = path.join(import.meta.dirname, '..');
 const PORTRAITS_DIR = path.join(ROOT, 'src/assets/portraits');
+const EVENTS_DIR = path.join(ROOT, 'src/assets/events');
 const MAP_FILE = path.join(ROOT, 'src/assets/ui/ashmark_map.jpg');
 
 // Largest portrait box in the UI is .hero-sheet-portrait at 164x205 (styles.css).
@@ -23,6 +25,12 @@ const PORTRAIT_QUALITY = 82;
 const MAP_WIDTH = 2000;
 const MAP_HEIGHT = 1500;
 const MAP_QUALITY = 78;
+
+// Event illustration panel is the 720px-wide .event-panel at a 16:9 crop
+// (styles.css .event-illustration-art); 2x that for retina headroom, then
+// let object-fit: cover crop to the box.
+const EVENT_WIDTH = 1440;
+const EVENT_QUALITY = 80;
 
 async function fileSize(file) {
   return (await stat(file)).size;
@@ -60,6 +68,32 @@ async function optimizePortraits() {
   );
 }
 
+async function optimizeEvents() {
+  const files = (await readdir(EVENTS_DIR)).filter((f) => /\.(png|jpe?g)$/i.test(f));
+  let before = 0;
+  let after = 0;
+  let count = 0;
+
+  for (const file of files) {
+    const src = path.join(EVENTS_DIR, file);
+    const dest = path.join(EVENTS_DIR, file.replace(/\.(png|jpe?g)$/i, '.webp'));
+    before += await fileSize(src);
+
+    await sharp(src)
+      .resize({ width: EVENT_WIDTH, withoutEnlargement: true })
+      .webp({ quality: EVENT_QUALITY })
+      .toFile(dest);
+
+    after += await fileSize(dest);
+    await unlink(src);
+    count += 1;
+  }
+
+  console.log(
+    `Event art: ${count} files, ${(before / 1e6).toFixed(1)}MB -> ${(after / 1e6).toFixed(1)}MB`,
+  );
+}
+
 async function optimizeMap() {
   const before = await fileSize(MAP_FILE);
   const tmp = `${MAP_FILE}.tmp`;
@@ -77,4 +111,5 @@ async function optimizeMap() {
 }
 
 await optimizePortraits();
+await optimizeEvents();
 await optimizeMap();

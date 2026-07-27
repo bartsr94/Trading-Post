@@ -780,6 +780,19 @@ race/gender/ethnicity combo, so unpainted pools never go blank. Coming of
 age switches the art automatically — the lookup reads the dependant's live
 `kind` on every render, no caching, no engine change needed.
 
+**Event illustrations** (`ui/eventArt.ts`, `Illustration.tsx`, 2026-07-27):
+same eager-glob/basename-lookup pattern as Portraits, one folder over — art
+lives in `src/assets/events/<illustration-key>.webp` (or `.png`/`.jpg`),
+where `<illustration-key>` is the exact string in the event's `illustration`
+field (e.g. `orc_demand.webp` for the `beastfolk_orc_tribute` event, whose
+`illustration: 'orc_demand'`). An unpainted key falls back to the original
+flat hash-hue placeholder panel with the key's text on it, so events with no
+art yet render fine. Several `illustration` keys are deliberately shared
+across multiple event ids (e.g. `beastfolk_friction` covers both
+`beastfolk_integration_orc` and `beastfolk_integration_goblin`) — painting
+one shows it on every event that references that key. Run new source art
+through `node scripts/optimize-images.mjs` before committing.
+
 ## 14. Cheat console
 
 An off-by-default testing tool (`CheatConsole.tsx`, toggled via
