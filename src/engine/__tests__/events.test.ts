@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { bindHero } from '../events/binding';
 import { evalCondition } from '../events/conditions';
 import { applyOutcomes } from '../events/outcomes';
 import { isEligible, selectEvents } from '../events/selection';
@@ -212,6 +213,39 @@ describe('event selection', () => {
 
     expect(() => resolveChoice(s, TEST_CONTENT, event, 0, 'p1')).toThrow(/not available/);
     expect(s).toEqual(before);
+  });
+});
+
+describe('weightedStat binding (favors, does not guarantee, a stat)', () => {
+  it('picks the highest-stat hero more often than uniform chance, but not exclusively', () => {
+    const s = testState();
+    s.heroes.forEach((h, i) => {
+      h.stats.might = i === 0 ? 5 : 1;
+    });
+    const [strongest, ...rest] = s.heroes;
+    const event: GameEvent = {
+      id: 'test_weighted_stat',
+      category: 'post',
+      illustration: 'test',
+      title: 'Test',
+      text: '{hero}',
+      conditions: [],
+      weight: 1,
+      binding: { type: 'weightedStat', stat: 'might' },
+      choices: [{ label: 'Continue', outcomes: { success: { text: 'Done', outcomes: [] } } }],
+    };
+
+    const rng = new Rng(7);
+    const picks = new Map<string, number>();
+    for (let i = 0; i < 500; i++) {
+      const hero = bindHero(s, event, rng)!;
+      picks.set(hero.id, (picks.get(hero.id) ?? 0) + 1);
+    }
+
+    const uniformShare = 500 / s.heroes.length;
+    expect(picks.get(strongest.id)!).toBeGreaterThan(uniformShare * 1.5);
+    expect(picks.get(strongest.id)!).toBeLessThan(400);
+    expect(rest.some((h) => (picks.get(h.id) ?? 0) > 0)).toBe(true);
   });
 });
 

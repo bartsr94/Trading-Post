@@ -2,13 +2,14 @@
 
 import type { GameEvent } from '../../engine/events/types';
 import { TUNING } from '../tuning';
-import { BEASTFOLK_EVENTS } from './beastfolkEvents';
 import { CAPTIVE_EVENTS } from './captiveEvents';
 import { DIPLOMACY_EVENTS } from './diplomacyEvents';
 import { FAMILY_EVENTS } from './familyEvents';
-import { HARPY_EVENTS } from './harpyEvents';
+import { GOBLIN_EVENTS } from './goblin';
+import { HARPY_EVENTS } from './harpy';
 import { GENERIC_HERO_EVENTS, HERO_EVENTS } from './heroEvents';
 import { MARKET_EVENTS } from './marketEvents';
+import { ORC_EVENTS } from './orc';
 import { POST_EVENTS } from './postEvents';
 import { RAID_EVENTS } from './raidEvents';
 import { RECRUIT_EVENTS } from './recruitEvents';
@@ -26,7 +27,8 @@ export const ALL_EVENTS: GameEvent[] = [
   ...FAMILY_EVENTS,
   ...SEASON_EVENTS,
   ...TRAVEL_EVENTS,
-  ...BEASTFOLK_EVENTS,
+  ...ORC_EVENTS,
+  ...GOBLIN_EVENTS,
   ...HARPY_EVENTS,
   ...RAID_EVENTS,
   ...DIPLOMACY_EVENTS,

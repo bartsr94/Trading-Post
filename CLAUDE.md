@@ -195,7 +195,29 @@ cross-reference.
   generic engine addition for it — `locationDiscoveryAny`, a `Condition`
   true once any of several listed locations clears a discovery threshold —
   the first "any of N locations" condition the engine has needed; reach for
-  it before inventing a second one.
+  it before inventing a second one. Orc content lives in `content/events/
+  orc/` (renamed from `beastfolk/` once Goblins split out — this directory
+  is also still the joint home for content that covers both peoples and
+  can't split cleanly, e.g. `settlement.ts`), one file per narrative arc
+  (tribute/match/settlement/firstEncounter/integration/flavor) plus an
+  `index.ts` barrel; Goblins got their own `content/events/goblin/`
+  directory (2026-07-27) for tone reasons — see the next bullet for the
+  mechanics and when/why a prefix becomes a directory like this.
+- **Event content organization** (`docs/EVENT_ORGANIZATION_SPEC.md` has the
+  full rationale): once a content prefix accumulates several distinct
+  narrative arcs, split it into a directory of one-file-per-arc +
+  `index.ts` barrel re-exporting the combined array under the name other
+  files already import — don't let a single prefix file keep growing
+  (`content/events/orc/`, `content/events/goblin/`, and
+  `content/events/harpy/` are the current examples; `postEvents.ts`/
+  `travelEvents.ts`/etc. stay single-file until they show the same
+  multi-arc shape — a flat pool of mostly-unrelated one-shots doesn't
+  qualify just from size, see the goblin split for why a directory can
+  also be justified by tone/identity rather than arc count alone). Tag
+  each event's optional `arc`
+  field (`engine/events/types.ts`, cataloging-only like `peoples`/
+  `factions`/`loreRef`) with `<prefix>_<arc-name>` so `npm run catalog`'s
+  "Arcs" section groups events across file boundaries.
 - **Chain events** (see `docs/GAME_FEATURES.md` §3): `EventPanel.tsx`/
   `advancePendingEvent` needed no change for `continueChain` since both
   already just operate on `pendingEvents[0]`. `ConditionContext` gained one
@@ -300,7 +322,13 @@ cross-reference.
   follow instead: same story beats, no `heroInParty` gate, bound via
   `highestSkill`/`highestStat` (whoever best fits the moment) so the event
   fires regardless of party composition — the `HeroBinding` union already
-  supports this, no engine change needed.
+  supports this, no engine change needed. For "this people tends to favor X"
+  flavor rather than an absolute rule, `weightedStat` (added 2026-07-27,
+  `engine/events/binding.ts`) picks probabilistically weighted by a stat
+  instead of deterministically topping it — see the Orc
+  strength/cunning events (`content/events/orc/flavor.ts`'s `beastfolk_dare`,
+  `orc_battle_of_wits`) for the pattern; reach for it before adding a second
+  probabilistic binding mechanism.
 - Location ids are lowercase snake_case, referenced from event conditions
   (`destinationIs`, `locationDiscovery`) and outcomes (`discover`). Tags on
   `LocationDef.tags` (e.g. `'river'`, `'hills'`, `'ruin'`) double as trait

@@ -103,6 +103,10 @@ export const TUNING = {
     defaultCooldown: 3,
     /** Chance per expedition per en-route turn that a travel event fires. */
     travelEventChance: 0.5,
+    /** Added to a hero's stat value before weighting a `weightedStat` binding
+     *  pick, so even the lowest-stat hero keeps a nonzero chance of being
+     *  featured — lower floor sharpens the bias toward high-stat heroes. */
+    weightedStatFloor: 1,
   },
 
   map: {

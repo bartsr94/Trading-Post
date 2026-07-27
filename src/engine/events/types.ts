@@ -149,6 +149,13 @@ export type HeroBinding =
   | { type: 'highestSkill'; skill: SkillId }
   | { type: 'lowestSkill'; skill: SkillId }
   | { type: 'highestStat'; stat: StatId }
+  /** Probability-weighted pick: a higher stat means more likely to be
+   *  featured, never guaranteed — unlike `highestStat`'s deterministic
+   *  top-pick. Weight is the hero's stat value plus
+   *  `TUNING.events.weightedStatFloor`, so even the lowest-stat hero keeps a
+   *  nonzero chance. Use for "this people tends to notice/respect X" flavor
+   *  rather than a hard "always the best" rule. */
+  | { type: 'weightedStat'; stat: StatId }
   | { type: 'withTrait'; trait: TraitId }
   | { type: 'withoutTrait'; trait: TraitId }
   | { type: 'highestStress' }
@@ -325,4 +332,9 @@ export interface GameEvent {
    *  content was grounded in, e.g. ['Sauromatia.md']. Omit if invented
    *  without a specific lore source. */
   loreRef?: string[];
+  /** Cataloging metadata only. Which narrative arc/chain family this event
+   *  belongs to, independent of which file it lives in — lets
+   *  docs/EVENT_CATALOG.md group/report across file boundaries. Convention:
+   *  `<prefix>_<arc-name>`, e.g. 'beastfolk_tribute', 'harpy_first_encounter'. */
+  arc?: string;
 }

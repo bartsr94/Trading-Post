@@ -1,6 +1,7 @@
 // Resolves which hero an event features. Returns null when no hero fits,
 // which makes the event ineligible this turn.
 
+import { TUNING } from '../../content/tuning';
 import { heroesAtPost } from '../types';
 import type { GameState, Hero } from '../types';
 import type { Rng } from '../rng';
@@ -29,6 +30,10 @@ export function bindHero(
       return best(pool, (h) => -h.skills[binding.skill], rng);
     case 'highestStat':
       return best(pool, (h) => h.stats[binding.stat], rng);
+    case 'weightedStat': {
+      const weights = pool.map((h) => h.stats[binding.stat] + TUNING.events.weightedStatFloor);
+      return rng.weightedPick(pool, weights);
+    }
     case 'withTrait': {
       const matches = pool.filter((h) => h.traits.includes(binding.trait));
       return matches.length > 0 ? rng.pick(matches) : null;

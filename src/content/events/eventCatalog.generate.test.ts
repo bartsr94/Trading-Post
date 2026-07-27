@@ -3,7 +3,7 @@
 // hand-edit that file. Runs as part of `npm test` (so the catalog can never
 // drift out of sync with content) and can be run alone via `npm run catalog`.
 // See docs/ADDING_EVENTS.md for the authoring conventions this reads
-// (`peoples`/`factions`/`loreRef` on GameEvent) and how to extend this
+// (`peoples`/`factions`/`loreRef`/`arc` on GameEvent) and how to extend this
 // script when a new engine-hand-built trigger or condition/outcome shape
 // is added.
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -13,12 +13,14 @@ import { describe, expect, it } from 'vitest';
 import type { Choice, Condition, GameEvent, Outcome } from '../../engine/events/types';
 import { FACTION_IDS, type FactionId } from '../../engine/types';
 import { HERITAGES } from '../../engine/types';
-import { BEASTFOLK_EVENTS } from './beastfolkEvents';
 import { CAPTIVE_EVENTS } from './captiveEvents';
 import { DIPLOMACY_EVENTS } from './diplomacyEvents';
 import { FAMILY_EVENTS } from './familyEvents';
+import { GOBLIN_EVENTS } from './goblin';
+import { HARPY_EVENTS } from './harpy';
 import { GENERIC_HERO_EVENTS, HERO_EVENTS } from './heroEvents';
 import { MARKET_EVENTS } from './marketEvents';
+import { ORC_EVENTS } from './orc';
 import { POST_EVENTS } from './postEvents';
 import { RAID_EVENTS } from './raidEvents';
 import { RECRUIT_EVENTS } from './recruitEvents';
@@ -54,7 +56,9 @@ const GROUPS: { label: string; events: readonly GameEvent[] }[] = [
   { label: 'familyEvents.ts', events: FAMILY_EVENTS },
   { label: 'seasonEvents.ts', events: SEASON_EVENTS },
   { label: 'travelEvents.ts', events: TRAVEL_EVENTS },
-  { label: 'beastfolkEvents.ts', events: BEASTFOLK_EVENTS },
+  { label: 'orc/', events: ORC_EVENTS },
+  { label: 'goblin/', events: GOBLIN_EVENTS },
+  { label: 'harpy/', events: HARPY_EVENTS },
   { label: 'raidEvents.ts', events: RAID_EVENTS },
   { label: 'diplomacyEvents.ts', events: DIPLOMACY_EVENTS },
   { label: 'captiveEvents.ts', events: CAPTIVE_EVENTS },
@@ -289,7 +293,7 @@ describe('event catalog generator', () => {
           `- **Mechanically touches:** factions=[${fmtList(touches.factions)}] peoples=[${fmtList(touches.peoples)}] locations=[${fmtList(touches.locations)}] buildings=[${fmtList(touches.buildings)}]`,
         );
         lines.push(
-          `- **Authored metadata:** peoples=[${fmtList(event.peoples ?? [])}] factions=[${fmtList(event.factions ?? [])}] loreRef=[${fmtList(event.loreRef ?? [])}]`,
+          `- **Authored metadata:** peoples=[${fmtList(event.peoples ?? [])}] factions=[${fmtList(event.factions ?? [])}] loreRef=[${fmtList(event.loreRef ?? [])}] arc=${event.arc ?? '—'}`,
         );
         lines.push('');
       }
@@ -299,6 +303,24 @@ describe('event catalog generator', () => {
     lines.push('');
     for (const [trigger, count] of triggerCounts) {
       lines.push(`- ${trigger}: ${count}`);
+    }
+    lines.push('');
+
+    lines.push('## Arcs (authored `arc` grouping, across file boundaries)');
+    lines.push('');
+    const arcGroups = new Map<string, string[]>();
+    for (const event of ALL_EVENTS) {
+      if (!event.arc) continue;
+      const ids = arcGroups.get(event.arc) ?? [];
+      ids.push(event.id);
+      arcGroups.set(event.arc, ids);
+    }
+    if (arcGroups.size) {
+      for (const [arc, ids] of [...arcGroups.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+        lines.push(`- **${arc}**: ${ids.join(', ')}`);
+      }
+    } else {
+      lines.push('_None authored yet._');
     }
     lines.push('');
 

@@ -105,8 +105,19 @@ threading an `events` lookup map into `OutcomeContext`; not built because
 nothing needs it yet.
 
 Shipped example: "A Patrol at the Treeline" — `beastfolk_first_encounter` →
-`_talks` → `_close`, 3 stages, `content/events/beastfolkEvents.ts`, gated on
-either beastfolk camp's discovery (`locationDiscoveryAny`, §10).
+`_talks` → `_close`, 3 stages, `content/events/orc/firstEncounter.ts`, gated
+on `beast_wilds` discovery (orc-only since the Goblin split, §10 — the
+Goblin equivalent is `content/events/goblin/firstEncounter.ts`'s
+independently-structured `goblin_first_encounter`, also §10).
+
+**Hero binding** (`HeroBinding`, `engine/events/binding.ts`): besides the
+deterministic `highestStat`/`highestSkill`/`lowestSkill`/`highestStress`/
+`withTrait`/`withoutTrait`/`specific`/`random` variants, `weightedStat`
+(added 2026-07-27 for the Orc strength/cunning theme, §10) picks
+probabilistically — weight = the hero's stat value plus
+`TUNING.events.weightedStatFloor` — so a high-stat hero is favored without
+being guaranteed, unlike `highestStat`'s always-the-top pick. Use it for
+"this people tends to notice/respect X" flavor rather than a hard rule.
 
 **Text interpolation & pronoun tokens** (`engine/events/text.ts`). Besides
 `{hero}`/`{post}`/`{destination}`/`{faction}`/`{partner}`, `interpolate` takes
@@ -121,7 +132,7 @@ whenever the binding isn't locked to a single fixed-gender pool hero (i.e.
 not `binding: { type: 'specific', heroId: 'pN' }` for one of the always-male
 p1/p3/p7 legacy heroes) — hardcoding "he"/"his"/"him" there reads wrong for a
 female-bound hero (fixed 2026-07-24: `thrallEvents.ts`'s river-clans offer
-and five `beastfolkEvents.ts` events — the treeline patrol chain, the
+and five `beastfolk/` events — the treeline patrol chain, the
 livestock-thief chase, and the orc's-dare challenge — all bind by
 `highestStat`/`highestSkill` and had leftover hardcoded male pronouns).
 
@@ -530,13 +541,13 @@ territory, one per people: `beast_wilds` ("The Gnawback Camp," orc) and
 `goblin_wilds` ("The Tangle," goblin) — split out from a single shared node
 in a later pass (BEASTFOLK_CAMPS_SPEC.md, since folded in here). Neither is
 a diplomacy seat; both carry `beastfolk` plus their own `orc`/`goblin` tag.
-Content written for one people alone (tribute/match/dare) gates on that
-people's own camp; content genuinely about both (settlement, the first-
-encounter chain, livestock raids, pilfering, the mid-standing visitor beat)
-gates on a new generic `locationDiscoveryAny` condition (`engine/events/
-conditions.ts`/`types.ts`) — true once *either* listed location clears the
-discovery threshold, the first "any of N locations" condition the engine
-has needed. The shared `beast_wilds` `MapFeatureDef` terrain overlay
+Content written for one people alone (tribute/match/dare/first-encounter)
+gates on that people's own camp; content genuinely about both (settlement,
+livestock raids, pilfering, the mid-standing visitor beat) gates on a
+generic `locationDiscoveryAny` condition (`engine/events/conditions.ts`/
+`types.ts`) — true once *either* listed location clears the discovery
+threshold, the first "any of N locations" condition the engine has needed.
+The shared `beast_wilds` `MapFeatureDef` terrain overlay
 (`content/map.ts`, distinct from the locations) was reshaped to bracket
 both camps' new coordinates so free-coordinate exploring nearby still reads
 as beastfolk country. No new `FactionId`, no new diplomacy seat, no save
@@ -581,10 +592,23 @@ alone (`standingAtMost 40`, a much looser band than tribute's −20): a
 livestock raid (`beastfolk_livestock_raid`, track-them-down or write off the
 loss), storehouse pilfering (`beastfolk_pilfering`, set a watch or absorb
 it), and a shouted contest-of-strength dare from an orc youth
-(`beastfolk_dare`, no standing gate at all — bravado, not policy). None of
-these use a new mechanism; all are ordinary weighted-pool events on the
-existing outcome vocabulary (`loseHerd`/`good`/`silver`/`standing`/
-`stress`/`health`).
+(`beastfolk_dare`, no standing gate at all — bravado, not policy). All are
+ordinary weighted-pool events on the existing outcome vocabulary
+(`loseHerd`/`good`/`silver`/`standing`/`stress`/`health`).
+
+**Orcs respect strength and cunning** (2026-07-27): `beastfolk_dare` now
+gates on `heroGender: 'male'` (an orc youth specifically testing a man's
+strength) and binds via `weightedStat: 'might'` instead of the old
+deterministic `highestStat` — the post's strongest man is *favored* to be
+challenged, not guaranteed to be, so a lower-Might hero can still get pulled
+in. A new counterpart, `orc_battle_of_wits` (`content/events/orc/
+flavor.ts`), covers the other half of that respect: an orc tactician wagers
+a game of knucklebones against whoever the wilds judge sharpest
+(`binding: { type: 'weightedStat', stat: 'wits' }`, check `skill: 'lore'`),
+gender-neutral since cunning isn't given the same masculine framing as the
+physical dare. Both reward a strong showing with standing and a stiff
+silver cost for losing badly — "orcs warm to those who prove themselves,
+by strength or by wit" is the throughline, not "orcs only respect men."
 
 **Sharper abduction identity** (`TUNING.abduction`, `engine/captivity.ts`/
 `raids.ts` — see §17 for the shared mechanism): BEASTFOLK now rolls captures
@@ -611,6 +635,37 @@ tag rather than a hill-tribes seat.
 **Save shape:** v10 seeded `factions.BEASTFOLK` (the only backfill a new
 `Heritage`/`TransientKind` literal ever needs); v24 added `residents.friction`
 (§7).
+
+**Goblins got their own content directory and tone** (2026-07-27,
+`EVENT_ORGANIZATION_SPEC.md`): goblin-specific events (`beastfolk_goblin_
+tribute`/`_match`/`_integration`/`_integration_settled`) moved verbatim from
+`content/events/beastfolk/` (since renamed to `content/events/orc/`, see below)
+into `content/events/goblin/`, still on the same
+`BEASTFOLK` faction/standing track — a content/tone split, not an engine
+one. `beastfolk_first_encounter`/`_talks`/`_close` narrowed from
+`locationDiscoveryAny([beast_wilds, goblin_wilds])` to `beast_wilds` only
+and became orc-exclusive (retextured, ids unchanged), and a new
+goblin-only `goblin_first_encounter` chain (`content/events/goblin/
+firstEncounter.ts`) took its place for `goblin_wilds` — deliberately
+structured *not* like the orc chain: three real choices each `continueChain`
+straight to their own self-contained ending (no shared `_talks`/`_close`
+checkpoint), whimsical and low-stakes in tone (a goblin committee squabbling
+over a prank rig) rather than a grim standoff, reflecting Goblins as a
+nuisance rather than a threat. New goblin-only content uses the `goblin_`
+id prefix (mirroring `harpy_`); relocated legacy events kept their original
+`beastfolk_goblin_*` ids. `arc` cataloging tags were split to match
+(`orc_tribute`/`goblin_tribute`, `orc_match`/`goblin_match`, `orc_
+integration`/`goblin_integration`, `orc_first_encounter`/`goblin_
+first_encounter`); `beastfolk_settlement`/`beastfolk_flavor` stayed joint
+since neither splits cleanly by people.
+
+**`content/events/beastfolk/` renamed to `content/events/orc/`** (same day):
+now that Goblins have their own directory, this one is Orcs' primary home —
+plus the leftover joint content (`settlement.ts`, most of `flavor.ts`) that
+still can't split cleanly by people, kept here as the default/joint home.
+Exported array names followed (`BEASTFOLK_EVENTS` → `ORC_EVENTS`, etc.);
+event ids, the `BEASTFOLK` `FactionId`, and illustration keys were untouched
+— this was a pure directory/identifier rename, not a content change.
 
 **Still open** (`docs/TODO_FEATURES.md`): a named Beastfolk recruit (orc
 smith/goblin scout) and sub-clan/war-band depth (named war-bands under
@@ -1034,7 +1089,7 @@ checkpoint (`old_road` + `hill_fort` visited), so Harpies are a deep-frontier
 find. It starts `initialDiscovery: 'unknown'` and carries `discoversFaction:
 'HARPY'`, so reaching it makes the faction known (§5).
 
-Content (`content/events/harpyEvents.ts`, `harpy_` prefix) mirrors the
+Content (`content/events/harpy/`, `harpy_` prefix) mirrors the
 Beastfolk standing arc gated on the eyrie's discovery: `harpy_tribute` (hostile
 band, pay/refuse), `harpy_match` (rising standing — a harpy comes down to wed a
 hero via `formUnion(source:'alliance', heritage:'harpy')` + the `wed_harpy`
