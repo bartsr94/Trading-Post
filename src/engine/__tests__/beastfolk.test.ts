@@ -160,18 +160,28 @@ describe('the beastfolk match events require a male hero', () => {
     s.locations.goblin_wilds.discovery = 'visited';
     s.factions.BEASTFOLK.standing = 50;
     for (const hero of s.heroes) hero.gender = 'female';
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(false);
+    s.assignments['p1'] = 'provision';
+    expect(isEligible(s, TEST_CONTENT.events.get('orc_match_watched')!)).toBe(false);
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(false);
   });
 
-  it('an unmarried male hero is still eligible', () => {
+  it('an unmarried male hero assigned to Provisioning is still eligible', () => {
     const s = testState();
     s.locations.beast_wilds.discovery = 'visited';
     s.locations.goblin_wilds.discovery = 'visited';
     s.factions.BEASTFOLK.standing = 50;
     getHero(s, 'p1').gender = 'male';
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(true);
+    s.assignments['p1'] = 'provision';
+    expect(isEligible(s, TEST_CONTENT.events.get('orc_match_watched')!)).toBe(true);
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(true);
+  });
+
+  it('a male hero not assigned to Provisioning is not eligible for the orc match chain', () => {
+    const s = testState();
+    s.locations.beast_wilds.discovery = 'visited';
+    s.factions.BEASTFOLK.standing = 50;
+    getHero(s, 'p1').gender = 'male';
+    expect(isEligible(s, TEST_CONTENT.events.get('orc_match_watched')!)).toBe(false);
   });
 });
 
@@ -210,14 +220,16 @@ describe('Beastfolk discovery gating', () => {
   it('match events are ineligible before their own camp is discovered, even once standing qualifies', () => {
     const s = testState();
     s.factions.BEASTFOLK.standing = 50;
+    getHero(s, 'p1').gender = 'male';
+    s.assignments['p1'] = 'provision';
     expect(s.locations.beast_wilds.discovery).toBe('rumored');
     expect(s.locations.goblin_wilds.discovery).toBe('rumored');
 
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(false);
+    expect(isEligible(s, TEST_CONTENT.events.get('orc_match_watched')!)).toBe(false);
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(false);
 
     s.locations.beast_wilds.discovery = 'visited';
-    expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_orc_match')!)).toBe(true);
+    expect(isEligible(s, TEST_CONTENT.events.get('orc_match_watched')!)).toBe(true);
     expect(isEligible(s, TEST_CONTENT.events.get('beastfolk_goblin_match')!)).toBe(false);
 
     s.locations.goblin_wilds.discovery = 'visited';

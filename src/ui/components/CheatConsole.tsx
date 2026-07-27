@@ -39,7 +39,7 @@ import type {
   TransientKind,
   UnionSource,
 } from '../../engine/types';
-import type { Outcome } from '../../engine/events/types';
+import type { GameEvent, Outcome } from '../../engine/events/types';
 import { useGameStore } from '../../store/gameStore';
 
 const AXES: { id: AxisId; label: string }[] = [
@@ -58,6 +58,7 @@ const TRANSIENT_LABELS: Record<TransientKind, string> = {
 export function CheatConsole({ game, onClose }: { game: GameState; onClose: () => void }) {
   const applyOutcomes = useGameStore((s) => s.applyCheatOutcomes);
   const forceFireEvent = useGameStore((s) => s.forceFireEvent);
+  const fireQueuedEvent = useGameStore((s) => s.fireQueuedEvent);
   const setCheatConsoleOpen = useGameStore((s) => s.setCheatConsoleOpen);
 
   const heroes = livingHeroes(game);
@@ -126,6 +127,16 @@ export function CheatConsole({ game, onClose }: { game: GameState; onClose: () =
             <FamilySection apply={apply} game={game} />
             <WorldSection apply={apply} game={game} />
             <RaidSection apply={apply} onTriggered={() => setCheatConsoleOpen(false)} />
+            <QueuedEventsSection
+              game={game}
+              onFire={(index) => {
+                if (fireQueuedEvent(index)) {
+                  setCheatConsoleOpen(false);
+                } else {
+                  setLog(['Could not fire that queued event (stale index, or its pinned hero is gone).']);
+                }
+              }}
+            />
             <ForceEventSection
               heroes={heroes}
               onForce={(eventId, heroId) => {
@@ -713,6 +724,25 @@ function RaidSection({
   );
 }
 
+// Chain stages (category 'chain') otherwise sit wherever they fall in file/
+// definition order, making a specific stage tedious to find by title alone —
+// grouping by the existing `arc` cataloging field clusters a chain's stages
+// together. Events without an `arc` fall into a trailing "(no arc)" group.
+function groupByArc(events: GameEvent[]): [string, GameEvent[]][] {
+  const groups = new Map<string, GameEvent[]>();
+  for (const e of events) {
+    const key = e.arc ?? '(no arc)';
+    const bucket = groups.get(key);
+    if (bucket) bucket.push(e);
+    else groups.set(key, [e]);
+  }
+  const withArc = [...groups.entries()]
+    .filter(([key]) => key !== '(no arc)')
+    .sort(([a], [b]) => a.localeCompare(b));
+  const noArc = groups.get('(no arc)');
+  return noArc ? [...withArc, ['(no arc)', noArc]] : withArc;
+}
+
 function ForceEventSection({
   heroes,
   onForce,
@@ -721,6 +751,7 @@ function ForceEventSection({
   onForce: (eventId: string, heroId: string) => void;
 }) {
   const eligible = ALL_EVENTS.filter((e) => e.category !== 'travel');
+  const grouped = groupByArc(eligible);
   const [eventId, setEventId] = useState(eligible[0]?.id ?? '');
   const [heroId, setHeroId] = useState(heroes[0]?.id ?? '');
   return (
@@ -728,8 +759,12 @@ function ForceEventSection({
       <h4 style={{ marginTop: 0 }}>Force Event</h4>
       <div className="cc-row">
         <select value={eventId} onChange={(e) => setEventId(e.target.value)} style={{ maxWidth: 220 }}>
-          {eligible.map((e) => (
-            <option key={e.id} value={e.id}>{e.title}</option>
+          {grouped.map(([arc, events]) => (
+            <optgroup key={arc} label={arc}>
+              {events.map((e) => (
+                <option key={e.id} value={e.id}>{e.title}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <select value={heroId} onChange={(e) => setHeroId(e.target.value)}>
@@ -742,7 +777,57 @@ function ForceEventSection({
         </button>
       </div>
       <p className="dim" style={{ fontSize: '0.72rem' }}>
-        Bypasses conditions, cooldowns, and `once` bookkeeping — for content testing only.
+        Bypasses conditions, cooldowns, and `once` bookkeeping — starts a fresh
+        instance with no chain vars, so a locked mid-chain choice may show
+        unavailable. For an in-flight chain, fire it from Queued Events below
+        instead, which keeps its real pinned hero and chain vars.
+      </p>
+    </div>
+  );
+}
+
+function QueuedEventsSection({
+  game,
+  onFire,
+}: {
+  game: GameState;
+  onFire: (index: number) => void;
+}) {
+  if (game.queuedEvents.length === 0) {
+    return (
+      <div className="panel">
+        <h4 style={{ marginTop: 0 }}>Queued Events</h4>
+        <p className="dim" style={{ fontSize: '0.78rem' }}>Nothing queued right now.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="panel">
+      <h4 style={{ marginTop: 0 }}>Queued Events</h4>
+      {game.queuedEvents.map((q, i) => {
+        const event = ALL_EVENTS.find((e) => e.id === q.eventId);
+        const hero = q.heroId ? game.heroes.find((h) => h.id === q.heroId) : undefined;
+        const turnsOut = q.fireOnTurn - game.turn;
+        return (
+          <div className="cc-row" key={`${q.eventId}-${i}`}>
+            <span style={{ flex: 1 }}>
+              {event?.title ?? q.eventId}
+              {hero ? ` — ${hero.name}` : ''}
+              {' · '}
+              <span className="dim">
+                {turnsOut > 0 ? `due in ${turnsOut} turn${turnsOut === 1 ? '' : 's'}` : 'due now'}
+              </span>
+            </span>
+            <button className="small" onClick={() => onFire(i)}>
+              Fire Now
+            </button>
+          </div>
+        );
+      })}
+      <p className="dim" style={{ fontSize: '0.72rem' }}>
+        Promotes the queued instance immediately, preserving its pinned hero
+        and chain vars — the right way to advance an in-flight chain without
+        ending turns.
       </p>
     </div>
   );

@@ -23,6 +23,7 @@ import { reallocate } from '../engine/residents';
 import { addThralls, manumitThralls, reallocateThralls } from '../engine/thralls';
 import { TUNING } from '../content/tuning';
 import { activateHero, benchHero } from '../engine/roster';
+import { bindHero } from '../engine/events/binding';
 import { evalConditions } from '../engine/events/conditions';
 import { applyOutcomes } from '../engine/events/outcomes';
 import type { Outcome } from '../engine/events/types';
@@ -149,6 +150,13 @@ interface GameStore {
   /** Force a non-travel event to fire immediately, bypassing selection/eligibility.
    *  Returns false if the event/hero is invalid. */
   forceFireEvent: (eventId: string, heroId: string) => boolean;
+  /** Promote a queued chain event (`GameState.queuedEvents[index]`) straight
+   *  into pendingEvents right now — unlike forceFireEvent, this keeps its
+   *  real pinned hero and chain vars, so a multi-stage chain can be tested
+   *  stage-by-stage without waiting out the delay or losing branch state.
+   *  Returns false if the index is stale or its pinned hero no longer
+   *  resolves. */
+  fireQueuedEvent: (index: number) => boolean;
 }
 
 function draft(game: GameState): GameState {
@@ -455,6 +463,38 @@ export const useGameStore = create<GameStore>((set, get) => {
     if (!livingHeroes(game).some((h) => h.id === heroId)) return false;
     const next = draft(game);
     next.pendingEvents = [{ eventId, heroId }, ...next.pendingEvents];
+    next.phase = 'event';
+    autosave(next);
+    set({ game: next, lastResolution: null });
+    return true;
+  },
+
+  fireQueuedEvent: (index) => {
+    const { game } = get();
+    if (!game) return false;
+    const queued = game.queuedEvents[index];
+    if (!queued) return false;
+    const event = CONTENT.events.get(queued.eventId);
+    if (!event) return false;
+    const next = draft(game);
+    const rng = new Rng(next.rngState);
+    const hero = queued.heroId
+      ? (next.heroes.find(
+          (h) => h.id === queued.heroId && (h.status === 'active' || h.status === 'captive'),
+        ) ?? null)
+      : bindHero(next, event, rng);
+    next.rngState = rng.getState();
+    if (!hero) return false;
+    next.pendingEvents = [
+      {
+        eventId: queued.eventId,
+        heroId: hero.id,
+        ...(queued.locationId ? { locationId: queued.locationId } : {}),
+        ...(queued.vars ? { vars: queued.vars } : {}),
+      },
+      ...next.pendingEvents,
+    ];
+    next.queuedEvents = next.queuedEvents.filter((_, i) => i !== index);
     next.phase = 'event';
     autosave(next);
     set({ game: next, lastResolution: null });

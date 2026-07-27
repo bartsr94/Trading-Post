@@ -557,8 +557,9 @@ migration — `LocationState` only ever stored `discovery`/`market`, and
 
 Content: demand/tribute events at low standing (pay, haggle, refuse — all
 non-violent, in silver/goods/standing/stress); voluntary union at rising
-standing (reuses `formUnion(source: 'alliance')` verbatim, plus `wed_orc`/
-`wed_goblin` traits); settlement at high standing (reuses `addResidents`,
+standing (reuses `formUnion(source: 'alliance')`, plus `wed_orc`/`wed_goblin`
+traits — the orc version is now a 3-stage chain, see below); settlement at
+high standing (reuses `addResidents`,
 split into two calls so orc/goblin counts stay distinct in the Origins tag
 breakdown) in two flavors — guards (`beastfolk_settlement`) or craftsfolk/
 porters (`beastfolk_settlement_workers`). Mixed orc/goblin × human children
@@ -666,6 +667,41 @@ still can't split cleanly by people, kept here as the default/joint home.
 Exported array names followed (`BEASTFOLK_EVENTS` → `ORC_EVENTS`, etc.);
 event ids, the `BEASTFOLK` `FactionId`, and illustration keys were untouched
 — this was a pure directory/identifier rename, not a content change.
+
+**The orc match event became a 3-stage courtship chain** (2026-07-27,
+`ORC_MATCH_CHAIN_SPEC.md`, now folded in here): `beastfolk_orc_match`
+(single-shot, decided in one roll) was replaced outright by
+`orc_match_watched` → `orc_match_trading` → `orc_match_returns`
+(`content/events/orc/match.ts`, arc `orc_match`), earning the union across
+several turns instead of deciding it on the spot. Stage 1 fires from the
+weighted `post` pool when a male hero eligible to marry is assigned to the
+Provisioning task; stages 2 and 3 are `category: 'chain'` (weight 0),
+reached only via a pinned, cross-turn `queueEvent(sameHero: true)` once
+that same hero is back at the post — no new mechanism needed there, since a
+pinned `QueuedEvent` already only fires on a turn its hero resolves via
+`heroesAtPost` (`selection.ts`), simply waiting rather than firing without
+him or dropping. An `impression` chain var (`'strong'`/`'weak'`, carried via
+`QueuedEvent.vars`/`ActiveEvent.vars` across the turn boundary — the same
+`ChainVars` mechanism same-sitting chains use) accumulates across stages 1
+and 2 and gates whether stage 3 offers the marriage choice at all; failing
+that check (or the stage-3 might check itself) always falls back to her
+joining as a plain resident, never a hard no.
+
+Two new generic `Condition`s, both reusable well beyond this chain:
+- **`heroAssignment`** (`{ activity: ActivityId; heroId? }`) — true when
+  `state.assignments[heroId]` matches, for any future "hero currently doing
+  job X" gate.
+- **`heroCanMarry`** (`{ heroId? }`) — wraps the existing `canWed`/spouse-cap
+  check (`family.ts`), unlike `heroUnmarried` (which requires zero spouses).
+  Since orcs are polygamous (`maxSpousesPerHero`, 3, §8), an already-married
+  hero is still a valid candidate here — `heroUnmarried` would have wrongly
+  excluded him.
+
+One new `TextContext` field, `spouseRank` (`engine/events/text.ts`,
+`{spouseRank}` token) — "first wife"/"second wife"/"third wife", computed
+from the existing `spouseCount` selector in `EventPanel.tsx` and always
+populated (even for a first marriage), so authored text can just say "as
+his {spouseRank}" without any conditional grammar.
 
 **Still open** (`docs/TODO_FEATURES.md`): a named Beastfolk recruit (orc
 smith/goblin scout) and sub-clan/war-band depth (named war-bands under
@@ -858,6 +894,22 @@ through the real, unmodified `applyOutcomes`. Can also force-fire any
 non-travel event directly, bypassing `once`/cooldown/`firedEvents`
 bookkeeping (deliberately — only `resolveTurn`'s normal selection pass
 touches those).
+
+**Force Event's dropdown groups by `arc`** (`optgroup`, `CheatConsole.tsx`'s
+`groupByArc`) so a multi-stage chain's events sit together instead of
+scattered in file/definition order; events without an authored `arc` fall
+into a trailing "(no arc)" group.
+
+**Queued Events panel** (2026-07-27, `fireQueuedEvent` in `gameStore.ts`):
+lists everything currently in `GameState.queuedEvents` (title, pinned hero
+if any, turns until due) with a **Fire Now** button that promotes that exact
+entry into `pendingEvents` right now — unlike Force Event, which always
+starts a fresh var-less instance, this preserves the queued entry's real
+pinned hero and chain vars (falls back to `bindHero` only for the rare
+unpinned queued event). This is the tool for stepping through a multi-stage
+`queueEvent`/`sameHero` chain (e.g. the orc match chain, §10) one stage at a
+time without ending turns or losing branch state — play a stage for real,
+then Fire Now the queued follow-up instead of waiting out its `delayTurns`.
 
 ## 15. Failure states
 

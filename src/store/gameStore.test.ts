@@ -152,6 +152,35 @@ describe('gameStore', () => {
     expect(useGameStore.getState().lastResolution).toBeNull();
   });
 
+  it('fireQueuedEvent promotes a queued chain event, keeping its pinned hero and vars', () => {
+    const s = testState(205, ['p1']);
+    const heroId = s.heroes[0].id;
+    s.queuedEvents.push({
+      eventId: 'post_drifter',
+      fireOnTurn: s.turn + 3,
+      heroId,
+      vars: { impression: 'strong' },
+    });
+    useGameStore.setState({ game: s });
+
+    expect(useGameStore.getState().fireQueuedEvent(0)).toBe(true);
+    const game = useGameStore.getState().game!;
+    expect(game.phase).toBe('event');
+    expect(game.pendingEvents[0]).toEqual({
+      eventId: 'post_drifter',
+      heroId,
+      vars: { impression: 'strong' },
+    });
+    expect(game.queuedEvents).toHaveLength(0);
+  });
+
+  it('fireQueuedEvent returns false for a stale index and leaves state untouched', () => {
+    const s = testState(206, ['p1']);
+    useGameStore.setState({ game: s });
+    expect(useGameStore.getState().fireQueuedEvent(0)).toBe(false);
+    expect(useGameStore.getState().game).toBe(s);
+  });
+
   it('chooseOption autosaves immediately, like the other turn-phase-boundary actions', () => {
     const localStorage = makeLocalStorage();
     vi.stubGlobal('localStorage', localStorage);

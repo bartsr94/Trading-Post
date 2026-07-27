@@ -2,7 +2,7 @@ import { activeHeroes, discoveryAtLeast, livingHeroes, reserveHeroes, seasonOfTu
 import { canAdvanceTier, hasBuilding } from '../buildings';
 import { isOverClaim } from '../claim';
 import { cargoUnits } from '../expeditions';
-import { eligiblePartners, isMarried, nodePeoples, spousesOf } from '../family';
+import { canWed, eligiblePartners, isMarried, nodePeoples, spousesOf } from '../family';
 import { diplomacySeatStateById, isFactionKnown } from '../diplomacy';
 import { frictionFor, heritageCount, nativeShare, postDefense, residentCount } from '../residents';
 import { raidThreatActive } from '../raids';
@@ -92,11 +92,19 @@ export function evalCondition(
       const heroId = resolveHeroId(cond, ctx);
       return heroId !== undefined && !isMarried(state, heroId);
     }
+    case 'heroCanMarry': {
+      const heroId = resolveHeroId(cond, ctx);
+      return heroId !== undefined && canWed(state, heroId);
+    }
     case 'heroGender': {
       const heroId = resolveHeroId(cond, ctx);
       if (heroId === undefined) return false;
       const hero = state.heroes.find((h) => h.id === heroId);
       return hero !== undefined && hero.gender === cond.gender;
+    }
+    case 'heroAssignment': {
+      const heroId = resolveHeroId(cond, ctx);
+      return heroId !== undefined && state.assignments[heroId] === cond.activity;
     }
     case 'heroSpouseHeritage': {
       const heroId = resolveHeroId(cond, ctx);

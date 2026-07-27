@@ -8,11 +8,15 @@ import { CONTENT } from '../../content/registry';
 import { evalConditions } from '../../engine/events/conditions';
 import { interpolate } from '../../engine/events/text';
 import type { Choice } from '../../engine/events/types';
+import { spouseCount } from '../../engine/family';
 import { cap, getHero } from '../../engine/types';
 import type { GameState } from '../../engine/types';
 import { travelContextOf, useGameStore } from '../../store/gameStore';
 import { DiceRoll } from '../components/DiceRoll';
 import { Illustration } from '../components/Illustration';
+
+// Matches TUNING.family.maxSpousesPerHero — a hero can never reach a 4th.
+const SPOUSE_ORDINALS = ['first', 'second', 'third'] as const;
 
 function checkHint(state: GameState, choice: Choice): string | null {
   if (!choice.check) return null;
@@ -44,6 +48,7 @@ export function EventPanel({ game }: { game: GameState }) {
     destinationName: travel?.destination.name ?? contactSeat?.name,
     factionName: contactSeat?.faction ? FACTION_DEFS.get(contactSeat.faction)?.name : undefined,
     partnerName: partner?.name,
+    spouseRank: `${SPOUSE_ORDINALS[spouseCount(game, hero.id)] ?? 'next'} wife`,
   };
   const showResult = resolution !== null && (resolution.check === null || diceSettled);
 

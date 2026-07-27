@@ -53,6 +53,32 @@ describe('condition evaluation', () => {
       evalCondition(s, { type: 'standingAtLeast', faction: 'CHARTER_COMPANY', value: 25 }),
     ).toBe(true);
   });
+
+  it('heroAssignment matches the hero\'s current turn assignment', () => {
+    const s = testState();
+    expect(evalCondition(s, { type: 'heroAssignment', activity: 'provision', heroId: 'p1' })).toBe(
+      false,
+    );
+    s.assignments['p1'] = 'provision';
+    expect(evalCondition(s, { type: 'heroAssignment', activity: 'provision', heroId: 'p1' })).toBe(
+      true,
+    );
+    expect(evalCondition(s, { type: 'heroAssignment', activity: 'trade', heroId: 'p1' })).toBe(
+      false,
+    );
+  });
+
+  it('heroCanMarry allows an already-married hero under the spouse cap, unlike heroUnmarried', () => {
+    const s = testState();
+    expect(evalCondition(s, { type: 'heroCanMarry', heroId: 'p1' })).toBe(true);
+    formUnion(s, 'p1', { source: 'alliance', heritage: 'orc', name: 'Groda' });
+    expect(evalCondition(s, { type: 'heroUnmarried', heroId: 'p1' })).toBe(false);
+    expect(evalCondition(s, { type: 'heroCanMarry', heroId: 'p1' })).toBe(true);
+    for (let i = 0; i < 2; i++) {
+      formUnion(s, 'p1', { source: 'alliance', heritage: 'orc', name: `Spouse${i}` });
+    }
+    expect(evalCondition(s, { type: 'heroCanMarry', heroId: 'p1' })).toBe(false);
+  });
 });
 
 describe('event selection', () => {
@@ -469,6 +495,13 @@ describe('text interpolation', () => {
       'Ask Berrin.',
     );
     expect(interpolate('Ask {partner}.', { heroName: 'Sela' })).toBe('Ask them.');
+  });
+
+  it('replaces {spouseRank}, falling back when absent', () => {
+    expect(
+      interpolate('as his {spouseRank}.', { heroName: 'Berrin', spouseRank: 'second wife' }),
+    ).toBe('as his second wife.');
+    expect(interpolate('as his {spouseRank}.', { heroName: 'Berrin' })).toBe('as his wife.');
   });
 
   it('replaces pronoun tokens by heroGender, defaulting to male', () => {

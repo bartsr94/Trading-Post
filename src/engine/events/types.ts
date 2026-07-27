@@ -2,6 +2,7 @@
 // the engine only ever consumes them.
 
 import type {
+  ActivityId,
   AxisId,
   BuildingId,
   ChainVarValue,
@@ -79,7 +80,16 @@ export type Condition =
   | { type: 'rosterBelow'; scope: 'active' | 'reserve' | 'living'; value: number }
   | { type: 'heroHasSpouse'; heroId?: string }
   | { type: 'heroUnmarried'; heroId?: string }
+  /** True while the hero is still under the spouse cap (`canWed`,
+   *  TUNING.family.maxSpousesPerHero) — unlike `heroUnmarried`, does not
+   *  require zero existing spouses. Use for polygamous-marriage content
+   *  (e.g. orc match events) where an already-married hero is still a
+   *  valid candidate. */
+  | { type: 'heroCanMarry'; heroId?: string }
   | { type: 'heroGender'; gender: Gender; heroId?: string }
+  /** True when the hero's current turn assignment matches the given
+   *  activity (GameState.assignments). */
+  | { type: 'heroAssignment'; activity: ActivityId; heroId?: string }
   /** True when any of the (candidate/bound) hero's spouses is of a given
    *  heritage — heritage-weighted birth rates (e.g. orc/goblin fertility)
    *  gate on this rather than a new engine mechanism. */

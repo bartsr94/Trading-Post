@@ -20,6 +20,12 @@ export interface TextContext {
    *  (FAMILY_PHASE_D_SPEC.md §2.4) — resolved from the active event's
    *  `vars.partnerId`, same pattern as `destinationName`/`factionName`. */
   partnerName?: string;
+  /** "first wife" / "second wife" / "third wife" — the bound hero's spouse
+   *  count + 1 (ORC_MATCH_CHAIN_SPEC.md §2c), for polygamous-marriage
+   *  content. Always populated when a hero is bound, even for a first
+   *  marriage, so authored text can just say "as his {spouseRank}"
+   *  unconditionally. */
+  spouseRank?: string;
 }
 
 const PRONOUNS: Record<Gender, { he: string; him: string; his: string; himself: string }> = {
@@ -42,5 +48,6 @@ export function interpolate(text: string, ctx: TextContext): string {
     .replaceAll('{post}', ctx.postName ?? 'the post')
     .replaceAll('{destination}', ctx.destinationName ?? 'the road')
     .replaceAll('{faction}', ctx.factionName ?? 'this people')
-    .replaceAll('{partner}', ctx.partnerName ?? 'them');
+    .replaceAll('{partner}', ctx.partnerName ?? 'them')
+    .replaceAll('{spouseRank}', ctx.spouseRank ?? 'wife');
 }
