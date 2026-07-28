@@ -237,4 +237,176 @@ describe('gameStore', () => {
     expect(useGameStore.getState().game!.silver).toBe(15);
     expect(log.length).toBeGreaterThan(0);
   });
+
+  it('buy purchases goods for silver, refusing when unaffordable', () => {
+    vi.stubGlobal('localStorage', makeLocalStorage());
+    const s = testState(505, ['p1']);
+    s.phase = 'assignment';
+    const silverBefore = s.silver;
+    const toolsBefore = s.goods.tools;
+    useGameStore.setState({ game: s });
+
+    expect(useGameStore.getState().buy('tools', 1)).toBe(true);
+    const game = useGameStore.getState().game!;
+    expect(game.goods.tools).toBe(toolsBefore + 1);
+    expect(game.silver).toBeLessThan(silverBefore);
+
+    useGameStore.setState({ game: { ...game, silver: 0 } });
+    expect(useGameStore.getState().buy('tools', 100)).toBe(false);
+    expect(useGameStore.getState().game!.goods.tools).toBe(toolsBefore + 1);
+
+    flushAutosave();
+  });
+
+  it('sell converts goods to silver, refusing more than is held', () => {
+    vi.stubGlobal('localStorage', makeLocalStorage());
+    const s = testState(506, ['p1']);
+    s.phase = 'assignment';
+    const silverBefore = s.silver;
+    const toolsBefore = s.goods.tools;
+    useGameStore.setState({ game: s });
+
+    expect(useGameStore.getState().sell('tools', 2)).toBe(true);
+    const game = useGameStore.getState().game!;
+    expect(game.goods.tools).toBe(toolsBefore - 2);
+    expect(game.silver).toBeGreaterThan(silverBefore);
+
+    expect(useGameStore.getState().sell('tools', 100)).toBe(false);
+    expect(useGameStore.getState().game!.goods.tools).toBe(toolsBefore - 2);
+
+    flushAutosave();
+  });
+
+  it('dispatch sends a caravan off the books, refusing to send an already-away hero', () => {
+    vi.stubGlobal('localStorage', makeLocalStorage());
+    const s = testState(501, ['p1', 'p2']);
+    s.phase = 'assignment';
+    const toolsBefore = s.goods.tools;
+    useGameStore.setState({ game: s });
+
+    const ok = useGameStore.getState().dispatch({
+      kind: 'caravan',
+      destination: 'river_meet',
+      heroIds: ['p1', 'p2'],
+      cargo: { tools: 2, salt: 2 },
+    });
+    expect(ok).toBe(true);
+    const game = useGameStore.getState().game!;
+    expect(game.goods.tools).toBe(toolsBefore - 2);
+    expect(game.expeditions).toHaveLength(1);
+
+    // p1 is now away on the caravan — a second dispatch naming them is refused.
+    const bad = useGameStore
+      .getState()
+      .dispatch({ kind: 'caravan', destination: 'river_meet', heroIds: ['p1'], cargo: {} });
+    expect(bad).toBe(false);
+    expect(useGameStore.getState().game!.expeditions).toHaveLength(1);
+
+    flushAutosave();
+  });
+
+  it('activate promotes a reserve hero and bench returns one, refusing one who is away', () => {
+    vi.stubGlobal('localStorage', makeLocalStorage());
+    const s = testState(502, ['p1', 'p2']);
+    s.phase = 'assignment';
+    s.activePartyIds = ['p1']; // p2 starts on the reserve bench
+    useGameStore.setState({ game: s });
+
+    expect(useGameStore.getState().activate('p2')).toBe(true);
+    expect(useGameStore.getState().game!.activePartyIds).toContain('p2');
+
+    expect(useGameStore.getState().bench('p2')).toBe(true);
+    expect(useGameStore.getState().game!.activePartyIds).not.toContain('p2');
+
+    const away = useGameStore.getState().game!;
+    useGameStore.setState({
+      game: {
+        ...away,
+        activePartyIds: ['p1', 'p2'],
+        expeditions: [
+          {
+            id: 'exp_away',
+            kind: 'explore',
+            heroIds: ['p2'],
+            leg: 'outbound',
+            turnsLeft: 1,
+            cargo: {},
+            silver: 0,
+            buyOrders: {},
+          },
+        ],
+      },
+    });
+    expect(useGameStore.getState().bench('p2')).toBe(false);
+
+    flushAutosave();
+  });
+
+  it('setLandAllocation re-apportions the Concession when the split sums to 100, refusing one that does not', () => {
+    vi.stubGlobal('localStorage', makeLocalStorage());
+    const s = testState(503, ['p1']);
+    s.phase = 'assignment';
+    useGameStore.setState({ game: s });
+
+    expect(useGameStore.getState().setLandAllocation({ cropland: 50, pasture: 30, wildland: 20 })).toBe(
+      true,
+    );
+    expect(useGameStore.getState().game!.claim.allocation).toEqual({
+      cropland: 50,
+      pasture: 30,
+      wildland: 20,
+    });
+
+    expect(useGameStore.getState().setLandAllocation({ cropland: 50, pasture: 30, wildland: 30 })).toBe(
+      false,
+    );
+    expect(useGameStore.getState().game!.claim.allocation).toEqual({
+      cropland: 50,
+      pasture: 30,
+      wildland: 20,
+    });
+
+    flushAutosave();
+  });
+
+  it('reallocateResidents moves heads between roles, refusing more than are available', () => {
+    vi.stubGlobal('localStorage', makeLocalStorage());
+    const s = testState(504, ['p1']);
+    s.phase = 'assignment';
+    useGameStore.setState({ game: s });
+
+    expect(useGameStore.getState().reallocateResidents('farmers', 'idle', 1)).toBe(true);
+    const game = useGameStore.getState().game!;
+    expect(game.residents.roles.farmers).toBe(1);
+    expect(game.residents.idle).toBe(1);
+
+    expect(useGameStore.getState().reallocateResidents('farmers', 'idle', 5)).toBe(false);
+    expect(useGameStore.getState().game!.residents.roles.farmers).toBe(1);
+
+    flushAutosave();
+  });
+
+  it('resolveRaid resolves the pending incoming raid and continueRaid dismisses the result', () => {
+    vi.stubGlobal('localStorage', makeLocalStorage());
+    const s = testState(507, ['p1']);
+    s.phase = 'event';
+    s.pendingRaid = {
+      kind: 'incoming',
+      faction: 'BEASTFOLK',
+      severity: 'raid',
+      attackerForce: 4,
+      attackerManeuver: 'charge',
+      spotted: true,
+      band: 'a small raiding party',
+    };
+    useGameStore.setState({ game: s });
+
+    useGameStore.getState().resolveRaid({ goal: 'driveoff', maneuver: 'skirmish' });
+    const { game, lastRaidResolution } = useGameStore.getState();
+    expect(game!.pendingRaid).toBeNull();
+    expect(lastRaidResolution).not.toBeNull();
+
+    useGameStore.getState().continueRaid();
+    expect(useGameStore.getState().lastRaidResolution).toBeNull();
+  });
 });

@@ -1222,7 +1222,8 @@ caps, `activeCapBonus`), the unwired `charterRevoked`
 Company-judgment mechanism (heritage + family sides both), Peoples Phase C
 Company-town content, Family's remaining forks (matrilineal marry-out,
 per-people alliance flavor, dependant mortality, bride-price income),
-Beastfolk's remaining content (named recruit, travel toll, second
-settlement flavor, visitor transient, sub-clan depth), and a separate
-engineering backlog (store-mutation helper, `SaveResult`/autosave warnings,
-lint tooling, test-coverage gaps, an unaudited content-file pass).
+Beastfolk's remaining content (named recruit, sub-clan depth), the
+Harpies' remaining content (in-fiction faction/eyrie naming, a distinct
+raid/abduction identity, lore + portrait art), and a separate engineering
+backlog (store-mutation helper, `SaveResult`/autosave warnings, lint
+tooling, test-coverage gaps, an unaudited content-file pass).

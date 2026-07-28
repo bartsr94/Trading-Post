@@ -287,14 +287,10 @@ export const useGameStore = create<GameStore>((set, get) => {
   openMarket: (destinationId) => set({ screen: 'market', marketDestinationFocus: destinationId }),
   clearMarketFocus: () => set({ marketDestinationFocus: null }),
 
-  setAssignment: (heroId, activity) => {
-    const { game } = get();
-    if (!game || game.phase !== 'assignment') return;
-    const next = draft(game);
-    next.assignments[heroId] = activity;
-    scheduleAutosave(next);
-    set({ game: next });
-  },
+  setAssignment: assignmentAction((state, heroId: string, activity: ActivityId) => {
+    state.assignments[heroId] = activity;
+    return true;
+  }),
 
   confirmTurn: () => {
     const { game } = get();
@@ -398,14 +394,10 @@ export const useGameStore = create<GameStore>((set, get) => {
 
   startConstruction: assignmentAction(startConstructionFn),
 
-  cancelConstruction: () => {
-    const { game } = get();
-    if (!game || game.phase !== 'assignment') return;
-    const next = draft(game);
-    cancelConstructionFn(next);
-    scheduleAutosave(next);
-    set({ game: next });
-  },
+  cancelConstruction: assignmentAction((state) => {
+    cancelConstructionFn(state);
+    return true;
+  }),
 
   setLandAllocation: assignmentAction(setLandAllocationFn),
 
