@@ -562,7 +562,22 @@ traits — the orc version is now a 3-stage chain, see below); settlement at
 high standing (reuses `addResidents`,
 split into two calls so orc/goblin counts stay distinct in the Origins tag
 breakdown) in two flavors — guards (`beastfolk_settlement`) or craftsfolk/
-porters (`beastfolk_settlement_workers`). Mixed orc/goblin × human children
+porters (`beastfolk_settlement_workers`). The guards flavor is now a 2-stage
+chain (reworked 2026-07-28): taking the band in queues `beastfolk_settlement_
+claim` 4 turns later, paying off the "no war-band will vouch for them" line
+in the arrival text — they're deserters, and the band they deserted comes to
+collect, offering a stand-and-defend check (`friction`/`standing`/
+`contentment` swing on the result), a straight silver+goods payoff, or handing
+the guards back (`loseResidents`, standing/contentment hit). The workers
+flavor (`beastfolk_settlement_workers`) got its own 2-stage follow-up the same
+day, deliberately shaped differently: `beastfolk_settlement_temptation` fires
+4 turns later with an old contact trying to talk a settled worker into
+smuggling goods out through routes only they know — confront the pair (a
+check), stay hands-off, or quietly set a watch. Purely internal to the post
+(`friction`/`contentment`/`loseResidents`), no `standing` swing at all — the
+guards arc is an external claim settled by force, this one's an internal
+temptation with no faction stakes.
+Mixed orc/goblin × human children
 fall out of the existing `Ancestry.peoples`/`bloodline` logic with no new
 code.
 
@@ -816,16 +831,27 @@ id — `content/buildings.ts` holds only name/blurb. Effects are **derived,
 never stored**: `buildingEffect(state, field)` sums a named field across the
 completed set, so a balance tweak needs no migration.
 
-**16 buildings currently exist:** `storehouse`, `palisade`, `trade_hall`,
+**17 buildings currently exist:** `storehouse`, `palisade`, `trade_hall`,
 `common_house`, `workshop` (tier 1); `storehouse_ii` (Grand Storehouse),
 `palisade_ii` (Stone Rampart), `workshop_ii` (Foundry), `infirmary`,
 `watchtower`, `river_shrine`, `goblin_warren`, `orc_longhouse`,
-`counting_house`, `dock`, `stables` (all minTier 2). Effect fields wired:
-`foodStorageBonus`, `defenseBonus`, `prosperityBonus`, `tradeIncomeBonus`,
-`stressReliefBonus` + `healingBonus`, `craftReliefBonus`, `upkeepSilver`,
-`contentmentBonus`, `cargoCapacityBonus`, `travelCheckBonus`. Gating
-vocabulary: `minTier`, `prerequisites`, `requiresResidents`,
-`requiresHeritageGroup`, `requiresTag`, `requiresStanding`, `minSilverHeld`.
+`counting_house`, `dock`, `stables`, `bathhouse` (all minTier 2). Effect
+fields wired: `foodStorageBonus`, `defenseBonus`, `prosperityBonus`,
+`tradeIncomeBonus`, `stressReliefBonus` + `healingBonus`, `craftReliefBonus`,
+`upkeepSilver`, `contentmentBonus`, `cargoCapacityBonus`, `travelCheckBonus`,
+`frictionReliefBonus`. Gating vocabulary: `minTier`, `prerequisites`,
+`requiresResidents`, `requiresHeritageGroup`, `requiresTag`,
+`requiresStanding`, `minSilverHeld`.
+
+**Bathhouse** (2026-07-28): a universal (no heritage gate) tier-2 amenity,
+prereq `common_house` — deliberately the first building with more than one
+"soft" effect at once: `contentmentBonus: 2` (double `common_house`'s),
+`stressReliefBonus: 1`, and a new generic field, `frictionReliefBonus`,
+added to `passiveDecayPerTurn` inside `driftFriction` (`residents.ts`) — a
+building-driven boost to how fast settled-heritage integration friction
+(§7/§10) cools on its own, on top of whatever mediation events already do.
+Not people-specific and no new gating vocabulary; `frictionReliefBonus` is
+just another summed `Partial<BuildingEffects>` field like the rest.
 
 **The Dock/Stables trade-route pair** (2026-07-24): the last clearly-scoped
 building pair from the original Phase B list. Both gate on

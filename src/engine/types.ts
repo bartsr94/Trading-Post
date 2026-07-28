@@ -650,6 +650,9 @@ export interface BuildingEffects {
   foodStorageBonus: number;
   contentmentBonus: number;
   healingBonus: number; // extra health recovery on a Rest turn, alongside stressReliefBonus
+  /** Extra passive friction decay per turn, on top of `passiveDecayPerTurn`
+   *  (a Bathhouse's community-integration function) — added in `driftFriction`. */
+  frictionReliefBonus: number;
   /** Extra cargo units any expedition can carry, on top of party size + porter
    *  escort (a Dock's river barges) — added wherever `cargoCapacity`/
    *  `raidCargoCapacity` is read. */

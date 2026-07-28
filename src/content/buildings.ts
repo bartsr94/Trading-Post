@@ -80,6 +80,13 @@ export const BUILDINGS: BuildingInfo[] = [
     category: 'core',
   },
   {
+    id: 'bathhouse',
+    name: 'Bathhouse',
+    blurb:
+      'Heated pools and a common room besides, open to whoever needs the warmth. Old grudges wear thinner in a place where everyone comes to unwind the same way.',
+    category: 'core',
+  },
+  {
     id: 'watchtower',
     name: 'Watchtower',
     blurb:

@@ -334,6 +334,22 @@ describe('integration friction', () => {
     expect(s.residents.friction.goblin).toBeLessThan(5);
     expect(s.residents.friction.goblin).toBeGreaterThan(0);
   });
+
+  it('a Bathhouse\'s frictionReliefBonus speeds passive decay', () => {
+    const base = testState();
+    base.residents = freshResidents();
+    base.residents.friction.orc = 5;
+    const withB = structuredClone(base);
+    withB.buildings.push('bathhouse');
+
+    driftFriction(base);
+    driftFriction(withB);
+
+    expect(5 - base.residents.friction.orc!).toBeCloseTo(TUNING.residents.friction.passiveDecayPerTurn);
+    expect(5 - withB.residents.friction.orc!).toBeCloseTo(
+      TUNING.residents.friction.passiveDecayPerTurn + TUNING.building.defs.bathhouse.effects.frictionReliefBonus!,
+    );
+  });
 });
 
 describe('expedition escorts', () => {

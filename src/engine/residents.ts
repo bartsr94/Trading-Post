@@ -177,7 +177,7 @@ export function frictionContentmentPressure(state: GameState): number {
 /** Friction settles naturally over time absent any event pushing it back up
  *  — called once per turn from `resolveResidentSociety`. */
 export function driftFriction(state: GameState): void {
-  const decay = TUNING.residents.friction.passiveDecayPerTurn;
+  const decay = TUNING.residents.friction.passiveDecayPerTurn + buildingEffect(state, 'frictionReliefBonus');
   for (const heritage of Object.keys(state.residents.friction) as Heritage[]) {
     const value = state.residents.friction[heritage];
     if (value !== undefined && value > 0) {

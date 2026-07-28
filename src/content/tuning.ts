@@ -539,6 +539,13 @@ export const TUNING = {
         minTier: 2,
         effects: { healingBonus: 2, upkeepSilver: 1 },
       },
+      bathhouse: {
+        cost: { silver: 130, goods: { timber: 15, tools: 8 } },
+        buildProgress: 7,
+        prerequisites: ['common_house'],
+        minTier: 2,
+        effects: { contentmentBonus: 2, stressReliefBonus: 1, frictionReliefBonus: 0.15, upkeepSilver: 2 },
+      },
       watchtower: {
         cost: { silver: 70, goods: { timber: 15 } },
         buildProgress: 5,
