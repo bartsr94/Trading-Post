@@ -283,7 +283,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
         label: 'Spring it back on them — let them have the joke.',
         outcomes: {
           success: {
-            text: '{hero} makes a show of "falling" for the snare anyway, tumbling theatrically into the very trap meant for {him} — and the goblins, delighted past all reason, decide {he}\'s the best thing to happen to this stretch of road in months.',
+            text: '{hero} makes a show of "falling" for the snare anyway, tumbling theatrically into the very trap meant for {him}. The goblins, delighted past all reason, pile in to "finish the job" — only this time {hero} is very much in on it. What starts as a joke turns into a messy, enthusiastic tangle of limbs in the brush, the goblins taking turns and sharing {him} with the kind of greedy cheer they usually reserve for loot. By the time they scramble off, still giggling, both sides are thoroughly satisfied.',
             outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: 2 }],
           },
         },
@@ -356,7 +356,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
         label: 'Spring it back on them — let them have the joke.',
         outcomes: {
           success: {
-            text: '{hero} plays the mark on purpose this time, and the band howls with laughter at getting to run their own trick after all — on their own terms, which somehow matters to them more than the terms themselves.',
+            text: '{hero} plays the mark on purpose this time, and the band howls with laughter at getting to run their own trick after all. They don\'t just "collect the toll" — they take their time with {him}, hands and mouths and eager little bodies pressing in, treating the whole thing like a reunion they\'ve been looking forward to. {hero} gives as good as {he} gets, and by the end the scorekeeper is making a very different kind of mark on that stick. The goblins leave grinning, already talking about next time.',
             outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: 3 }],
           },
         },
@@ -429,7 +429,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
         label: 'Spring it back on them — let them have the joke.',
         outcomes: {
           success: {
-            text: 'It\'s a risk, playing the fool for a crowd that\'s stopped laughing — but it works, and works better than {hero} expected. Something in the old routine still means something to them, tired of it or not.',
+            text: 'It\'s a risk, playing the fool for a crowd that\'s stopped laughing — but it works, and works better than {hero} expected. The old routine still means something to them. They don\'t just take the joke; they take {hero}, thoroughly and without hurry, the whole band using {him} the way they\'ve clearly been wanting to for a while now. {hero} leans into it, and for once the silence breaks into something almost affectionate. When they finally let {him} go, one of them mutters that maybe they don\'t need to take {him} home after all — not if {he} keeps coming back like this.',
             outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: 4 }],
           },
         },
