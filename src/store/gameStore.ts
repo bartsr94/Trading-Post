@@ -18,6 +18,7 @@ import type { DispatchParams } from '../engine/expeditions';
 import { resolveIncomingRaid, resolveOutgoingRaid } from '../engine/raids';
 import type { RaidAttackParams, RaidDefenseParams, RaidResolution } from '../engine/raids';
 import { Rng } from '../engine/rng';
+import type { CheckTier } from '../engine/checks';
 import { setLandAllocation as setLandAllocationFn } from '../engine/claim';
 import { reallocate } from '../engine/residents';
 import { addThralls, manumitThralls, reallocateThralls } from '../engine/thralls';
@@ -147,9 +148,22 @@ interface GameStore {
   setCheatConsoleOpen: (open: boolean) => void;
   /** Apply arbitrary testing outcomes against a cloned draft. Returns the log lines. */
   applyCheatOutcomes: (outcomes: Outcome[], heroId: string) => string[];
-  /** Force a non-travel event to fire immediately, bypassing selection/eligibility.
-   *  Returns false if the event/hero is invalid. */
+  /** Force an event to fire immediately, bypassing selection/eligibility.
+   *  Travel events fire with no real expedition — cargo/silver outcomes fall
+   *  back to post stock, and any `{destination}` text or pace check
+   *  modifiers won't apply. Returns false if the event/hero is invalid. */
   forceFireEvent: (eventId: string, heroId: string) => boolean;
+  /** Force-fires an event AND immediately resolves one of its choices, with
+   *  an optional forced check tier — the debug-console way to jump straight
+   *  to a specific result (e.g. a repeatable encounter's critFailure branch)
+   *  without grinding real dice. Omitting `forcedTier` rolls for real.
+   *  Returns false if the event/hero/choice is invalid. */
+  forceFireAndResolveEvent: (
+    eventId: string,
+    heroId: string,
+    choiceIndex: number,
+    forcedTier?: CheckTier,
+  ) => boolean;
   /** Promote a queued chain event (`GameState.queuedEvents[index]`) straight
    *  into pendingEvents right now — unlike forceFireEvent, this keeps its
    *  real pinned hero and chain vars, so a multi-stage chain can be tested
@@ -451,13 +465,37 @@ export const useGameStore = create<GameStore>((set, get) => {
     const { game } = get();
     if (!game) return false;
     const event = CONTENT.events.get(eventId);
-    if (!event || event.category === 'travel') return false;
+    if (!event) return false;
     if (!livingHeroes(game).some((h) => h.id === heroId)) return false;
     const next = draft(game);
     next.pendingEvents = [{ eventId, heroId }, ...next.pendingEvents];
     next.phase = 'event';
     autosave(next);
     set({ game: next, lastResolution: null });
+    return true;
+  },
+
+  forceFireAndResolveEvent: (eventId, heroId, choiceIndex, forcedTier) => {
+    const { game } = get();
+    if (!game) return false;
+    const event = CONTENT.events.get(eventId);
+    if (!event || !event.choices[choiceIndex]) return false;
+    if (!livingHeroes(game).some((h) => h.id === heroId)) return false;
+    const next = draft(game);
+    next.pendingEvents = [{ eventId, heroId }, ...next.pendingEvents];
+    next.phase = 'event';
+    const resolution = resolveChoice(
+      next,
+      CONTENT,
+      event,
+      choiceIndex,
+      heroId,
+      undefined,
+      undefined,
+      forcedTier,
+    );
+    autosave(next);
+    set({ game: next, lastResolution: resolution });
     return true;
   },
 

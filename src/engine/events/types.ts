@@ -131,6 +131,12 @@ export type Condition =
   /** Chain-scoped branch memory set by `setChainVar` earlier in the same
    *  chain run (CHAIN_EVENTS_SPEC.md §3). */
   | { type: 'chainVar'; key: string; value: ChainVarValue }
+  /** Persistent per-hero counter (`Hero.counters`, TRAVEL_AMBUSH_SPEC.md) —
+   *  unlike `chainVar`, survives across separate future encounters. Absent
+   *  counter reads as 0. `heroId` defaults to the event's bound/candidate
+   *  hero. */
+  | { type: 'heroCounterAtLeast'; key: string; value: number; heroId?: string }
+  | { type: 'heroCounterAtMost'; key: string; value: number; heroId?: string }
   /** True once the grace period has elapsed and an aggressor exists (RAIDING_SPEC.md §6). */
   | { type: 'raidReady' }
   /** The post was sacked within the last `turns` (RAIDING_SPEC.md §7). */
@@ -195,6 +201,11 @@ export type Outcome =
   /** Writes chain-scoped branch memory onto the in-flight event/queued-event
    *  (CHAIN_EVENTS_SPEC.md §3), read back later via the `chainVar` condition. */
   | { type: 'setChainVar'; key: string; value: ChainVarValue }
+  /** Adjusts a persistent per-hero counter (`Hero.counters`,
+   *  TRAVEL_AMBUSH_SPEC.md), clamped at 0 — there's no "forgive a failure"
+   *  outcome, these are meant to be permanent. `heroId` defaults to the
+   *  bound hero. Read back via `heroCounterAtLeast`/`heroCounterAtMost`. */
+  | { type: 'heroCounter'; key: string; delta: number; heroId?: string }
   | { type: 'setFlag'; flag: string; value?: boolean }
   /** Push a market price shock (TRADING_ECONOMY_SPEC §3c). `lead` turns of
    *  rumor (no price effect) precede `duration` turns of the live `mod` on

@@ -536,6 +536,10 @@ export interface Hero {
   captivity?: { faction: FactionId; capturedTurn: number; source?: 'raid' | 'expedition' | 'event' };
   /** Auto-appended log of notable events for the Hero Sheet. */
   history: string[];
+  /** Named, persistent per-hero counters (e.g. repeat-encounter memory —
+   *  TRAVEL_AMBUSH_SPEC.md). Absent key === 0. Content-defined keys; the
+   *  engine never branches on a specific one. */
+  counters?: Record<string, number>;
 }
 
 /** A trait definition (content provides instances; engine only consumes). */

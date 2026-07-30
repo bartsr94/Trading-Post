@@ -210,6 +210,9 @@ function validateHero(value: unknown, path: string): string {
     }
   }
   stringArray(hero.history, `${path}.history`);
+  if (hero.counters !== undefined) {
+    validateIntegerRecord(hero.counters, `${path}.counters`, true);
+  }
   return id;
 }
 

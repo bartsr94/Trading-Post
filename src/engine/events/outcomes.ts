@@ -229,6 +229,12 @@ export function applyOutcomes(
         state.flags[outcome.flag] = outcome.value ?? true;
         break;
       }
+      case 'heroCounter': {
+        const target = outcome.heroId ? getHero(state, outcome.heroId) : hero;
+        const current = target.counters?.[outcome.key] ?? 0;
+        target.counters = { ...(target.counters ?? {}), [outcome.key]: Math.max(0, current + outcome.delta) };
+        break;
+      }
       case 'marketShock': {
         const lead = Math.max(0, outcome.lead ?? 0);
         state.marketShocks.push({

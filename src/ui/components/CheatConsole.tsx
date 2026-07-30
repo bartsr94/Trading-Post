@@ -2,8 +2,15 @@
 // thin UI layer over the same Outcome vocabulary every event already uses:
 // every "apply" button below builds an Outcome[] and hands it to the store's
 // applyCheatOutcomes, which runs it through the real engine applyOutcomes.
-// Forcing an event reuses resolveChoice via the store's forceFireEvent. No
-// engine code changes; this file is content-aware like any other screen.
+// Force Event's plain "Fire Now" just queues the event (store's
+// forceFireEvent) and leaves resolution to the real EventPanel/chooseOption
+// flow; "Fire & Resolve" (store's forceFireAndResolveEvent) queues AND
+// immediately calls the real resolveChoice, optionally passing a
+// `forcedTier` override — the one engine touch this file relies on
+// (`resolveChoice`'s optional `forcedTier` param, `engine/turn.ts`), which
+// skips the dice roll entirely and applies that tier's outcomes directly.
+// This file is otherwise content-aware like any other screen, no engine
+// changes needed for anything else.
 
 import { useState } from 'react';
 import { BUILDINGS } from '../../content/buildings';
@@ -13,6 +20,8 @@ import { GOOD_NAMES } from '../../content/goods';
 import { LOCATION_NAMES } from '../../content/locations';
 import { RECRUITS } from '../../content/recruits';
 import { TRAIT_NAMES } from '../../content/traits';
+import { CHECK_TIERS } from '../../engine/checks';
+import type { CheckTier } from '../../engine/checks';
 import { canWed, graphNode, isMarried, marriageableKin, spousesOf } from '../../engine/family';
 import {
   DISCOVERY_STATES,
@@ -58,6 +67,7 @@ const TRANSIENT_LABELS: Record<TransientKind, string> = {
 export function CheatConsole({ game, onClose }: { game: GameState; onClose: () => void }) {
   const applyOutcomes = useGameStore((s) => s.applyCheatOutcomes);
   const forceFireEvent = useGameStore((s) => s.forceFireEvent);
+  const forceFireAndResolveEvent = useGameStore((s) => s.forceFireAndResolveEvent);
   const fireQueuedEvent = useGameStore((s) => s.fireQueuedEvent);
   const setCheatConsoleOpen = useGameStore((s) => s.setCheatConsoleOpen);
 
@@ -143,7 +153,14 @@ export function CheatConsole({ game, onClose }: { game: GameState; onClose: () =
                 if (forceFireEvent(eventId, heroId)) {
                   setCheatConsoleOpen(false);
                 } else {
-                  setLog(['Could not force that event (unknown id, travel event, or invalid hero).']);
+                  setLog(['Could not force that event (unknown id or invalid hero).']);
+                }
+              }}
+              onForceResolve={(eventId, heroId, choiceIndex, forcedTier) => {
+                if (forceFireAndResolveEvent(eventId, heroId, choiceIndex, forcedTier)) {
+                  setCheatConsoleOpen(false);
+                } else {
+                  setLog(['Could not resolve that choice (unknown id, choice, or invalid hero).']);
                 }
               }}
             />
@@ -743,22 +760,42 @@ function groupByArc(events: GameEvent[]): [string, GameEvent[]][] {
   return noArc ? [...withArc, ['(no arc)', noArc]] : withArc;
 }
 
+const TIER_LABELS: Record<CheckTier, string> = {
+  critSuccess: 'Critical Success',
+  success: 'Success',
+  failure: 'Failure',
+  critFailure: 'Critical Failure',
+};
+
 function ForceEventSection({
   heroes,
   onForce,
+  onForceResolve,
 }: {
   heroes: { id: string; name: string }[];
   onForce: (eventId: string, heroId: string) => void;
+  onForceResolve: (eventId: string, heroId: string, choiceIndex: number, forcedTier?: CheckTier) => void;
 }) {
-  const eligible = ALL_EVENTS.filter((e) => e.category !== 'travel');
-  const grouped = groupByArc(eligible);
-  const [eventId, setEventId] = useState(eligible[0]?.id ?? '');
+  const grouped = groupByArc(ALL_EVENTS);
+  const [eventId, setEventId] = useState(ALL_EVENTS[0]?.id ?? '');
   const [heroId, setHeroId] = useState(heroes[0]?.id ?? '');
+  const event = ALL_EVENTS.find((e) => e.id === eventId);
+  const [choiceIndex, setChoiceIndex] = useState(0);
+  const [tier, setTier] = useState<CheckTier | 'auto'>('auto');
+
+  const choice = event?.choices[choiceIndex];
   return (
     <div className="panel">
       <h4 style={{ marginTop: 0 }}>Force Event</h4>
       <div className="cc-row">
-        <select value={eventId} onChange={(e) => setEventId(e.target.value)} style={{ maxWidth: 220 }}>
+        <select
+          value={eventId}
+          onChange={(e) => {
+            setEventId(e.target.value);
+            setChoiceIndex(0);
+          }}
+          style={{ maxWidth: 220 }}
+        >
           {grouped.map(([arc, events]) => (
             <optgroup key={arc} label={arc}>
               {events.map((e) => (
@@ -776,11 +813,48 @@ function ForceEventSection({
           Fire Now
         </button>
       </div>
+      {event && event.choices.length > 0 && (
+        <div className="cc-row">
+          <select
+            value={choiceIndex}
+            onChange={(e) => setChoiceIndex(Number(e.target.value))}
+            style={{ maxWidth: 220 }}
+          >
+            {event.choices.map((c, i) => (
+              <option key={i} value={i}>
+                {c.label}
+                {c.check ? '' : ' (no check)'}
+              </option>
+            ))}
+          </select>
+          <select
+            value={tier}
+            onChange={(e) => setTier(e.target.value as CheckTier | 'auto')}
+            disabled={!choice?.check}
+          >
+            <option value="auto">Auto (real roll)</option>
+            {CHECK_TIERS.map((t) => (
+              <option key={t} value={t}>{TIER_LABELS[t]}</option>
+            ))}
+          </select>
+          <button
+            className="small"
+            onClick={() => onForceResolve(eventId, heroId, choiceIndex, tier === 'auto' ? undefined : tier)}
+          >
+            Fire &amp; Resolve
+          </button>
+        </div>
+      )}
       <p className="dim" style={{ fontSize: '0.72rem' }}>
         Bypasses conditions, cooldowns, and `once` bookkeeping — starts a fresh
         instance with no chain vars, so a locked mid-chain choice may show
         unavailable. For an in-flight chain, fire it from Queued Events below
-        instead, which keeps its real pinned hero and chain vars.
+        instead, which keeps its real pinned hero and chain vars. Travel
+        events fire with no real expedition, so cargo/silver outcomes fall
+        back to post stock and any pace modifiers or {'{destination}'} text
+        won't apply. "Fire &amp; Resolve" immediately resolves the selected
+        choice — pick a tier to skip the dice and jump straight to that
+        result, or leave it on Auto to roll for real.
       </p>
     </div>
   );

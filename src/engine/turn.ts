@@ -11,7 +11,7 @@ import {
   resolveCheck,
   traitModifiers,
 } from './checks';
-import type { CheckResult } from './checks';
+import type { CheckResult, CheckTier } from './checks';
 import {
   addBuildProgress,
   buildingEffect,
@@ -753,7 +753,11 @@ export interface ChoiceResolution {
   log: string[];
 }
 
-/** Resolves a player's event choice: roll the check (if any), apply outcomes. */
+/** Resolves a player's event choice: roll the check (if any), apply outcomes.
+ *  `forcedTier` is a debug-only override (cheat console) that skips the roll
+ *  entirely and picks that tier's outcomes directly — no dice, no RNG
+ *  consumed, so `check` comes back null and the panel shows the result
+ *  immediately rather than animating a roll that didn't happen. */
 export function resolveChoice(
   state: GameState,
   ctx: TurnContext,
@@ -762,6 +766,7 @@ export function resolveChoice(
   heroId: string,
   expeditionId?: string,
   locationId?: LocationId,
+  forcedTier?: CheckTier,
 ): ChoiceResolution {
   const hero = getHero(state, heroId);
   const choice = event.choices[choiceIndex];
@@ -782,18 +787,23 @@ export function resolveChoice(
   let tier: keyof Choice['outcomes'] = 'success';
 
   if (choice.check) {
-    const difficulty =
-      typeof choice.check.difficulty === 'function'
-        ? choice.check.difficulty(state)
-        : choice.check.difficulty;
-    const mods = traitModifiers(hero, ctx.traitDefs, choice.check.skill, choice.check.tags ?? []);
-    if (event.category === 'travel' && expedition) {
-      const value = paceCheckModifier(expedition.pace);
-      if (value !== 0) mods.push({ label: `${expedition.pace ?? 'normal'} pace`, value });
+    if (forcedTier) {
+      tier = forcedTier;
+      if (isSuccess(tier)) markSkill(hero, choice.check.skill);
+    } else {
+      const difficulty =
+        typeof choice.check.difficulty === 'function'
+          ? choice.check.difficulty(state)
+          : choice.check.difficulty;
+      const mods = traitModifiers(hero, ctx.traitDefs, choice.check.skill, choice.check.tags ?? []);
+      if (event.category === 'travel' && expedition) {
+        const value = paceCheckModifier(expedition.pace);
+        if (value !== 0) mods.push({ label: `${expedition.pace ?? 'normal'} pace`, value });
+      }
+      check = resolveCheck(rng, hero, choice.check.skill, choice.check.stat, difficulty, mods);
+      tier = check.tier;
+      if (isSuccess(check.tier)) markSkill(hero, choice.check.skill);
     }
-    check = resolveCheck(rng, hero, choice.check.skill, choice.check.stat, difficulty, mods);
-    tier = check.tier;
-    if (isSuccess(check.tier)) markSkill(hero, choice.check.skill);
   }
 
   const result = pickTierResult(choice, tier);

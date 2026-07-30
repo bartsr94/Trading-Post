@@ -759,6 +759,50 @@ from the existing `spouseCount` selector in `EventPanel.tsx` and always
 populated (even for a first marriage), so authored text can just say "as
 his {spouseRank}" without any conditional grammar.
 
+**New generic engine capability: persistent per-hero counters**
+(`Hero.counters`, `engine/events/types.ts`/`conditions.ts`/`outcomes.ts` —
+formerly `TRAVEL_AMBUSH_SPEC.md`, now folded in here): before this, the only
+persistent event bookkeeping was global (`state.flags`, booleans only);
+`ChainVars` are richer but scoped to one chain run and gone once it
+resolves. Nothing could ask "how many times has *this specific hero* failed
+*this specific kind of check*, ever?" `Hero.counters?: Record<string,
+number>` is a free-form named counter bag, same idiom as `state.flags`/
+`ChainVars` (content invents keys, the engine never branches on a specific
+one) but hero-scoped and permanent — absent key reads as 0, and there's
+deliberately no "forgive a failure" outcome; the two new `Condition`s
+(`heroCounterAtLeast`/`heroCounterAtMost`, `key`/`value`/optional `heroId`
+defaulting to the bound hero, same `resolveHeroId` pattern as
+`heroGender`/`heroAssignment`) and one new `Outcome`
+(`heroCounter`, `key`/`delta`/optional `heroId`, clamped at 0) are the only
+way to read or write one. Bumped `TUNING.save.version` 30→31 (a new `Hero`
+field); `saveValidation.ts` validates it with the same
+`validateIntegerRecord` used for `residents.tags`. Escalating content that
+needs this reads it on **separate root events gated by a counter range**,
+not by branching inside one event's tiered outcomes — a `TierResult`'s
+outcomes are a static list, and chain-spliced/queued events never re-check
+`conditions` when they fire (confirmed against `selection.ts`), so
+per-tier branching has to live at the top level, one event per tier.
+
+**Shipped example: the goblin travel-ambush chain**
+(`content/events/goblin/ambush.ts`, arc `goblin_ambush`, counter key
+`goblin_ambush_fails`): three mutually-exclusive `category: 'travel'`
+events, all gated on `destinationTag: 'goblin'` (narrower than
+`travel_beastfolk_toll`'s shared `beastfolk` tag), each escalating the same
+hidden `survival`/`wits` "watch the treeline" check's flavor by how many
+times *that specific hero* has already failed it —
+`travel_goblin_ambush` (first time, `heroCounterAtMost` 0, ordinary
+robbery), `travel_goblin_ambush_again` (`heroCounterAtLeast` 1 `AtMost` 3,
+the goblins recognize and mock him by name), `travel_goblin_ambush_tired`
+(`heroCounterAtLeast` 4, they've decided he's stalling on purpose and
+`captureHero` him instead of robbing him, reusing the existing captivity
+system rather than a new one). Only the check's `failure`/`critFailure`
+increments the counter; a no-check "push on and pretend not to notice"
+alternative always takes a smaller guaranteed loss without touching it, so
+declining to try never counts against him. Binding is plain `{ type:
+'random' }` on all three — the candidate pool is already pre-filtered to
+heroes meeting that tier's counter range before binding runs, so it
+naturally features whichever party member has the matching history.
+
 **Still open** (`docs/TODO_FEATURES.md`): a named Beastfolk recruit (orc
 smith/goblin scout) and sub-clan/war-band depth (named war-bands under
 `subPeople`) — both deferred, since either needs an invented character/name
@@ -951,21 +995,57 @@ across multiple event ids (e.g. `beastfolk_friction` covers both
 one shows it on every event that references that key. Run new source art
 through `node scripts/optimize-images.mjs` before committing.
 
+**Event cast portraits** (`EventCast.tsx`, `EventPanel.tsx`,
+2026-07-30 — formerly `EVENT_CAST_PORTRAITS_SPEC.md`): a small chip strip
+overlaid on the illustration's bottom-left corner, one `Portrait` + name per
+hero the event is actually about, so `{hero}`/`{partner}` in the prose has a
+face on screen rather than just a name. Purely presentational, no engine
+change — `EventPanel` already resolved both `hero` (`active.heroId`) and
+`partner` (`active.vars?.partnerId`, the one chain that names a second hero
+today: the hero-to-hero marriage chain in `familyEvents.ts`) to interpolate
+text, so the cast list is just those two reshaped into `Hero[]` (protagonist
+first, partner appended only if present and distinct). Always shows at least
+the one protagonist chip, even on ordinary single-hero events. A future
+antagonist/NPC portrait (a named raid leader, a captor with a face) is
+explicitly not built — there's no entity to point at yet (raiders are
+aggregate math in `raids.ts`, a captor is just a `FactionId`) — see
+`docs/TODO_FEATURES.md` if that's picked up later.
+
 ## 14. Cheat console
 
 An off-by-default testing tool (`CheatConsole.tsx`, toggled via
 `SettingsMenu.tsx`'s "Cheat mode" checkbox, persisted to `localStorage`, not
-`GameState`/save). Adds **no new engine mechanism** — every button builds an
-`Outcome[]` (the same union every event outcome already uses) and runs it
-through the real, unmodified `applyOutcomes`. Can also force-fire any
-non-travel event directly, bypassing `once`/cooldown/`firedEvents`
+`GameState`/save). Nearly every button builds an `Outcome[]` (the same union
+every event outcome already uses) and runs it through the real, unmodified
+`applyOutcomes`. Can also force-fire **any** event directly (including
+travel — the category exclusion was lifted once forcing one no longer needed
+a real expedition, see below), bypassing `once`/cooldown/`firedEvents`
 bookkeeping (deliberately — only `resolveTurn`'s normal selection pass
-touches those).
+touches those). A forced travel event runs with no real expedition: cargo/
+silver outcomes fall back to post stock (their existing non-travel
+fallback), and any `{destination}` text or pace check modifiers simply don't
+apply.
 
 **Force Event's dropdown groups by `arc`** (`optgroup`, `CheatConsole.tsx`'s
 `groupByArc`) so a multi-stage chain's events sit together instead of
 scattered in file/definition order; events without an authored `arc` fall
 into a trailing "(no arc)" group.
+
+**"Fire & Resolve" forces a specific check result** (added alongside the
+goblin ambush chain, §10, to test its fail-count escalation without grinding
+real dice): picks one of the event's choices and, optionally, a tier
+(`critSuccess`/`success`/`failure`/`critFailure`) to skip the roll and jump
+straight to that outcome — "Auto" rolls for real, same as plain "Fire Now".
+The one genuine engine touch this relies on: `resolveChoice`
+(`engine/turn.ts`) gained an optional trailing `forcedTier` param that, when
+set, skips `resolveCheck` entirely (no dice, no RNG consumed) and applies
+that tier's outcomes directly — `ChoiceResolution.check` comes back `null` in
+this case, so `EventPanel` shows the result text immediately with no dice
+animation (it already treats `check === null` as "show the result now," the
+same path a checkless choice takes). The store's `forceFireAndResolveEvent`
+queues the event and calls this in one step, unlike plain `forceFireEvent`
+(still `Outcome`-only) which just queues and leaves resolution to the normal
+`chooseOption` flow.
 
 **Queued Events panel** (2026-07-27, `fireQueuedEvent` in `gameStore.ts`):
 lists everything currently in `GameState.queuedEvents` (title, pinned hero

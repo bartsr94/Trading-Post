@@ -190,6 +190,18 @@ export function evalCondition(
       });
     case 'chainVar':
       return ctx.chainVars?.[cond.key] === cond.value;
+    case 'heroCounterAtLeast': {
+      const heroId = resolveHeroId(cond, ctx);
+      if (heroId === undefined) return false;
+      const hero = state.heroes.find((h) => h.id === heroId);
+      return (hero?.counters?.[cond.key] ?? 0) >= cond.value;
+    }
+    case 'heroCounterAtMost': {
+      const heroId = resolveHeroId(cond, ctx);
+      if (heroId === undefined) return false;
+      const hero = state.heroes.find((h) => h.id === heroId);
+      return (hero?.counters?.[cond.key] ?? 0) <= cond.value;
+    }
     case 'expeditionKind':
       return ctx.travel !== undefined && ctx.travel.expedition.kind === cond.kind;
     case 'expeditionLeg':

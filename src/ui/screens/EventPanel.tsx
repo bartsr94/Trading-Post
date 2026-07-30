@@ -10,9 +10,10 @@ import { interpolate } from '../../engine/events/text';
 import type { Choice } from '../../engine/events/types';
 import { spouseCount } from '../../engine/family';
 import { cap, getHero } from '../../engine/types';
-import type { GameState } from '../../engine/types';
+import type { GameState, Hero } from '../../engine/types';
 import { travelContextOf, useGameStore } from '../../store/gameStore';
 import { DiceRoll } from '../components/DiceRoll';
+import { EventCast } from '../components/EventCast';
 import { Illustration } from '../components/Illustration';
 
 // Matches TUNING.family.maxSpousesPerHero — a hero can never reach a 4th.
@@ -42,6 +43,7 @@ export function EventPanel({ game }: { game: GameState }) {
   const contactSeat = !travel && active.locationId ? LOCATION_DEFS.get(active.locationId) : undefined;
   const partnerId = active.vars?.partnerId;
   const partner = typeof partnerId === 'string' ? game.heroes.find((h) => h.id === partnerId) : undefined;
+  const cast: Hero[] = partner && partner.id !== hero.id ? [hero, partner] : [hero];
   const ctx = {
     heroName: hero.name,
     heroGender: hero.gender,
@@ -55,7 +57,10 @@ export function EventPanel({ game }: { game: GameState }) {
   return (
     <div className="overlay">
       <div className="event-panel">
-        <Illustration assetKey={event.illustration} />
+        <div className="event-illustration-wrap">
+          <Illustration assetKey={event.illustration} />
+          <EventCast heroes={cast} />
+        </div>
         <div className="event-body">
           <h2>{event.title}</h2>
           {resolution === null ? (

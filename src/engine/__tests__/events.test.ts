@@ -476,6 +476,58 @@ describe('chain events (CHAIN_EVENTS_SPEC.md)', () => {
   });
 });
 
+describe('persistent per-hero counters (TRAVEL_AMBUSH_SPEC.md)', () => {
+  it('heroCounter outcome increments an absent counter from 0 and defaults to the bound hero', () => {
+    const s = testState();
+    applyOutcomes(s, [{ type: 'heroCounter', key: 'ambush_fails', delta: 1 }], {
+      heroId: 'p1',
+      ...NAME_CTX,
+    });
+    expect(s.heroes.find((h) => h.id === 'p1')!.counters).toEqual({ ambush_fails: 1 });
+    expect(s.heroes.find((h) => h.id === 'p2')!.counters).toBeUndefined();
+
+    applyOutcomes(s, [{ type: 'heroCounter', key: 'ambush_fails', delta: 1 }], {
+      heroId: 'p1',
+      ...NAME_CTX,
+    });
+    expect(s.heroes.find((h) => h.id === 'p1')!.counters).toEqual({ ambush_fails: 2 });
+  });
+
+  it('heroCounter clamps at 0 and respects an explicit heroId override', () => {
+    const s = testState();
+    applyOutcomes(s, [{ type: 'heroCounter', key: 'ambush_fails', delta: -5, heroId: 'p2' }], {
+      heroId: 'p1',
+      ...NAME_CTX,
+    });
+    expect(s.heroes.find((h) => h.id === 'p2')!.counters).toEqual({ ambush_fails: 0 });
+    expect(s.heroes.find((h) => h.id === 'p1')!.counters).toBeUndefined();
+  });
+
+  it('heroCounterAtLeast/heroCounterAtMost read the bound hero\'s counter, treating an absent one as 0', () => {
+    const s = testState();
+    expect(evalCondition(s, { type: 'heroCounterAtMost', key: 'ambush_fails', value: 0 }, { heroId: 'p1' })).toBe(
+      true,
+    );
+    expect(evalCondition(s, { type: 'heroCounterAtLeast', key: 'ambush_fails', value: 1 }, { heroId: 'p1' })).toBe(
+      false,
+    );
+
+    s.heroes.find((h) => h.id === 'p1')!.counters = { ambush_fails: 4 };
+    expect(evalCondition(s, { type: 'heroCounterAtLeast', key: 'ambush_fails', value: 4 }, { heroId: 'p1' })).toBe(
+      true,
+    );
+    expect(evalCondition(s, { type: 'heroCounterAtMost', key: 'ambush_fails', value: 3 }, { heroId: 'p1' })).toBe(
+      false,
+    );
+    // An explicit heroId on the condition overrides the context's bound hero.
+    expect(
+      evalCondition(s, { type: 'heroCounterAtLeast', key: 'ambush_fails', value: 4, heroId: 'p1' }, { heroId: 'p2' }),
+    ).toBe(true);
+    // No hero to resolve at all (no heroId in cond or ctx) reads as false, not a crash.
+    expect(evalCondition(s, { type: 'heroCounterAtLeast', key: 'ambush_fails', value: 0 })).toBe(false);
+  });
+});
+
 describe('text interpolation', () => {
   it('replaces {hero} everywhere', () => {
     expect(interpolate('{hero} nods. {hero} leaves.', { heroName: 'Sela' })).toBe(

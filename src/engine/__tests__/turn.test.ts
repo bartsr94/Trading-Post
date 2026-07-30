@@ -162,6 +162,28 @@ describe('event choice resolution', () => {
     expect(s.silver).toBe(190);
   });
 
+  it('a forcedTier skips the roll entirely and applies that tier\'s outcomes (debug console)', () => {
+    const s = testState();
+    const event = TEST_CONTENT.events.get('post_charter_letter')!;
+    const hero = livingHeroes(s)[0];
+    const rngBefore = s.rngState;
+    const res = resolveChoice(s, TEST_CONTENT, event, 1, hero.id, undefined, undefined, 'critFailure');
+    expect(res.check).toBeNull();
+    expect(res.tier).toBe('critFailure');
+    expect(s.factions.CHARTER_COMPANY.standing).toBeLessThan(25);
+    // No dice rolled, so no RNG stream was consumed.
+    expect(s.rngState).toBe(rngBefore);
+  });
+
+  it('a forcedTier of critSuccess still marks the skill, same as a real success roll would', () => {
+    const s = testState();
+    const event = TEST_CONTENT.events.get('post_charter_letter')!;
+    const hero = livingHeroes(s)[0];
+    expect(hero.skillMarks).not.toContain('diplomacy');
+    resolveChoice(s, TEST_CONTENT, event, 1, hero.id, undefined, undefined, 'critSuccess');
+    expect(hero.skillMarks).toContain('diplomacy');
+  });
+
   it('advancePendingEvent moves to report after the last event', () => {
     const s = testState();
     s.phase = 'event';
