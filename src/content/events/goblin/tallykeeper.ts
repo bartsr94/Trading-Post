@@ -46,6 +46,39 @@ export const GOBLIN_TALLYKEEPER_EVENTS: GameEvent[] = [
       },
     ],
   }),
+  // A second, rarer reputation-aware variant on the reveal itself — only
+  // fits the victim pole (learning the scorekeeper's name lands hardest for
+  // whoever's already on the wrong end of her stick), and only ever fires
+  // once, same as the original, so `figureNotExists` guards against firing
+  // a second "you learn her name" beat after the original already has.
+  makeChoiceEvent({
+    id: 'goblin_tallykeeper_reveal_easy_target',
+    category: 'post',
+    illustration: 'goblin_mischief',
+    title: 'A Name Already Marked',
+    text: 'Word comes back with the name, same as it would for anyone — Yikka, the one who keeps the tally stick. What the caravan adds, unprompted, is that {hero}\'s doesn\'t need looking up on it. It\'s one of the ones she checks first.',
+    conditions: [
+      { type: 'locationDiscovery', location: 'goblin_wilds', atLeast: 'visited' },
+      { type: 'figureNotExists', figureId: FIGURE_ID },
+    ],
+    weight: 8,
+    once: true,
+    binding: { type: 'withTrait', trait: 'easy_target' },
+    factions: ['BEASTFOLK'],
+    peoples: ['goblin'],
+    arc: 'goblin_tallykeeper',
+    choices: [
+      {
+        type: 'flat',
+        label: 'Take note of the name — and the reputation.',
+        text: '{hero} files it away, reputation and all. Knowing who\'s been keeping score is one thing; knowing {he}\'s already a favorite entry is another.',
+        outcomes: [
+          { type: 'introduceFigure', figureDefId: FIGURE_ID },
+          outcome.history('Learned that Yikka the Tallykeeper already had {hero} marked as a favorite entry.'),
+        ],
+      },
+    ],
+  }),
   makeChoiceEvent({
     id: 'goblin_tallykeeper_dealings',
     category: 'travel',
@@ -159,6 +192,106 @@ export const GOBLIN_TALLYKEEPER_EVENTS: GameEvent[] = [
         label: 'Leave her be and walk on.',
         text: '{hero} decides the tally stick isn\'t worth the trouble today, and walks on. Behind {him}, Yikka watches the party go, already turning something over.',
         outcomes: [outcome.stress(-1)],
+      },
+    ],
+  }),
+  // Reputation-aware variants (REPUTATION_TRAITS_SPEC.md): Yikka literally
+  // keeps score of every name, so acknowledging a hero's existing goblin
+  // reputation is close to the point of her character. Each variant shares
+  // `goblin_tallykeeper_dealings`'s conditions plus a `withTrait` binding,
+  // so it only ever competes for (and is only ever drawn for) a hero who
+  // already carries that pole — the un-branded original stays exactly as
+  // it was, untouched.
+  makeChoiceEvent({
+    id: 'goblin_tallykeeper_dealings_easy_target',
+    category: 'travel',
+    illustration: 'goblin_mischief',
+    title: 'Already on the Stick',
+    text: 'Yikka doesn\'t bother with the usual sizing-up this time — {hero}\'s name is already carved deep enough into that stick that she barely glances up. "You," she says, not unkindly, the way you\'d greet a running joke that had stopped being funny a while ago and started just being true.',
+    conditions: [
+      { type: 'destinationTag', tag: 'goblin' },
+      { type: 'figureExists', figureId: FIGURE_ID },
+    ],
+    weight: 10,
+    cooldownTurns: 6,
+    binding: { type: 'withTrait', trait: 'easy_target' },
+    factions: ['BEASTFOLK'],
+    peoples: ['goblin'],
+    arc: 'goblin_tallykeeper',
+    choices: [
+      {
+        type: 'flat',
+        label: 'Let her have her fun — you\'ve earned it.',
+        text: 'Yikka collects the usual toll without even making a show of it this time, and there\'s something almost companionable in how little ceremony she bothers with. Familiarity, it turns out, cuts the sting out of a bad reputation.',
+        outcomes: [outcome.expeditionSilver(-6), outcome.stress(-1)],
+      },
+      {
+        type: 'flat',
+        label: 'Try, one more time, to talk your way past the reputation.',
+        text: 'Yikka hears {hero} out with open, undisguised amusement, taps the stick once against her palm, and waves the party through without collecting anything at all — the entertainment value, apparently, is payment enough today.',
+        outcomes: [outcome.history('Talked Yikka the Tallykeeper out of the usual toll, reputation and all.')],
+      },
+    ],
+  }),
+  makeChoiceEvent({
+    id: 'goblin_tallykeeper_dealings_shakedown',
+    category: 'travel',
+    illustration: 'goblin_mischief',
+    title: 'A Rival Ledger',
+    text: 'Yikka looks {hero} over with something closer to professional respect than her usual sizing-up. "You keep your own tally, I hear," she says, tapping her stick against her leg. Two people who both keep score, it turns out, tend to recognize each other fast.',
+    conditions: [
+      { type: 'destinationTag', tag: 'goblin' },
+      { type: 'figureExists', figureId: FIGURE_ID },
+    ],
+    weight: 10,
+    cooldownTurns: 6,
+    binding: { type: 'withTrait', trait: 'goblin_shakedown_artist' },
+    factions: ['BEASTFOLK'],
+    peoples: ['goblin'],
+    arc: 'goblin_tallykeeper',
+    choices: [
+      {
+        type: 'flat',
+        label: 'Compare notes — professional courtesy.',
+        text: 'It turns into something closer to a negotiation between equals than a shakedown, and both sides come away with a grudging new respect for the other\'s ledger.',
+        outcomes: [outcome.standing('BEASTFOLK', 2), outcome.expeditionSilver(4)],
+      },
+      {
+        type: 'flat',
+        label: 'Try the shakedown anyway — see if it still works on her.',
+        text: 'It does not work on her, and Yikka lets {hero} know it with the particular delight of someone who invented the trick {hero}\'s been running. She waves the party on, laughing, tally stick unbothered.',
+        outcomes: [outcome.stress(1), outcome.history('Tried to shake down Yikka the Tallykeeper herself, and lost.')],
+      },
+    ],
+  }),
+  makeChoiceEvent({
+    id: 'goblin_tallykeeper_dealings_friend',
+    category: 'travel',
+    illustration: 'goblin_mischief',
+    title: 'Family Discount',
+    text: 'Yikka waves {hero} down like she\'s been waiting for the chance — tally stick tucked away for once, not out. "You\'re not on here to be collected from," she says, tapping her own chest instead of the wood. "You\'re on here to be looked out for."',
+    conditions: [
+      { type: 'destinationTag', tag: 'goblin' },
+      { type: 'figureExists', figureId: FIGURE_ID },
+    ],
+    weight: 10,
+    cooldownTurns: 6,
+    binding: { type: 'withTrait', trait: 'friend_of_goblins' },
+    factions: ['BEASTFOLK'],
+    peoples: ['goblin'],
+    arc: 'goblin_tallykeeper',
+    choices: [
+      {
+        type: 'flat',
+        label: 'Sit and trade news for a while.',
+        text: 'It\'s less an encounter than a visit — Yikka trades gossip for gossip, and sends the party off with directions around the worst of the road ahead, no toll asked or offered.',
+        outcomes: [outcome.standing('BEASTFOLK', 2), outcome.stress(-1)],
+      },
+      {
+        type: 'flat',
+        label: 'Keep it brief — there\'s ground to cover.',
+        text: 'Yikka doesn\'t press, just waves the party through with the easy familiarity of someone who knows {hero} will be back this way again.',
+        outcomes: [],
       },
     ],
   }),

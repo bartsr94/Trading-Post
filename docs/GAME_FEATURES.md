@@ -1462,6 +1462,85 @@ ever go beyond one named figure per people.
 
 ---
 
+## 21. Reputation traits — a hero's history following them around
+
+*(REPUTATION_TRAITS_SPEC.md — Bartosz, 2026-07-31: heroes who keep getting
+ambushed by goblins should earn a bad reputation for it; heroes who
+repeatedly turn the tables or make friends of it should earn the opposite.
+Needed no engine changes at all — every piece (traits, per-hero counters,
+threshold-gated events, trait-aware binding) already existed and is reused
+as-is, per CLAUDE.md rule #2.)*
+
+**The mechanism, in full, is existing vocabulary:** `Outcome: addTrait`/
+`removeTrait` grant/revoke a `TraitId` (already real, e.g. `shaken`,
+`wed_orc`); `Hero.counters` + `Outcome: heroCounter` +
+`Condition: heroCounterAtLeast`/`heroCounterAtMost` are the persistent
+per-hero memory `ambush.ts` already used for its own escalating tiers;
+`HeroBinding: withTrait`/`withoutTrait` binds an event only to (or
+excluding) a hero already carrying a trait, returning no eligible hero
+otherwise — confirmed in `selection.ts`/`binding.ts` that a counter-gated
+condition is evaluated per candidate *before* binding, so a `{ type:
+'random' }`-bound, counter-gated event already self-narrows to only
+qualifying heroes (exactly how the pre-existing `travel_goblin_ambush_tired`/
+`travel_goblin_ambush_surrender` tiers behave). A **reputation axis** is
+just a set of `TraitId`s that are mutually exclusive by content convention
+— nothing enforces this beyond every grant site removing the other poles.
+
+**One new generic helper**, `exclusiveTrait(grant, others)`
+(`content/events/eventHelpers.ts`, alongside a plain `outcome.addTrait`/
+`removeTrait`): returns `[...removeTrait(others), addTrait(grant)]`.
+Domain-agnostic — takes trait ids as parameters, no knowledge of which axis
+or people they belong to — so any future reputation axis reuses it as-is.
+
+**Goblin pilot**: a "goblin reputation" axis of three traits
+(`content/traits.ts`) — `easy_target` (BEASTFOLK −2, the victim pole),
+`goblin_shakedown_artist` (BEASTFOLK +2, the extortionist pole),
+`friend_of_goblins` (BEASTFOLK +1 / intimidation −1, the bonded pole).
+Grant sites, all in `ambush.ts`:
+- `easy_target` slots into the existing `travel_goblin_ambush_tired`
+  failure/critFailure branches (already gated `goblin_ambush_fails ≥ 4`,
+  already per-candidate) — no new event needed.
+- `goblin_shakedown_artist`/`friend_of_goblins` each get a small new travel
+  event (`travel_goblin_ambush_feared`/`travel_goblin_ambush_bond`), gated
+  on their own threshold (`goblin_ambush_wins ≥ 3`, and a new
+  `goblin_ambush_kindness` counter ≥ 3, incremented on the existing
+  "spring it back" reaction choice). Both compete in the normal weighted
+  travel-event draw alongside the base tiers, same as the pre-existing
+  `travel_goblin_ambush_surrender`/`travel_goblin_trade` already do — no
+  extra "already granted" bookkeeping needed, since `addTrait` is
+  idempotent and these counters never decrease.
+- **Reversible**: since every grant calls `exclusiveTrait`, a hero later
+  crossing a *different* axis's own threshold flips cleanly to the new
+  pole, regardless of which one they held before.
+
+**Consuming the reputation elsewhere** — three `withTrait`-gated variants,
+each layered alongside an existing event (higher weight, same conditions
+plus the trait binding) rather than editing the original:
+- `goblin_tallykeeper_dealings_easy_target`/`_shakedown`/`_friend`
+  (`tallykeeper.ts`) — Yikka literally keeps a tally of every name, so all
+  three poles get a variant here.
+- `goblin_tallykeeper_reveal_easy_target` — only the victim pole; a rarer,
+  one-shot payoff (guarded by `figureNotExists` so it can't double-fire
+  after the original reveal already has).
+- `goblin_match_skulking_friend` (`match.ts`) — only the bonded pole fits
+  the courtship opener naturally; shares the same downstream chain
+  (`goblin_match_intrusion`/`goblin_match_offer`) as the untouched
+  original, the two competing for the hero pool via their own bindings
+  (`weightedStat` vs. `withTrait`) and each gated by its own independent
+  `once`.
+
+**UI**: none — a plain `TraitDef`, shown wherever traits already render
+(e.g. the Hero Sheet).
+
+**Save shape**: unchanged — new `TraitId`s and `Hero.counters` keys are both
+free-form/content-defined already (`TraitId = string`,
+`Record<string, number>`), so no save-version bump.
+
+**Still open**: rolling the pattern out to a second reputation axis or
+people beyond this Goblin pilot.
+
+---
+
 ## What's still open
 
 The full backlog lives in **`docs/TODO_FEATURES.md`** — one consolidated

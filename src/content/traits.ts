@@ -223,6 +223,32 @@ export const TRAITS: TraitDef[] = [
     description: 'Married another of the company\'s own — no outside kin gained, no outside kin lost.',
     checkMods: [],
   },
+
+  // Goblin reputation axis (REPUTATION_TRAITS_SPEC.md): mutually exclusive —
+  // content granting one always removes the other two via eventHelpers'
+  // `exclusiveTrait`. Reversible: whichever counter next crosses its own
+  // threshold replaces whichever of these three a hero currently holds.
+  {
+    id: 'easy_target',
+    name: 'Easy Target',
+    description: 'The goblins know this one falls for the same trick every time.',
+    checkMods: [{ tag: 'BEASTFOLK', value: -2, label: 'Easy Target' }],
+  },
+  {
+    id: 'goblin_shakedown_artist',
+    name: 'Goblin Shakedown Artist',
+    description: 'Turns the tables on goblin ambushes often enough that the bands have learned to pay up fast.',
+    checkMods: [{ tag: 'BEASTFOLK', value: 2, label: 'Goblin Shakedown Artist' }],
+  },
+  {
+    id: 'friend_of_goblins',
+    name: 'Friend to Goblins',
+    description: 'The goblin bands have decided this one is more friend than mark — and treat them accordingly.',
+    checkMods: [
+      { tag: 'BEASTFOLK', value: 1, label: 'Friend to Goblins' },
+      { tag: 'intimidation', value: -1, label: 'Friend to Goblins' },
+    ],
+  },
 ];
 
 export const TRAIT_DEFS: ReadonlyMap<string, TraitDef> = uniqueIdMap('trait', TRAITS);

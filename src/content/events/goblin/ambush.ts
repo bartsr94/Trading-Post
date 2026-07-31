@@ -6,12 +6,25 @@
 // (tired critFail special).
 
 import type { GameEvent, Outcome } from '../../../engine/events/types';
-import { makeChoiceEvent, outcome } from '../eventHelpers';
+import { exclusiveTrait, makeChoiceEvent, outcome } from '../eventHelpers';
 
 const AMBUSH_COUNTER_KEY = 'goblin_ambush_fails';
 const AMBUSH_WINS_KEY = 'goblin_ambush_wins';
 const AMBUSH_WINS_THRESHOLD = 4;
 const AMBUSH_TRUCE_FLAG = 'goblin_ambush_truce';
+
+// Goblin reputation axis (REPUTATION_TRAITS_SPEC.md) — three mutually
+// exclusive traits earned off the same fails/wins counters above plus one
+// new counter for the "spring it back"/Nice pick. `easy_target` reuses the
+// existing fails>=4 tier below; the other two poles get their own
+// low-weight travel events gated on their own threshold, same idiom as the
+// tiers themselves.
+const AMBUSH_KINDNESS_KEY = 'goblin_ambush_kindness';
+const AMBUSH_FEARED_THRESHOLD = 3;
+const AMBUSH_KINDNESS_THRESHOLD = 3;
+const GOBLIN_REPUTATION_TRAITS = ['easy_target', 'goblin_shakedown_artist', 'friend_of_goblins'] as const;
+const otherReputationTraits = (grant: (typeof GOBLIN_REPUTATION_TRAITS)[number]) =>
+  GOBLIN_REPUTATION_TRAITS.filter((t) => t !== grant);
 
 const AMBUSH_CONDITIONS = [{ type: 'destinationTag', tag: 'goblin' }, { type: 'notFlag', flag: AMBUSH_TRUCE_FLAG }] as const;
 
@@ -79,7 +92,10 @@ function makeAmbushReactionEvent(config: {
         label: 'Spring it back on them — let them have the joke.',
         text: config.springBack.text,
         illustration: 'goblin_tumble',
-        outcomes: [outcome.standing('BEASTFOLK', config.springBack.standing)],
+        outcomes: [
+          outcome.standing('BEASTFOLK', config.springBack.standing),
+          outcome.heroCounter(AMBUSH_KINDNESS_KEY, 1),
+        ],
       },
     ],
   });
@@ -235,6 +251,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
             outcome.cargo('cloth', -2),
             outcome.stress(2),
             outcome.heroCounter(AMBUSH_COUNTER_KEY, 1),
+            ...exclusiveTrait('easy_target', otherReputationTraits('easy_target')),
           ],
         },
         critFailure: {
@@ -243,6 +260,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
           outcomes: [
             outcome.captureHero('BEASTFOLK'),
             outcome.heroCounter(AMBUSH_COUNTER_KEY, 1),
+            ...exclusiveTrait('easy_target', otherReputationTraits('easy_target')),
             outcome.history('Fell for the same goblin ambush one time too many, and was carried off for it.'),
           ],
         },
@@ -371,6 +389,75 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
       text: 'It\'s a risk, playing the fool for a crowd that\'s stopped laughing — but it works, and works better than {hero} expected. The old routine still means something to them. They don\'t just take the joke; they take {hero}, thoroughly and without hurry, the whole band using {him} the way they\'ve clearly been wanting to for a while now. {hero} leans into it, and for once the silence breaks into something almost affectionate. When they finally let {him} go, one of them mutters that maybe they don\'t need to take {him} home after all — not if {he} keeps coming back like this.',
       standing: 4,
     },
+  }),
+  makeChoiceEvent({
+    id: 'travel_goblin_ambush_feared',
+    category: 'travel',
+    illustration: 'goblin_shakedown',
+    title: 'A Name to Reckon With',
+    text: 'The scrub goes quiet on this stretch again — but no snare drops, and no giggling starts. A single goblin steps out instead, empty-handed and visibly nervous, holding out a fistful of coin before {hero} can so much as slow down. "Word gets around," is all he offers. Word, apparently, has gotten all the way around.',
+    conditions: [...AMBUSH_CONDITIONS, { type: 'heroCounterAtLeast', key: AMBUSH_WINS_KEY, value: AMBUSH_FEARED_THRESHOLD }],
+    weight: 6,
+    cooldownTurns: 5,
+    factions: ['BEASTFOLK'],
+    peoples: ['goblin'],
+    arc: 'goblin_ambush',
+    choices: [
+      {
+        type: 'flat',
+        label: 'Take what\'s offered and let the reputation stand.',
+        text: '{hero} pockets the coin without comment, and the goblin scrambles off looking relieved rather than resentful — being feared, it turns out, pays better than being clever ever did.',
+        outcomes: [
+          outcome.expeditionSilver(6),
+          ...exclusiveTrait('goblin_shakedown_artist', otherReputationTraits('goblin_shakedown_artist')),
+          outcome.history('Goblins started paying a toll upfront rather than risk another shakedown from {hero}.'),
+        ],
+      },
+      {
+        type: 'flat',
+        label: 'Wave him off — you didn\'t come here to collect coin from a coward.',
+        text: 'The goblin practically trips over himself getting out of {hero}\'s way, coin and all, clearly more relieved than insulted. Whatever {hero}\'s name means out here now, it\'s not a name anyone wants to test twice.',
+        outcomes: [
+          outcome.standing('BEASTFOLK', 1),
+          ...exclusiveTrait('goblin_shakedown_artist', otherReputationTraits('goblin_shakedown_artist')),
+          outcome.history('Goblins started paying a toll upfront rather than risk another shakedown from {hero}.'),
+        ],
+      },
+    ],
+  }),
+  makeChoiceEvent({
+    id: 'travel_goblin_ambush_bond',
+    category: 'travel',
+    illustration: 'goblin_encounter_01',
+    title: 'One of Their Own, More or Less',
+    text: 'The same stretch of scrub, but the goblins waiting in it aren\'t hiding this time — they wave {hero} down like an old friend passing through, one of them already offering to trade jokes instead of blows. Whatever the ambush used to be between them, it\'s turned into something closer to a running visit.',
+    conditions: [...AMBUSH_CONDITIONS, { type: 'heroCounterAtLeast', key: AMBUSH_KINDNESS_KEY, value: AMBUSH_KINDNESS_THRESHOLD }],
+    weight: 6,
+    cooldownTurns: 5,
+    factions: ['BEASTFOLK'],
+    peoples: ['goblin'],
+    arc: 'goblin_ambush',
+    choices: [
+      {
+        type: 'flat',
+        label: 'Stop and trade a joke or two before moving on.',
+        text: '{hero} plays along, and the goblins send the party off with a round of terrible puns and no toll at all — the ambush routine has quietly become something {hero} looks forward to as much as they do.',
+        outcomes: [
+          outcome.stress(-1),
+          ...exclusiveTrait('friend_of_goblins', otherReputationTraits('friend_of_goblins')),
+          outcome.history('Goblins along the road started treating {hero} like one of their own.'),
+        ],
+      },
+      {
+        type: 'flat',
+        label: 'Wave back and keep moving — there\'s still ground to cover.',
+        text: 'No time today, but the goblins take the wave for what it is and let the party through without so much as a token toll, already shouting after {hero} to come back and visit properly next time.',
+        outcomes: [
+          ...exclusiveTrait('friend_of_goblins', otherReputationTraits('friend_of_goblins')),
+          outcome.history('Goblins along the road started treating {hero} like one of their own.'),
+        ],
+      },
+    ],
   }),
   makeChoiceEvent({
     id: 'travel_goblin_ambush_surrender',

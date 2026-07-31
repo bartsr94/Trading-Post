@@ -14,7 +14,7 @@ import type {
   Outcome,
   TierResult,
 } from '../../engine/events/types';
-import type { FactionId, GoodId, Heritage } from '../../engine/types';
+import type { FactionId, GoodId, Heritage, TraitId } from '../../engine/types';
 
 /** One-line builders for the handful of dominant simple `Outcome` shapes —
  *  cuts a `{ type: 'x', ... }` entry from a multi-line object literal to a
@@ -41,7 +41,20 @@ export const outcome = {
   contentment: (delta: number): Outcome => ({ type: 'contentment', delta }),
   friction: (heritage: Heritage, delta: number): Outcome => ({ type: 'friction', heritage, delta }),
   figureCounter: (figureId: string, key: string, delta: number): Outcome => ({ type: 'figureCounter', figureId, key, delta }),
+  addTrait: (trait: TraitId): Outcome => ({ type: 'addTrait', trait }),
+  removeTrait: (trait: TraitId): Outcome => ({ type: 'removeTrait', trait }),
 };
+
+/** Grants `grant` and revokes every trait in `others` — the building block
+ *  for a mutually-exclusive "reputation axis" (REPUTATION_TRAITS_SPEC.md):
+ *  content grants one pole of the axis by calling this with the other poles
+ *  as `others`, so a hero only ever holds one at a time. Domain-agnostic —
+ *  takes trait ids as parameters, no knowledge of which axis or people they
+ *  belong to — so it's reusable for any future reputation axis, not just
+ *  the goblin one it was introduced for. */
+export function exclusiveTrait(grant: TraitId, others: TraitId[]): Outcome[] {
+  return [...others.map((t) => outcome.removeTrait(t)), outcome.addTrait(grant)];
+}
 
 /** One choice in a `makeChoiceEvent` call — either check-gated (up to all
  *  four result tiers) or flat (a single always-taken outcome). Discriminated

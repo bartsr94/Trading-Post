@@ -107,6 +107,104 @@ export const GOBLIN_MATCH_EVENTS: GameEvent[] = [
       },
     ],
   }),
+  // Reputation-aware variant of the chain's opener (REPUTATION_TRAITS_SPEC.md):
+  // only the `friend_of_goblins` pole fits naturally here (a hero the band
+  // already treats as one of their own is a believable reason for a band
+  // to start seriously courting rather than just watching) — the other two
+  // poles don't fit this beat and are left alone. Shares the same downstream
+  // chain (`goblin_match_intrusion`/`goblin_match_offer`) as the original,
+  // which is untouched; the two events simply compete for the same hero
+  // pool via their own bindings (`weightedStat` vs `withTrait`), each still
+  // gated by its own independent `once`.
+  makeChoiceEvent({
+    id: 'goblin_match_skulking_friend',
+    category: 'post',
+    illustration: 'goblin_encounter_01',
+    title: 'Something at the Wall',
+    text: 'A knot of goblins has been at the palisade\'s edge for three nights running now — not scavenging, not raiding, just watching, the easy way you\'d watch someone you already like rather than someone you\'re still sizing up. Tonight {hero} finally catches them at it before they can melt back into the dark, and not one of them even bothers looking guilty about it.',
+    conditions: [
+      { type: 'hasBuilding', building: 'palisade' },
+      { type: 'locationDiscovery', location: 'goblin_wilds', atLeast: 'visited' },
+      { type: 'standingAtLeast', faction: 'BEASTFOLK', value: 10 },
+      { type: 'heroGender', gender: 'male' },
+      { type: 'heroUnmarried' },
+    ],
+    weight: 9,
+    once: true,
+    cooldownTurns: 4,
+    binding: { type: 'withTrait', trait: 'friend_of_goblins' },
+    factions: ['BEASTFOLK'],
+    peoples: ['goblin'],
+    arc: 'goblin_match',
+    choices: [
+      {
+        type: 'checked',
+        label: 'Corner them and talk your way to the truth of it.',
+        check: { skill: 'diplomacy', stat: 'charm', difficulty: 10, tags: ['BEASTFOLK', 'strangers'] },
+        critSuccess: {
+          text: 'They don\'t scatter — they barely even try to look caught, and what {hero} pieces together is less an appraisal than a decision already made. Of course it\'s {him}, one of them says, like that settles it.',
+          outcomes: [
+            { type: 'setChainVar', key: 'impression', value: 'strong' },
+            { type: 'queueEvent', eventId: 'goblin_match_intrusion', delayTurns: 3, sameHero: true },
+          ],
+        },
+        success: {
+          text: '{hero} gets more shrugging than answers, but they don\'t bolt, and there\'s nothing anxious about the way they slip off into the treeline — more like a plan continuing than a scheme interrupted.',
+          outcomes: [
+            { type: 'setChainVar', key: 'impression', value: 'strong' },
+            { type: 'queueEvent', eventId: 'goblin_match_intrusion', delayTurns: 3, sameHero: true },
+          ],
+        },
+        failure: {
+          text: 'Whatever {hero} says only gets the goblins arguing faster, in a tongue too quick to follow, before the whole knot of them scatters into the dark at once. Nothing about that felt like it went well.',
+          outcomes: [outcome.stress(1)],
+        },
+        critFailure: {
+          text: 'The talking stops being talking. Before {hero} can make sense of the sudden press of small, quick hands, {he}\'s bundled off the ground and into the wilds, laughing goblins carrying {him} like a piece of especially interesting cargo.',
+          outcomes: [
+            outcome.captureHero('BEASTFOLK'),
+            outcome.history('Cornered a band of goblins at the wall and was carried off for it.'),
+          ],
+        },
+      },
+      {
+        type: 'checked',
+        label: 'Corner them and put the fear in them.',
+        check: { skill: 'leadership', stat: 'resolve', difficulty: 10, tags: ['BEASTFOLK', 'intimidation'] },
+        critSuccess: {
+          text: '{hero}\'s voice cracks across the yard and the whole knot of them flinches — more startled than scared, and clearly a little hurt at the reception, given how things usually go between {him} and their kind. They go, but reluctantly.',
+          outcomes: [
+            { type: 'setChainVar', key: 'impression', value: 'strong' },
+            { type: 'queueEvent', eventId: 'goblin_match_intrusion', delayTurns: 3, sameHero: true },
+          ],
+        },
+        success: {
+          text: 'They scatter at the shout, mostly, though it plainly costs them something — this isn\'t how {hero} usually talks to them, and they notice.',
+          outcomes: [
+            { type: 'setChainVar', key: 'impression', value: 'strong' },
+            { type: 'queueEvent', eventId: 'goblin_match_intrusion', delayTurns: 3, sameHero: true },
+          ],
+        },
+        failure: {
+          text: 'The shout does nothing but make them laugh, which is somehow worse than being ignored outright. They\'re gone before {hero} decides on a second approach.',
+          outcomes: [outcome.stress(1)],
+        },
+        critFailure: {
+          text: 'Shouting at goblins, it turns out, reads to goblins as an invitation to a game — especially from {hero}, of all people. By the time {he} understands that, {he}\'s already off {his} feet and headed for the treeline at speed, laughter on all sides.',
+          outcomes: [
+            outcome.captureHero('BEASTFOLK'),
+            outcome.history('Tried to scare off a band of goblins at the wall and was carried off for it.'),
+          ],
+        },
+      },
+      {
+        type: 'flat',
+        label: 'Leave it — not tonight.',
+        text: '{hero} lets them be and turns back toward the post. By morning there\'s no sign anyone was ever at the wall at all.',
+        outcomes: [outcome.history('Left a band of watching goblins alone at the wall.')],
+      },
+    ],
+  }),
   makeChoiceEvent({
     id: 'goblin_match_intrusion',
     illustration: 'goblin_mischief',
