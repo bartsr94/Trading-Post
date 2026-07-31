@@ -49,20 +49,29 @@ import { applyEscape, applyHoldingPressure, thrallTotal, updateRestiveness } fro
 import { applyOutcomes } from './events/outcomes';
 import type { OutcomeContext } from './events/outcomes';
 import { evalConditions } from './events/conditions';
-import { childrenComingOfAge, comeOfAge, grownKinCount } from './family';
+import {
+  childrenComingOfAge,
+  comeOfAge,
+  grownKinCount,
+  spouseCount,
+  worstNativeSpouseUnion,
+} from './family';
 import { dependantCount, reconcileRoster } from './roster';
 import { selectEvents } from './events/selection';
 import type { Choice, GameEvent, TierResult } from './events/types';
 import { Rng } from './rng';
 import { paceCheckModifier } from './map';
 import {
+  activeHeroes,
   clamp,
   clampStanding,
   getHero,
   heroesAtPost,
   isSeasonEnd,
   livingHeroes,
+  partyHeritageShare,
   reserveHeroes,
+  stanceOf,
 } from './types';
 import type {
   BuildingId,
@@ -153,6 +162,11 @@ export function resolveTurn(state: GameState, ctx: TurnContext): void {
   }
 
   payCharterQuota(state, report);
+  evaluateCharterJudgment(state, report);
+  if (state.gameOver) {
+    state.rngState = rng.getState();
+    return;
+  }
   const missedWages = payResidentWages(state, report);
 
   // 2. Expeditions move (and may resolve) before at-post activities. A
@@ -628,6 +642,88 @@ function payCharterQuota(
   }
 }
 
+/**
+ * The Company's read of the post's cultural drift and who leads it
+ * (CHARTER_REVOKED_SPEC.md). Runs every season end, after `payCharterQuota` so
+ * it composes with quota resolution rather than replacing it. Culture-axis
+ * drift and the active party's own heritage/marriages move CHARTER_COMPANY
+ * standing; a sustained compromised-AND-hostile streak ends the game.
+ */
+function evaluateCharterJudgment(
+  state: GameState,
+  report: (icon: string, text: string) => void,
+): void {
+  if (!isSeasonEnd(state.turn)) return;
+  const h = TUNING.heritage;
+  const faction = state.factions.CHARTER_COMPANY;
+  const party = activeHeroes(state);
+
+  // -- compromise: culture drift + the bloodline-marriage signal --
+  const cultureCompromise =
+    state.axes.culture >= h.compromiseThreshold
+      ? h.compromiseStandingLoss * (state.axes.culture - h.compromiseThreshold)
+      : 0;
+
+  let bloodlineCompromise = 0;
+  let pureReassure = 0;
+  for (const hero of party) {
+    if (hero.bloodline === 'pure') {
+      pureReassure += TUNING.family.company.purePartyReassure;
+    } else if (hero.bloodline === 'mixed') {
+      const union = worstNativeSpouseUnion(state, hero.id);
+      const unionMult =
+        union === 'informal' ? TUNING.family.company.informalCompromiseMult : 1;
+      const multiSpouseMult =
+        spouseCount(state, hero.id) > 1 ? TUNING.family.company.multiSpouseCompromiseMult : 1;
+      bloodlineCompromise += TUNING.family.company.mixedCompromiseAdd * unionMult * multiSpouseMult;
+    }
+  }
+  const totalCompromise = cultureCompromise + bloodlineCompromise;
+
+  // -- reassurance: a mostly-homeland party, plus each wed-pure hero --
+  const homelandShare = partyHeritageShare(state, 'homeland');
+  const partyReassure = homelandShare >= h.partyLoyalShare ? h.partyReassureStanding : 0;
+  const totalReassure = partyReassure + pureReassure;
+  const dampenMult = totalReassure > 0 ? h.partyReassureDampen : 1;
+  const compromiseLoss = totalCompromise * dampenMult;
+
+  const loyalGain = state.axes.culture <= h.loyalThreshold ? h.loyalStandingGain : 0;
+
+  faction.standing = clampStanding(faction.standing - compromiseLoss + totalReassure + loyalGain);
+
+  // -- a mixed active party earns goodwill with native factions still in play --
+  const nativePartyShare = partyHeritageShare(state, 'native');
+  if (homelandShare > 0 && nativePartyShare > 0) {
+    for (const f of h.nativeFactions) {
+      if (state.factions[f].standing > -50) {
+        state.factions[f].standing = clampStanding(
+          state.factions[f].standing + h.nativeRelationsGainPerSeason,
+        );
+      }
+    }
+  }
+
+  // -- the compromise streak & the ending --
+  const isCompromised =
+    state.axes.culture >= h.compromiseThreshold || (party.length > 0 && homelandShare === 0);
+  const isHostile = stanceOf(faction.standing) === 'Hostile';
+
+  if (isCompromised && isHostile) {
+    state.charterCompromisedStreak += 1;
+    if (state.charterCompromisedStreak >= h.revokeStreak) {
+      declareGameOver(state, 'charterRevoked');
+      return;
+    }
+    const remaining = h.revokeStreak - state.charterCompromisedStreak;
+    report(
+      '📜',
+      `Company inspectors read the post's drift with open alarm — ${remaining} more season${remaining === 1 ? '' : 's'} like this and the charter is forfeit.`,
+    );
+  } else {
+    state.charterCompromisedStreak = 0;
+  }
+}
+
 function resolveActivity(
   state: GameState,
   ctx: TurnContext,
@@ -909,7 +1005,7 @@ function checkBrokenCompany(state: GameState): void {
 
 export function declareGameOver(
   state: GameState,
-  kind: 'bankrupt' | 'brokenCompany' | 'destroyed',
+  kind: 'bankrupt' | 'brokenCompany' | 'destroyed' | 'charterRevoked',
 ): void {
   switch (kind) {
     case 'bankrupt':
@@ -931,6 +1027,13 @@ export function declareGameOver(
         kind,
         title: 'The Post Falls',
         text: 'They come through the broken palisade at dawn and there is no one left with the strength to hold them. What little the storehouse held goes onto their backs; the rest goes up in smoke. By the time word reaches Thornwatch, the frontier has already closed over the place as if it were never there.',
+      };
+      break;
+    case 'charterRevoked':
+      state.gameOver = {
+        kind,
+        title: 'The Charter Forfeit',
+        text: 'Word comes upriver, sealed and final: Thornwatch reads this post as lost to the frontier, and the Company will not go on lending its name to what it no longer recognizes as its own. The charter is void; whatever stands here now stands on its own, unentitled to the Ansberry name or the ships that once served it.',
       };
       break;
   }

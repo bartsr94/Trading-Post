@@ -148,7 +148,12 @@ describe('visiting guards ride back with a successful envoy', () => {
     let sawFailure = false;
 
     for (let seed = 1; seed <= 24; seed++) {
-      const s = testState(seed);
+      // A homeland-only party (just p1) keeps RIVER_CLANS' standing delta
+      // attributable solely to the envoy — a mixed default party would also
+      // draw the season-end nativeRelationsGain nudge (CHARTER_REVOKED_SPEC.md
+      // §2.2) on any tick crossing a season boundary, confounding the signal
+      // this test is isolating.
+      const s = testState(seed, ['p1']);
       const faction = 'RIVER_CLANS';
       const before = s.factions[faction].standing;
       dispatchExpedition(s, { kind: 'diplomacy', destination: 'river_meet', heroIds: ['p1'] }, DEFS);

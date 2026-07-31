@@ -445,7 +445,10 @@ export function updateContentment(state: GameState, flags: UpkeepFlags): number 
   return delta;
 }
 
-/** Residents desert while contentment sits in the unrest band. Returns how many left. */
+/** Residents desert while contentment sits in the unrest band. Returns how many left.
+ *  A post sitting Aloof (`integration` at or below the threshold) sees natives
+ *  leave first (CHARTER_REVOKED_SPEC.md §3), rather than the default
+ *  proportional split. */
 export function applyDesertion(state: GameState): number {
   if (contentmentBand(state) !== 'unrest') return 0;
   const total = residentTotal(state);
@@ -453,7 +456,8 @@ export function applyDesertion(state: GameState): number {
   const d = TUNING.residents.desertion;
   const rate = Math.max(0, d.unrestDesertRate - postDefense(state) * d.guardSuppressionPerPoint);
   const leaving = Math.ceil(total * rate);
-  return loseResidents(state, undefined, leaving);
+  const group = state.axes.integration <= d.aloofIntegrationThreshold ? 'native' : undefined;
+  return loseResidents(state, undefined, leaving, group);
 }
 
 /** A content post may draw a new pair of hands. Returns 1 if it grew. Growth is

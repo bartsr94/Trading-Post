@@ -106,6 +106,24 @@ export function spouseCount(state: GameState, id: string): number {
   return spousesOf(state, id).length;
 }
 
+/**
+ * The "worst" (most Company-compromising) union source among a hero's
+ * native-blood spouses — `'informal'` outweighs `'alliance'`/`'homeland'`
+ * (CHARTER_REVOKED_SPEC.md §2.2, the bloodline-marriage signal). Only
+ * meaningful when the hero's `bloodline` is already `'mixed'`. A hero-to-hero
+ * union (`formHeroUnion`) has no `Dependant` spouse record to read `.union`
+ * from at all, so it isn't found here and falls through to `undefined` —
+ * callers should treat that the same as `'alliance'` (a formal, at-post
+ * union, not an unblessed hearth-companion arrangement).
+ */
+export function worstNativeSpouseUnion(state: GameState, heroId: string): UnionSource | undefined {
+  const nativeSpouses = householdMembers(state, heroId).filter(
+    (m) => m.kind === 'spouse' && nodePeoples(m).some(isNativeHeritage),
+  );
+  if (nativeSpouses.some((m) => m.union === 'informal')) return 'informal';
+  return nativeSpouses[0]?.union;
+}
+
 export function isMarried(state: GameState, id: string): boolean {
   return spouseCount(state, id) > 0;
 }
