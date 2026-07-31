@@ -161,7 +161,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
   makeChoiceEvent({
     id: 'travel_goblin_ambush_again',
     category: 'travel',
-    illustration: 'goblin_encounter_01',
+    illustration: 'goblin_ambush_again',
     title: 'The Same Trick Twice',
     text: 'Same stretch of scrub, same badly-hidden snare — and this time the giggling has names in it. "{hero}! {hero} again!" A goblin is actually keeping score on a stick. Whatever dignity survived the first time is not going to survive this one; they are delighted to see {hero}, and delight is not a good sign here.',
     conditions: [
@@ -221,7 +221,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
   makeChoiceEvent({
     id: 'travel_goblin_ambush_tired',
     category: 'travel',
-    illustration: 'goblin_arrival',
+    illustration: 'goblin_ambush_tired',
     title: "Tired of the Game",
     text: 'The snare is barely hidden at all this time — nobody bothered. A dozen goblins sit around it in plain sight, arms crossed, and there is no giggling. "{hero} again," one says flatly, the way you\'d announce a chore that has quietly become a habit. This has stopped being a joke to them. They have decided they like having {him}.',
     conditions: [...AMBUSH_CONDITIONS, { type: 'heroCounterAtLeast', key: AMBUSH_COUNTER_KEY, value: 4 }],
