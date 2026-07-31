@@ -124,6 +124,7 @@ describe('gameStore', () => {
       tier: 'success',
       resultText: 'x',
       log: [],
+      illustration: 'placeholder',
     };
     useGameStore.setState({ game: s, lastResolution: resolution, growthLines: ['y'] });
 

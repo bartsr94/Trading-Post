@@ -803,6 +803,20 @@ declining to try never counts against him. Binding is plain `{ type:
 heroes meeting that tier's counter range before binding runs, so it
 naturally features whichever party member has the matching history.
 
+**Resolution arc — beating the goblins into a truce:** a second per-hero
+counter, `goblin_ambush_wins`, tracks the mirror image — only the "Turn the
+tables" reaction choice (in each tier's `_react` companion) increments it,
+and only on `success`/`critSuccess`, i.e. actually out-ambushing them, not
+just spotting or declining the ambush. Once any hero's counter reaches 4,
+`travel_goblin_ambush_surrender` (`once: true`) becomes eligible: the
+goblins concede and offer a truce. Accepting sets the global flag
+`goblin_ambush_truce`, which the three ambush-tier events all gate off via
+`notFlag` and the new `travel_goblin_trade` event gates on via `flag` — so
+the shift from ambush to peaceful bartering is party-wide and permanent,
+not scoped to whichever hero earned it, unlike the counters that trigger
+it. Declining the truce leaves the flag unset (the ambush chain continues
+indefinitely); the surrender scene itself only ever plays once either way.
+
 **Still open** (`docs/TODO_FEATURES.md`): a named Beastfolk recruit (orc
 smith/goblin scout) and sub-clan/war-band depth (named war-bands under
 `subPeople`) — both deferred, since either needs an invented character/name
@@ -994,6 +1008,54 @@ across multiple event ids (e.g. `beastfolk_friction` covers both
 `beastfolk_integration_orc` and `beastfolk_integration_goblin`) — painting
 one shows it on every event that references that key. Run new source art
 through `node scripts/optimize-images.mjs` before committing.
+
+**Per-choice and per-tier illustration override** (2026-07-31): an event's
+illustration can now vary by *what the player picked* and *how it turned
+out*, not just by event id. Two independent, stackable override points,
+both optional:
+- `Choice.illustration?: string` — overrides the event's base image once
+  that choice is picked, regardless of which tier it resolves to (e.g.
+  three different reactions to the same setup each showing their own art).
+- `TierResult.illustration?: string` — overrides *that* one further, for
+  one specific `critSuccess`/`success`/`failure`/`critFailure` result of a
+  single choice (e.g. "spotted the ambush" vs. "got ambushed" showing
+  different art for the *same* choice).
+
+Resolution order is `tier.illustration ?? choice.illustration ?? event.
+illustration`, computed once in `engine/turn.ts`'s `resolveChoice` and
+carried on `ChoiceResolution.illustration`; `EventPanel.tsx` shows it as
+soon as a choice is picked (`resolution?.illustration ?? event.
+illustration`), replacing the event's base image for the rest of that
+event's resolution. Both fields live on the real `Choice`/`TierResult`
+engine types (`engine/events/types.ts`), not a helper-only concept, so any
+event/choice/tier can use them whether authored via `eventHelpers.ts`'s
+`makeChoiceEvent`/`ChoiceSpec` (which threads `Choice.illustration` through
+on both the `'checked'` and `'flat'` variants, and passes `TierResult`
+objects straight through so their `illustration` needs no extra plumbing)
+or a raw object literal. `resolveChoice` is the single function every
+choice resolution goes through — normal play and cheat-console forced-tier
+alike — and `EventPanel.tsx` is the only UI surface that renders a
+`GameEvent`'s illustration, so there's no second path to keep in sync.
+
+**Worked example — the full goblin ambush chain**
+(`content/events/goblin/ambush.ts`): each of the three escalation tiers'
+"Watch the treeline" check keeps its base image (`goblin_mischief`/
+`goblin_encounter_01`/`goblin_arrival`) on critSuccess/success ("spotted
+it"), but overrides to `goblin_ambush_caught` on failure/critFailure
+("got ambushed") — a per-tier override on the *same* choice. The
+always-available "push on and pretend not to notice" choice never spots
+anything either, so it carries the same `goblin_ambush_caught` override at
+the choice level. One further distinction: the tired tier's critFailure is
+the actual `captureHero` outcome (the hero is carried off), a materially
+different beat from an ordinary robbery, so it gets its own key
+(`goblin_ambush_captured`) rather than reusing `goblin_ambush_caught`. Each
+`_react` companion's three reaction choices (Turn the tables/Leave them to
+it/Spring it back) use choice-level overrides (`goblin_shakedown`/
+`goblin_standoff`/`goblin_tumble`), shared across all three escalation
+tiers rather than re-keyed per tier. None of `goblin_ambush_caught`/
+`goblin_ambush_captured`/`goblin_shakedown`/`goblin_standoff`/
+`goblin_tumble` are painted yet — they fall back to the hash-hue
+placeholder like any unpainted key (§13 above).
 
 **Event cast portraits** (`EventCast.tsx`, `EventPanel.tsx`,
 2026-07-30 — formerly `EVENT_CAST_PORTRAITS_SPEC.md`): a small chip strip
@@ -1314,6 +1376,90 @@ Harpies"/"The Windward Crags"); the Harpy raid profile uses the shared bases
 identity yet); and lore (`docs/lore/`) + portrait art are deferred, so
 `harpy_` events carry no `loreRef`.
 
+## 20. Named faction figures — a person inside the abstraction
+
+*(NAMED_NPCS_SPEC.md — closes the long-standing gap where every faction/
+people was a standing number and a camp/seat, with nobody in it the player
+could point to. Piloted on a single Goblin figure; the engine mechanism
+itself is generic, per CLAUDE.md rule #2.)*
+
+**Data model.** `FactionFigure` (`engine/types.ts`) is deliberately *not*
+folded into `Hero`/`HeroStatus` — doing so would need every `status ===
+'active'` selector (`livingHeroes`, grain, `brokenCompany`, ...) to carve out
+"exists, but isn't really here." Instead `GameState.factionFigures: Record<
+string, FactionFigure>` is a separate bucket, empty until a figure is met.
+Content provides `FactionFigureDef`s (`content/factionFigures.ts`, injected
+via `TurnContext.factionFigureDefs`, same split as `RecruitDef`), and the
+engine builds the runtime `FactionFigure` from one via the `introduceFigure`
+outcome — the "meet in world" moment. A figure carries the same
+stats/skills/traits/health shape as a `Hero`, a free-form `counters` bag (the
+personal antagonize/rapport track, same idiom as `Hero.counters`, entirely
+separate from faction `standing`), and an optional `heldByPost` flag (an
+antagonize-escalation capture, mirroring `Hero.captivity` in reverse — the
+post is the captor).
+
+**Four resolutions, all one-shot** (recruiting/marrying/ransoming a figure
+removes it from `factionFigures` for good — no successor mechanism; a
+resolved people simply has no named figure for the rest of that
+playthrough):
+- **Recruit** — the `recruitFigure` outcome promotes a figure into a real
+  roster `Hero` via `recruitFactionFigure` (`engine/roster.ts`), carrying
+  over its *current* identity/condition rather than template defaults
+  (unlike `recruitCharacter`'s always-fresh-from-template build).
+- **Antagonize → capture** — day-to-day friction moves the personal
+  `figureCounter` outcome (read via `figureCounterAtLeast`/`AtMost`) and
+  never touches faction standing; the `captureFigure` outcome (an
+  antagonize-escalation beat) sets `heldByPost` without resolving the arc,
+  since ransom still needs the figure to exist.
+- **Ransom** — `ransomFigure` pays silver to the post and resolves the arc;
+  this is the capture payoff (Bartosz, 2026-07-30 — a cash resource, not a
+  diplomacy-leverage token or a unique thrall).
+- **Marry/ally** — `marryFigure` calls the existing `formUnion` alliance path
+  using the figure's own identity; an outsider who marries in always becomes
+  a `Dependant`, never a `Hero` (per `Hero.spouseIds`'s existing doc
+  comment), so this is a third, distinct promotion path alongside recruit
+  (→ `Hero`) and capture (→ `heldByPost`, no roster entry at all).
+
+Big resolution beats (recruit/capture/ransom/marry) also carry an ordinary
+`standing` outcome alongside the figure-specific one, authored the same way
+any other named-character event does — a content convention, not a new
+mechanism (Bartosz, 2026-07-30: personal counters stay personal, but big
+beats nudge standing too).
+
+**New generic engine vocabulary**: outcomes `introduceFigure`/
+`figureCounter`/`recruitFigure`/`captureFigure`/`ransomFigure`/`marryFigure`;
+conditions `figureExists`/`figureNotExists`/`figureCounterAtLeast`/
+`figureCounterAtMost`/`figureHeldByPost`. All figure-scoped conditions take
+an explicit `figureId` rather than resolving one via any `HeroBinding`-style
+mechanism — with only one figure in play for the pilot, a figure-binding
+system would be pure speculative generality; add one only once a second
+concurrent figure actually ships.
+
+**Goblin pilot**: Yikka the Tallykeeper (`content/factionFigures.ts`,
+`content/events/goblin/tallykeeper.ts`, arc `goblin_tallykeeper`) — the one
+who keeps the tally stick behind the goblin road's running ambush game
+(ambush.ts's `goblin_ambush_fails`/`goblin_ambush_wins` counters, §10).
+`goblin_tallykeeper_reveal` (post, once, gated on `goblin_wilds` reaching
+`visited`) introduces her by name; `goblin_tallykeeper_dealings` (travel,
+repeatable, gated on `destinationTag: 'goblin'` + `figureExists`) offers
+hunt-her-down (→ capture), win-her-over (→ recruit), court-her (→ marry,
+choice-gated on `heroGender: 'male'` + `heroCanMarry`), or walk away;
+`goblin_tallykeeper_retaliates` (post, once, gated on her grudge counter
+reaching 3) escalates an ignored antagonize track into a `startRaid`;
+`goblin_tallykeeper_ransom` (post, gated on `figureHeldByPost`) is the
+capture payoff. All four are pure additions — no edits to the shipped
+`ambush.ts`/`firstEncounter.ts` chains they build on.
+
+**UI**: none — purely event-text driven (Bartosz, 2026-07-30), matching how
+the rest of Beastfolk content works.
+
+**Save shape:** v32 (`GameState.factionFigures`, additive, no migration —
+per the current Saves policy a stale save simply fails validation).
+
+**Still open** (not blockers, just not decided yet): rolling this out to
+other peoples/factions beyond the Goblin pilot; whether cardinality should
+ever go beyond one named figure per people.
+
 ---
 
 ## What's still open
@@ -1328,7 +1474,8 @@ caps, `activeCapBonus`), the unwired `charterRevoked`
 Company-judgment mechanism (heritage + family sides both), Peoples Phase C
 Company-town content, Family's remaining forks (matrilineal marry-out,
 per-people alliance flavor, dependant mortality, bride-price income),
-Beastfolk's remaining content (named recruit, sub-clan depth), the
+Beastfolk's remaining content (sub-clan depth — the named-recruit gap
+closed 2026-07-30, §20), the
 Harpies' remaining content (in-fiction faction/eyrie naming, a distinct
 raid/abduction identity, lore + portrait art), and a separate engineering
 backlog (store-mutation helper, `SaveResult`/autosave warnings, lint

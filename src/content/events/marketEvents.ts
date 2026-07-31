@@ -6,9 +6,10 @@
 // the ordinary weighted pool); gated on the market being reachable ('visited').
 
 import type { GameEvent } from '../../engine/events/types';
+import { makeChoiceEvent } from './eventHelpers';
 
 export const MARKET_EVENTS: GameEvent[] = [
-  {
+  makeChoiceEvent({
     id: 'market_garrison_salt_short',
     category: 'post',
     illustration: 'market_news',
@@ -20,19 +21,14 @@ export const MARKET_EVENTS: GameEvent[] = [
     factions: ['CHARTER_COMPANY'],
     choices: [
       {
+        type: 'flat',
         label: 'Mark it in the ledger and watch the road.',
-        outcomes: {
-          success: {
-            text: 'You note the market and the day. Salt is dear at Thornwatch now — and dearer still by the time word spreads.',
-            outcomes: [
-              { type: 'marketShock', location: 'charter_landing', good: 'salt', mod: 1.8, lead: 2, duration: 5 },
-            ],
-          },
-        },
+        text: 'You note the market and the day. Salt is dear at Thornwatch now — and dearer still by the time word spreads.',
+        outcomes: [{ type: 'marketShock', location: 'charter_landing', good: 'salt', mod: 1.8, lead: 2, duration: 5 }],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'market_fur_glut',
     category: 'post',
     illustration: 'market_news',
@@ -44,19 +40,14 @@ export const MARKET_EVENTS: GameEvent[] = [
     peoples: ['hanjoda'],
     choices: [
       {
+        type: 'flat',
         label: 'Send word ahead to buy while the pelts are cheap.',
-        outcomes: {
-          success: {
-            text: 'Furs are worth next to nothing at the Ashcircle until the glut clears. Buy low.',
-            outcomes: [
-              { type: 'marketShock', location: 'hill_fort', good: 'furs', mod: 0.5, lead: 1, duration: 4 },
-            ],
-          },
-        },
+        text: 'Furs are worth next to nothing at the Ashcircle until the glut clears. Buy low.',
+        outcomes: [{ type: 'marketShock', location: 'hill_fort', good: 'furs', mod: 0.5, lead: 1, duration: 4 }],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'market_tools_starved_hills',
     category: 'post',
     illustration: 'market_news',
@@ -68,19 +59,14 @@ export const MARKET_EVENTS: GameEvent[] = [
     peoples: ['hanjoda'],
     choices: [
       {
+        type: 'flat',
         label: 'Load tools while the Company sells them cheap.',
-        outcomes: {
-          success: {
-            text: 'Tools will fetch a fortune at the Ashcircle until the smithies mend. Buy them dear nowhere, sell them dear there.',
-            outcomes: [
-              { type: 'marketShock', location: 'hill_fort', good: 'tools', mod: 1.9, lead: 2, duration: 5 },
-            ],
-          },
-        },
+        text: 'Tools will fetch a fortune at the Ashcircle until the smithies mend. Buy them dear nowhere, sell them dear there.',
+        outcomes: [{ type: 'marketShock', location: 'hill_fort', good: 'tools', mod: 1.9, lead: 2, duration: 5 }],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'market_greyleaf_fever',
     category: 'post',
     illustration: 'market_news',
@@ -92,19 +78,14 @@ export const MARKET_EVENTS: GameEvent[] = [
     factions: ['RIVER_CLANS'],
     choices: [
       {
+        type: 'flat',
         label: 'Gather what Greyleaf you can and make for the river.',
-        outcomes: {
-          success: {
-            text: 'Greyleaf is worth a fever\'s ransom at Njaro-Matu while the sickness holds.',
-            outcomes: [
-              { type: 'marketShock', location: 'river_meet', good: 'herbs', mod: 1.9, lead: 1, duration: 4 },
-            ],
-          },
-        },
+        text: 'Greyleaf is worth a fever\'s ransom at Njaro-Matu while the sickness holds.',
+        outcomes: [{ type: 'marketShock', location: 'river_meet', good: 'herbs', mod: 1.9, lead: 1, duration: 4 }],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'market_amber_fashion',
     category: 'post',
     illustration: 'market_news',
@@ -116,19 +97,14 @@ export const MARKET_EVENTS: GameEvent[] = [
     factions: ['CHARTER_COMPANY'],
     choices: [
       {
+        type: 'flat',
         label: 'Buy amber cheap from the Bejasi and run it up-river.',
-        outcomes: {
-          success: {
-            text: 'Amber will fetch a homeland price at Shackle Station until the fashion turns. The Bejasi sell it for a song.',
-            outcomes: [
-              { type: 'marketShock', location: 'shackle_station', good: 'amber', mod: 1.7, lead: 2, duration: 6 },
-            ],
-          },
-        },
+        text: 'Amber will fetch a homeland price at Shackle Station until the fashion turns. The Bejasi sell it for a song.',
+        outcomes: [{ type: 'marketShock', location: 'shackle_station', good: 'amber', mod: 1.7, lead: 2, duration: 6 }],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'market_grain_dearth',
     category: 'post',
     illustration: 'market_news',
@@ -140,16 +116,11 @@ export const MARKET_EVENTS: GameEvent[] = [
     peoples: ['hanjoda'],
     choices: [
       {
+        type: 'flat',
         label: 'Fill the sacks and make for the plateau.',
-        outcomes: {
-          success: {
-            text: 'Grain is dear in the badlands until the season turns. Carry it up while the dearth holds.',
-            outcomes: [
-              { type: 'marketShock', location: 'blackstone_plateau', good: 'grain', mod: 1.7, lead: 2, duration: 6 },
-            ],
-          },
-        },
+        text: 'Grain is dear in the badlands until the season turns. Carry it up while the dearth holds.',
+        outcomes: [{ type: 'marketShock', location: 'blackstone_plateau', good: 'grain', mod: 1.7, lead: 2, duration: 6 }],
       },
     ],
-  },
+  }),
 ];

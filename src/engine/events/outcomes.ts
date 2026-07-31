@@ -32,14 +32,15 @@ import {
   loseResidents,
 } from '../residents';
 import { addThralls, adjustRestiveness, loseThralls } from '../thralls';
-import { departCharacter, recruitCharacter } from '../roster';
+import { departCharacter, recruitCharacter, recruitFactionFigure } from '../roster';
 import { Rng } from '../rng';
-import { clamp, getHero, livingHeroes, nextDiscovery, oppositeGender, signed } from '../types';
+import { clamp, getHero, livingHeroes, nextDiscovery, oppositeGender, signed, SKILL_IDS } from '../types';
 import type {
   ActiveEvent,
   BuildingId,
   DiscoveryState,
   ExpeditionState,
+  FactionFigureDef,
   GameState,
   Gender,
   GoodId,
@@ -47,6 +48,7 @@ import type {
   LocationDef,
   LocationId,
   RecruitDef,
+  SkillId,
 } from '../types';
 import type { Outcome } from './types';
 
@@ -65,6 +67,9 @@ export interface OutcomeContext {
   buildingNames: ReadonlyMap<BuildingId, string>;
   /** Recruit templates by id, so `recruitCharacter` stays content-free. */
   recruitDefs: ReadonlyMap<string, RecruitDef>;
+  /** Named faction-figure templates by id, so `introduceFigure` stays
+   *  content-free (NAMED_NPCS_SPEC.md). */
+  factionFigureDefs: ReadonlyMap<string, FactionFigureDef>;
   /** A dependant name for a people + gender, picked deterministically by seed. */
   dependantName: (heritage: Heritage, gender: Gender, seed: number) => string;
   /** The turn's RNG when applied from an event (absent when called directly). */
@@ -233,6 +238,76 @@ export function applyOutcomes(
         const target = outcome.heroId ? getHero(state, outcome.heroId) : hero;
         const current = target.counters?.[outcome.key] ?? 0;
         target.counters = { ...(target.counters ?? {}), [outcome.key]: Math.max(0, current + outcome.delta) };
+        break;
+      }
+      case 'introduceFigure': {
+        if (state.factionFigures[outcome.figureDefId]) break; // already met
+        const def = ctx.factionFigureDefs.get(outcome.figureDefId);
+        if (!def) break;
+        const skills = {} as Record<SkillId, number>;
+        for (const s of SKILL_IDS) skills[s] = def.skills[s] ?? 0;
+        state.factionFigures[def.id] = {
+          id: def.id,
+          name: def.name,
+          epithet: def.epithet,
+          bio: def.bio,
+          portraitKey: def.portraitKey,
+          stats: { ...def.stats },
+          skills,
+          traits: [...def.traits],
+          health: TUNING.condition.maxHealth,
+          gender: def.gender,
+          heritage: def.heritage,
+          subPeople: def.subPeople,
+          faction: def.faction,
+        };
+        log.push(`${def.name}, ${def.epithet}, becomes known to you.`);
+        break;
+      }
+      case 'figureCounter': {
+        const target = state.factionFigures[outcome.figureId];
+        if (!target) break;
+        const current = target.counters?.[outcome.key] ?? 0;
+        target.counters = { ...(target.counters ?? {}), [outcome.key]: Math.max(0, current + outcome.delta) };
+        break;
+      }
+      case 'recruitFigure': {
+        const figure = state.factionFigures[outcome.figureId];
+        if (!figure) break;
+        const joined = recruitFactionFigure(state, figure, outcome.toActive);
+        delete state.factionFigures[outcome.figureId];
+        log.push(`${joined.name}, ${joined.epithet}, joins the company.`);
+        break;
+      }
+      case 'captureFigure': {
+        const figure = state.factionFigures[outcome.figureId];
+        if (!figure || figure.heldByPost) break;
+        figure.heldByPost = { capturedTurn: state.turn };
+        log.push(`${figure.name} is taken captive.`);
+        break;
+      }
+      case 'ransomFigure': {
+        const figure = state.factionFigures[outcome.figureId];
+        if (!figure || !figure.heldByPost) break;
+        state.silver += Math.max(0, outcome.silver);
+        log.push(`${figure.name} is ransomed back: +${Math.max(0, outcome.silver)} silver`);
+        delete state.factionFigures[outcome.figureId];
+        break;
+      }
+      case 'marryFigure': {
+        const figure = state.factionFigures[outcome.figureId];
+        if (!figure) break;
+        const subjectId = outcome.heroId ?? ctx.heroId;
+        const subject = graphNode(state, subjectId);
+        const spouse = formUnion(state, subjectId, {
+          source: 'alliance',
+          heritage: figure.heritage,
+          name: figure.name,
+        });
+        if (spouse && subject) {
+          log.push(`${subject.name} weds ${spouse.name}.`);
+          delete state.factionFigures[outcome.figureId];
+        }
         break;
       }
       case 'marketShock': {

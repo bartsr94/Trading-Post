@@ -6,9 +6,10 @@
 // as intentions.
 
 import type { GameEvent } from '../../engine/events/types';
+import { makeChoiceEvent, outcome } from './eventHelpers';
 
 export const THRALL_EVENTS: GameEvent[] = [
-  {
+  makeChoiceEvent({
     id: 'thrall_river_clans_offer',
     category: 'post',
     illustration: 'thrall_barge',
@@ -25,55 +26,43 @@ export const THRALL_EVENTS: GameEvent[] = [
     peoples: ['kiswani'],
     choices: [
       {
+        type: 'checked',
         label: 'Buy the lot — silver now, hands later.',
         check: { skill: 'bargain', stat: 'charm', difficulty: 10, tags: ['RIVER_CLANS', 'bargain'] },
-        outcomes: {
-          critSuccess: {
-            text: '{hero} talks her down twice over, and the barge empties for less than she meant to ask. Three chained figures are led up to the post, and the trader poles off looking faintly annoyed at her own weak bargaining.',
-            outcomes: [
-              { type: 'silver', delta: -18 },
-              { type: 'addThralls', role: 'idle', count: 3, tag: 'kiswani', group: 'native' },
-              { type: 'history', text: 'Bought thralls off a Tributary Towns trader\'s barge.' },
-            ],
-          },
-          success: {
-            text: '{hero} settles on a price that leaves neither side happy, which the trader seems to take as proof it was fair. Two are led ashore in silence.',
-            outcomes: [
-              { type: 'silver', delta: -20 },
-              { type: 'addThralls', role: 'idle', count: 2, tag: 'kiswani', group: 'native' },
-            ],
-          },
-          failure: {
-            text: 'The haggling goes nowhere and {hero} pays close to what she first asked for a single captive — word of an easy buyer at the post will outrun the barge downriver.',
-            outcomes: [
-              { type: 'silver', delta: -15 },
-              { type: 'addThralls', role: 'idle', count: 1, tag: 'kiswani', group: 'native' },
-              { type: 'contentment', delta: -1 },
-            ],
-          },
-          critFailure: {
-            text: '{hero} fumbles the whole exchange badly enough that the trader simply poles off insulted, silver already pocketed for "the trouble of stopping."',
-            outcomes: [
-              { type: 'silver', delta: -10 },
-              { type: 'standing', faction: 'RIVER_CLANS', delta: -2 },
-            ],
-          },
+        critSuccess: {
+          text: '{hero} talks her down twice over, and the barge empties for less than she meant to ask. Three chained figures are led up to the post, and the trader poles off looking faintly annoyed at her own weak bargaining.',
+          outcomes: [
+            outcome.silver(-18),
+            { type: 'addThralls', role: 'idle', count: 3, tag: 'kiswani', group: 'native' },
+            outcome.history('Bought thralls off a Tributary Towns trader\'s barge.'),
+          ],
+        },
+        success: {
+          text: '{hero} settles on a price that leaves neither side happy, which the trader seems to take as proof it was fair. Two are led ashore in silence.',
+          outcomes: [outcome.silver(-20), { type: 'addThralls', role: 'idle', count: 2, tag: 'kiswani', group: 'native' }],
+        },
+        failure: {
+          text: 'The haggling goes nowhere and {hero} pays close to what she first asked for a single captive — word of an easy buyer at the post will outrun the barge downriver.',
+          outcomes: [
+            outcome.silver(-15),
+            { type: 'addThralls', role: 'idle', count: 1, tag: 'kiswani', group: 'native' },
+            outcome.contentment(-1),
+          ],
+        },
+        critFailure: {
+          text: '{hero} fumbles the whole exchange badly enough that the trader simply poles off insulted, silver already pocketed for "the trouble of stopping."',
+          outcomes: [outcome.silver(-10), outcome.standing('RIVER_CLANS', -2)],
         },
       },
       {
+        type: 'flat',
         label: 'Wave the barge on — this is not a trade you\'ll make.',
-        outcomes: {
-          success: {
-            text: '{hero} shakes {his} head once, plainly, and the trader shrugs and poles back into the current without another word. Whatever becomes of her cargo downriver is no longer the post\'s question to answer.',
-            outcomes: [
-              { type: 'history', text: 'Turned away a slave-trader\'s barge at the landing.' },
-            ],
-          },
-        },
+        text: '{hero} shakes {his} head once, plainly, and the trader shrugs and poles back into the current without another word. Whatever becomes of her cargo downriver is no longer the post\'s question to answer.',
+        outcomes: [outcome.history('Turned away a slave-trader\'s barge at the landing.')],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'thrall_revolt',
     category: 'post',
     illustration: 'thrall_revolt',
@@ -88,62 +77,58 @@ export const THRALL_EVENTS: GameEvent[] = [
     binding: { type: 'highestSkill', skill: 'leadership' },
     choices: [
       {
+        type: 'checked',
         label: 'Put it down — by force if it comes to that.',
         check: { skill: 'combat', stat: 'might', difficulty: 11, tags: ['intimidation'] },
-        outcomes: {
-          critSuccess: {
-            text: '{hero} is on them before the standoff can turn into anything worse, and the show of force alone breaks what fight was left in the yard. A handful are dragged off in irons; the rest go back to work faster than they left it.',
-            outcomes: [
-              { type: 'loseThralls', count: 2 },
-              { type: 'thrallRestiveness', delta: -6 },
-              { type: 'history', text: 'Put down a thrall revolt before it drew blood.' },
-            ],
-          },
-          success: {
-            text: 'It gets ugly before it\'s over — a guard comes away bleeding, and more than one thrall doesn\'t come back from the yard at all — but the post holds.',
-            outcomes: [
-              { type: 'loseResidents', role: 'guards', count: 1 },
-              { type: 'loseThralls', count: 4 },
-              { type: 'thrallRestiveness', delta: -5 },
-              { type: 'contentment', delta: -1 },
-            ],
-          },
-          failure: {
-            text: 'The yard goes fully to chaos before anyone regains it — thralls scatter for the treeline in the confusion, and the guards who tried to stop them paid for it.',
-            outcomes: [
-              { type: 'loseResidents', role: 'guards', count: 2 },
-              { type: 'loseThralls', count: 6 },
-              { type: 'thrallRestiveness', delta: -3 },
-              { type: 'contentment', delta: -2 },
-              { type: 'stress', delta: 2 },
-            ],
-          },
-          critFailure: {
-            text: 'Whatever {hero} meant to do, it is the wrong thing said at the wrong second — the yard erupts, half the thralls the post held are simply gone by morning, and the guards who stood their ground paid the worst of it.',
-            outcomes: [
-              { type: 'loseResidents', role: 'guards', count: 3 },
-              { type: 'loseThralls', count: 10 },
-              { type: 'contentment', delta: -2 },
-              { type: 'stress', delta: 3 },
-              { type: 'health', delta: -3 },
-            ],
-          },
+        critSuccess: {
+          text: '{hero} is on them before the standoff can turn into anything worse, and the show of force alone breaks what fight was left in the yard. A handful are dragged off in irons; the rest go back to work faster than they left it.',
+          outcomes: [
+            { type: 'loseThralls', count: 2 },
+            { type: 'thrallRestiveness', delta: -6 },
+            outcome.history('Put down a thrall revolt before it drew blood.'),
+          ],
+        },
+        success: {
+          text: 'It gets ugly before it\'s over — a guard comes away bleeding, and more than one thrall doesn\'t come back from the yard at all — but the post holds.',
+          outcomes: [
+            { type: 'loseResidents', role: 'guards', count: 1 },
+            { type: 'loseThralls', count: 4 },
+            { type: 'thrallRestiveness', delta: -5 },
+            outcome.contentment(-1),
+          ],
+        },
+        failure: {
+          text: 'The yard goes fully to chaos before anyone regains it — thralls scatter for the treeline in the confusion, and the guards who tried to stop them paid for it.',
+          outcomes: [
+            { type: 'loseResidents', role: 'guards', count: 2 },
+            { type: 'loseThralls', count: 6 },
+            { type: 'thrallRestiveness', delta: -3 },
+            outcome.contentment(-2),
+            outcome.stress(2),
+          ],
+        },
+        critFailure: {
+          text: 'Whatever {hero} meant to do, it is the wrong thing said at the wrong second — the yard erupts, half the thralls the post held are simply gone by morning, and the guards who stood their ground paid the worst of it.',
+          outcomes: [
+            { type: 'loseResidents', role: 'guards', count: 3 },
+            { type: 'loseThralls', count: 10 },
+            outcome.contentment(-2),
+            outcome.stress(3),
+            outcome.health(-3),
+          ],
         },
       },
       {
+        type: 'flat',
         label: 'Stand the guards down — better a smaller household than a slaughter.',
-        outcomes: {
-          success: {
-            text: '{hero} calls the guards off and lets the standoff simply end — most of the thralls who threw down their tools slip away before the hour is out, and no one who stood in that yard has to carry what would have happened otherwise.',
-            outcomes: [
-              { type: 'loseThralls', count: 8 },
-              { type: 'thrallRestiveness', delta: -7 },
-              { type: 'contentment', delta: 1 },
-              { type: 'history', text: 'Let a thrall revolt end in flight rather than force.' },
-            ],
-          },
-        },
+        text: '{hero} calls the guards off and lets the standoff simply end — most of the thralls who threw down their tools slip away before the hour is out, and no one who stood in that yard has to carry what would have happened otherwise.',
+        outcomes: [
+          { type: 'loseThralls', count: 8 },
+          { type: 'thrallRestiveness', delta: -7 },
+          outcome.contentment(1),
+          outcome.history('Let a thrall revolt end in flight rather than force.'),
+        ],
       },
     ],
-  },
+  }),
 ];

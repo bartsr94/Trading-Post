@@ -137,6 +137,19 @@ export type Condition =
    *  hero. */
   | { type: 'heroCounterAtLeast'; key: string; value: number; heroId?: string }
   | { type: 'heroCounterAtMost'; key: string; value: number; heroId?: string }
+  /** Whether a named faction figure (NAMED_NPCS_SPEC.md) has been introduced
+   *  and hasn't yet resolved out (recruited/married/ransomed). */
+  | { type: 'figureExists'; figureId: string }
+  | { type: 'figureNotExists'; figureId: string }
+  /** Persistent per-figure counter (`FactionFigure.counters`), same idiom as
+   *  `heroCounterAtLeast`/`heroCounterAtMost` but figure-scoped — a figure id
+   *  and a hero id aren't interchangeable, so this is a parallel condition
+   *  rather than a shared one. Absent counter reads as 0. */
+  | { type: 'figureCounterAtLeast'; figureId: string; key: string; value: number }
+  | { type: 'figureCounterAtMost'; figureId: string; key: string; value: number }
+  /** True while the post holds a named faction figure (mirrors
+   *  `hasCaptiveHeldBy` in reverse — here the post is the captor). */
+  | { type: 'figureHeldByPost'; figureId: string }
   /** True once the grace period has elapsed and an aggressor exists (RAIDING_SPEC.md §6). */
   | { type: 'raidReady' }
   /** The post was sacked within the last `turns` (RAIDING_SPEC.md §7). */
@@ -206,6 +219,31 @@ export type Outcome =
    *  outcome, these are meant to be permanent. `heroId` defaults to the
    *  bound hero. Read back via `heroCounterAtLeast`/`heroCounterAtMost`. */
   | { type: 'heroCounter'; key: string; delta: number; heroId?: string }
+  /** Instantiates a `FactionFigureDef` into `GameState.factionFigures` if not
+   *  already present (idempotent) — the "meet in world" moment for a named
+   *  faction figure (NAMED_NPCS_SPEC.md). */
+  | { type: 'introduceFigure'; figureDefId: string }
+  /** Adjusts a persistent per-figure counter (`FactionFigure.counters`),
+   *  clamped at 0 — mirrors `heroCounter` but figure-scoped. Read back via
+   *  `figureCounterAtLeast`/`figureCounterAtMost`. */
+  | { type: 'figureCounter'; figureId: string; key: string; delta: number }
+  /** Promotes a named faction figure into a real roster `Hero` (carrying
+   *  over its current stats/skills/traits/health, not template defaults),
+   *  then removes it from `factionFigures` — a one-shot resolution. */
+  | { type: 'recruitFigure'; figureId: string; toActive?: boolean }
+  /** The post seizes a named faction figure — an antagonize-escalation
+   *  capture, mirroring `captureHero` in reverse. Does not remove the
+   *  figure (ransom needs it to still exist). */
+  | { type: 'captureFigure'; figureId: string }
+  /** Pays `silver` to the post and resolves a held figure's arc for good
+   *  (NAMED_NPCS_SPEC.md §4 — ransom is the capture payoff). No-ops if the
+   *  figure isn't currently held. */
+  | { type: 'ransomFigure'; figureId: string; silver: number }
+  /** Marries a named faction figure into a hero's household (defaults to
+   *  the bound hero) via the existing `formUnion` alliance path — an
+   *  outsider who marries in always becomes a `Dependant`, never a `Hero`.
+   *  Resolves the figure's arc for good. */
+  | { type: 'marryFigure'; figureId: string; heroId?: string }
   | { type: 'setFlag'; flag: string; value?: boolean }
   /** Push a market price shock (TRADING_ECONOMY_SPEC §3c). `lead` turns of
    *  rumor (no price effect) precede `duration` turns of the live `mod` on
@@ -307,6 +345,11 @@ export type Outcome =
 /** Narrative text + effects for one result tier. */
 export interface TierResult {
   text: string;
+  /** Overrides the choice's (and event's) illustration once this specific
+   *  tier resolves — e.g. a "before" image on success vs. an "after" image
+   *  on failure for the same choice. Falls back to `Choice.illustration`,
+   *  then the event's, when unset. */
+  illustration?: string;
   outcomes: Outcome[];
 }
 
@@ -323,6 +366,11 @@ export interface Choice {
   /** Unmet requirements show the choice locked. */
   requires?: Condition[];
   check?: EventCheck;
+  /** Overrides the event's `illustration` once this choice is resolved
+   *  (EVENT_TEXT_SEPARATION_SPEC.md follow-up, 2026-07-31) — e.g. three
+   *  different reactions to the same setup each show their own art. Falls
+   *  back to the event's illustration when unset. */
+  illustration?: string;
   outcomes: {
     critSuccess?: TierResult;
     success: TierResult;

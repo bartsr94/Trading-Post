@@ -58,7 +58,7 @@ export function EventPanel({ game }: { game: GameState }) {
     <div className="overlay">
       <div className="event-panel">
         <div className="event-illustration-wrap">
-          <Illustration assetKey={event.illustration} />
+          <Illustration assetKey={resolution?.illustration ?? event.illustration} />
           <EventCast heroes={cast} />
         </div>
         <div className="event-body">

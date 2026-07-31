@@ -3,9 +3,10 @@
 // TUNING.residents.friction). See ./index.ts for shared context.
 
 import type { GameEvent } from '../../../engine/events/types';
+import { makeChoiceEvent, outcome } from '../eventHelpers';
 
 export const GOBLIN_INTEGRATION_EVENTS: GameEvent[] = [
-  {
+  makeChoiceEvent({
     id: 'beastfolk_integration_goblin',
     category: 'post',
     illustration: 'beastfolk_friction',
@@ -23,49 +24,39 @@ export const GOBLIN_INTEGRATION_EVENTS: GameEvent[] = [
     arc: 'goblin_integration',
     choices: [
       {
+        type: 'checked',
         label: 'Get ahead of the rumors and set the record straight.',
         check: { skill: 'diplomacy', stat: 'charm', difficulty: 10, tags: ['BEASTFOLK', 'diplomacy'] },
-        outcomes: {
-          critSuccess: {
-            text: '{hero} runs down what actually happened in each case — mostly nothing, once — and says so plainly enough that even the sourest gossip has to concede the point. It doesn\'t make anyone friends, but it starves the rumor mill for a while.',
-            outcomes: [
-              { type: 'friction', heritage: 'goblin', delta: -5 },
-              { type: 'contentment', delta: 1 },
-              { type: 'history', text: 'Talked down suspicion between residents and the post\'s goblins.' },
-            ],
-          },
-          success: {
-            text: '{hero} makes the rounds and pours a little cold water on the loudest complaints. Not everyone\'s convinced, but the grumbling quiets some.',
-            outcomes: [{ type: 'friction', heritage: 'goblin', delta: -3 }],
-          },
-          failure: {
-            text: 'The rounds don\'t land — half the post hears "the goblins again" and decides {hero} is just making excuses for them.',
-            outcomes: [
-              { type: 'friction', heritage: 'goblin', delta: 1 },
-              { type: 'stress', delta: 1 },
-            ],
-          },
-          critFailure: {
-            text: 'Somehow defending them makes it worse — now it looks like {hero} is covering for them, and the whispering picks up rather than stops.',
-            outcomes: [
-              { type: 'friction', heritage: 'goblin', delta: 2 },
-              { type: 'contentment', delta: -1 },
-            ],
-          },
+        critSuccess: {
+          text: '{hero} runs down what actually happened in each case — mostly nothing, once — and says so plainly enough that even the sourest gossip has to concede the point. It doesn\'t make anyone friends, but it starves the rumor mill for a while.',
+          outcomes: [
+            outcome.friction('goblin', -5),
+            outcome.contentment(1),
+            outcome.history('Talked down suspicion between residents and the post\'s goblins.'),
+          ],
+        },
+        success: {
+          text: '{hero} makes the rounds and pours a little cold water on the loudest complaints. Not everyone\'s convinced, but the grumbling quiets some.',
+          outcomes: [outcome.friction('goblin', -3)],
+        },
+        failure: {
+          text: 'The rounds don\'t land — half the post hears "the goblins again" and decides {hero} is just making excuses for them.',
+          outcomes: [outcome.friction('goblin', 1), outcome.stress(1)],
+        },
+        critFailure: {
+          text: 'Somehow defending them makes it worse — now it looks like {hero} is covering for them, and the whispering picks up rather than stops.',
+          outcomes: [outcome.friction('goblin', 2), outcome.contentment(-1)],
         },
       },
       {
+        type: 'flat',
         label: 'Ignore it — gossip burns itself out eventually.',
-        outcomes: {
-          success: {
-            text: 'Maybe it does, someday. Today it just keeps smoldering, unaddressed.',
-            outcomes: [{ type: 'friction', heritage: 'goblin', delta: 1 }],
-          },
-        },
+        text: 'Maybe it does, someday. Today it just keeps smoldering, unaddressed.',
+        outcomes: [outcome.friction('goblin', 1)],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'beastfolk_integration_settled_goblin',
     category: 'post',
     illustration: 'beastfolk_settled',
@@ -83,18 +74,15 @@ export const GOBLIN_INTEGRATION_EVENTS: GameEvent[] = [
     arc: 'goblin_integration',
     choices: [
       {
+        type: 'flat',
         label: 'Good. Let it stand.',
-        outcomes: {
-          success: {
-            text: 'The post is a little more itself for it — one less line dividing who belongs and who\'s merely tolerated.',
-            outcomes: [
-              { type: 'standing', faction: 'BEASTFOLK', delta: 2 },
-              { type: 'contentment', delta: 1 },
-              { type: 'history', text: 'The post\'s goblin residents finished settling in, grudge-free.' },
-            ],
-          },
-        },
+        text: 'The post is a little more itself for it — one less line dividing who belongs and who\'s merely tolerated.',
+        outcomes: [
+          outcome.standing('BEASTFOLK', 2),
+          outcome.contentment(1),
+          outcome.history('The post\'s goblin residents finished settling in, grudge-free.'),
+        ],
       },
     ],
-  },
+  }),
 ];

@@ -18,6 +18,7 @@ const NAME_CTX = {
   locationDefs: TEST_CONTENT.locationDefs,
   buildingNames: TEST_CONTENT.buildingNames,
   recruitDefs: TEST_CONTENT.recruitDefs,
+  factionFigureDefs: TEST_CONTENT.factionFigureDefs,
   dependantName: TEST_CONTENT.dependantName,
 };
 

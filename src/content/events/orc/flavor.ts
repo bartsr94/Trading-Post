@@ -4,9 +4,10 @@
 // for shared context.
 
 import type { GameEvent } from '../../../engine/events/types';
+import { makeChoiceEvent, outcome } from '../eventHelpers';
 
 export const ORC_FLAVOR_EVENTS: GameEvent[] = [
-  {
+  makeChoiceEvent({
     id: 'beastfolk_livestock_raid',
     category: 'post',
     illustration: 'beastfolk_livestock',
@@ -25,45 +26,35 @@ export const ORC_FLAVOR_EVENTS: GameEvent[] = [
     arc: 'beastfolk_flavor',
     choices: [
       {
+        type: 'checked',
         label: 'Track them at first light.',
         check: { skill: 'survival', stat: 'agility', difficulty: 11, tags: ['BEASTFOLK'] },
-        outcomes: {
-          critSuccess: {
-            text: '{hero} reads the ground like a page and runs the thieves down before they\'ve finished skinning what they took. What\'s left of the herd comes home, and the word that goes with it — that this post tracks its losses — is worth more than the meat.',
-            outcomes: [
-              { type: 'standing', faction: 'BEASTFOLK', delta: 1 },
-              { type: 'history', text: 'Ran down livestock thieves from the wilds and recovered the herd.' },
-            ],
-          },
-          success: {
-            text: '{hero} finds the trail, finds the camp, and comes back with most of what was lost and a little respect that comes from not making it easy.',
-            outcomes: [{ type: 'addHerd', delta: 1 }],
-          },
-          failure: {
-            text: 'The trail runs out on rock and river, the way a trail does when whoever left it knew the ground better than {hero} does.',
-            outcomes: [
-              { type: 'loseHerd', delta: 1 },
-              { type: 'stress', delta: 1 },
-            ],
-          },
-          critFailure: {
-            text: '{hero} follows the wrong trail entirely, loses a day, and comes home to find the herd thinner than when {he} left it — someone came back for a second helping while the post\'s best tracker was busy elsewhere.',
-            outcomes: [{ type: 'loseHerd', delta: 2 }],
-          },
+        critSuccess: {
+          text: '{hero} reads the ground like a page and runs the thieves down before they\'ve finished skinning what they took. What\'s left of the herd comes home, and the word that goes with it — that this post tracks its losses — is worth more than the meat.',
+          outcomes: [outcome.standing('BEASTFOLK', 1), outcome.history('Ran down livestock thieves from the wilds and recovered the herd.')],
+        },
+        success: {
+          text: '{hero} finds the trail, finds the camp, and comes back with most of what was lost and a little respect that comes from not making it easy.',
+          outcomes: [{ type: 'addHerd', delta: 1 }],
+        },
+        failure: {
+          text: 'The trail runs out on rock and river, the way a trail does when whoever left it knew the ground better than {hero} does.',
+          outcomes: [{ type: 'loseHerd', delta: 1 }, outcome.stress(1)],
+        },
+        critFailure: {
+          text: '{hero} follows the wrong trail entirely, loses a day, and comes home to find the herd thinner than when {he} left it — someone came back for a second helping while the post\'s best tracker was busy elsewhere.',
+          outcomes: [{ type: 'loseHerd', delta: 2 }],
         },
       },
       {
+        type: 'flat',
         label: 'Write it off — the wilds always take a little.',
-        outcomes: {
-          success: {
-            text: 'Chasing thieves through unfamiliar country for a handful of head has never been worth the risk, and it isn\'t today either. The herd is smaller by morning\'s count and no further conversation is had about it.',
-            outcomes: [{ type: 'loseHerd', delta: 1 }],
-          },
-        },
+        text: 'Chasing thieves through unfamiliar country for a handful of head has never been worth the risk, and it isn\'t today either. The herd is smaller by morning\'s count and no further conversation is had about it.',
+        outcomes: [{ type: 'loseHerd', delta: 1 }],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'beastfolk_pilfering',
     category: 'post',
     illustration: 'beastfolk_pilfering',
@@ -81,51 +72,35 @@ export const ORC_FLAVOR_EVENTS: GameEvent[] = [
     arc: 'beastfolk_flavor',
     choices: [
       {
+        type: 'checked',
         label: 'Set a watch and catch them at it.',
         check: { skill: 'stealth', stat: 'agility', difficulty: 10, tags: ['BEASTFOLK'] },
-        outcomes: {
-          critSuccess: {
-            text: '{hero} waits out three quiet nights and catches a goblin scout with a sack half-full, mid-reach. Rather than raise the alarm, {hero} lets her go empty-handed and makes sure word gets back to her clan of exactly how close she came to being caught. The pilfering stops.',
-            outcomes: [
-              { type: 'standing', faction: 'BEASTFOLK', delta: 1 },
-              { type: 'history', text: 'Caught a beastfolk pilferer in the act and let the lesson do the rest.' },
-            ],
-          },
-          success: {
-            text: 'The watch pays off — {hero} spots a shape at the storehouse wall and the shape decides the risk isn\'t worth it anymore, tonight at least.',
-            outcomes: [],
-          },
-          failure: {
-            text: 'A long, cold, uneventful watch, and the storehouse is short again by morning anyway — whoever it was simply waited {hero} out.',
-            outcomes: [
-              { type: 'good', good: 'tools', delta: -2 },
-              { type: 'stress', delta: 1 },
-            ],
-          },
-          critFailure: {
-            text: 'The watch is a waste twice over: nothing caught, and by the time {hero} gives it up as a bad job, the storehouse has been picked over more thoroughly than usual.',
-            outcomes: [
-              { type: 'good', good: 'tools', delta: -3 },
-              { type: 'silver', delta: -8 },
-            ],
-          },
+        critSuccess: {
+          text: '{hero} waits out three quiet nights and catches a goblin scout with a sack half-full, mid-reach. Rather than raise the alarm, {hero} lets her go empty-handed and makes sure word gets back to her clan of exactly how close she came to being caught. The pilfering stops.',
+          outcomes: [outcome.standing('BEASTFOLK', 1), outcome.history('Caught a beastfolk pilferer in the act and let the lesson do the rest.')],
+        },
+        success: {
+          text: 'The watch pays off — {hero} spots a shape at the storehouse wall and the shape decides the risk isn\'t worth it anymore, tonight at least.',
+          outcomes: [],
+        },
+        failure: {
+          text: 'A long, cold, uneventful watch, and the storehouse is short again by morning anyway — whoever it was simply waited {hero} out.',
+          outcomes: [outcome.good('tools', -2), outcome.stress(1)],
+        },
+        critFailure: {
+          text: 'The watch is a waste twice over: nothing caught, and by the time {hero} gives it up as a bad job, the storehouse has been picked over more thoroughly than usual.',
+          outcomes: [outcome.good('tools', -3), outcome.silver(-8)],
         },
       },
       {
+        type: 'flat',
         label: 'Let it go — it costs less than the lost sleep chasing it.',
-        outcomes: {
-          success: {
-            text: 'The post absorbs the loss the way it absorbs most frontier costs — quietly, and without much choice in the matter.',
-            outcomes: [
-              { type: 'good', good: 'tools', delta: -1 },
-              { type: 'silver', delta: -4 },
-            ],
-          },
-        },
+        text: 'The post absorbs the loss the way it absorbs most frontier costs — quietly, and without much choice in the matter.',
+        outcomes: [outcome.good('tools', -1), outcome.silver(-4)],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'beastfolk_dare',
     category: 'post',
     illustration: 'beastfolk_dare',
@@ -143,48 +118,35 @@ export const ORC_FLAVOR_EVENTS: GameEvent[] = [
     arc: 'beastfolk_flavor',
     choices: [
       {
+        type: 'checked',
         label: 'Take the dare.',
         check: { skill: 'combat', stat: 'might', difficulty: 10, tags: ['BEASTFOLK'] },
-        outcomes: {
-          critSuccess: {
-            text: '{hero} puts her down hard enough to draw a laugh out of her own war-band, and the story that travels back to the wilds does the post more good than a season of careful diplomacy — this is exactly the kind of showing orcs remember a man by.',
-            outcomes: [
-              { type: 'standing', faction: 'BEASTFOLK', delta: 4 },
-              { type: 'history', text: 'Won a shouted challenge from an orc youth and earned the wilds\' respect.' },
-            ],
-          },
-          success: {
-            text: 'It\'s close and it\'s ugly and {hero} wins anyway, which is apparently all that matters. The orc claps {him} on the shoulder like they\'re old friends and wanders off satisfied.',
-            outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: 2 }],
-          },
-          failure: {
-            text: 'She\'s stronger than she looked, and {hero} ends up in the dirt for it — bruised more in pride than in body, but bruised.',
-            outcomes: [
-              { type: 'health', delta: -2 },
-              { type: 'stress', delta: 1 },
-            ],
-          },
-          critFailure: {
-            text: 'It goes badly enough that {hero} is carried back rather than walking, and the story that travels back to the wilds is not the one the post wanted told.',
-            outcomes: [
-              { type: 'health', delta: -4 },
-              { type: 'standing', faction: 'BEASTFOLK', delta: -1 },
-            ],
-          },
+        critSuccess: {
+          text: '{hero} puts her down hard enough to draw a laugh out of her own war-band, and the story that travels back to the wilds does the post more good than a season of careful diplomacy — this is exactly the kind of showing orcs remember a man by.',
+          outcomes: [outcome.standing('BEASTFOLK', 4), outcome.history('Won a shouted challenge from an orc youth and earned the wilds\' respect.')],
+        },
+        success: {
+          text: 'It\'s close and it\'s ugly and {hero} wins anyway, which is apparently all that matters. The orc claps {him} on the shoulder like they\'re old friends and wanders off satisfied.',
+          outcomes: [outcome.standing('BEASTFOLK', 2)],
+        },
+        failure: {
+          text: 'She\'s stronger than she looked, and {hero} ends up in the dirt for it — bruised more in pride than in body, but bruised.',
+          outcomes: [outcome.health(-2), outcome.stress(1)],
+        },
+        critFailure: {
+          text: 'It goes badly enough that {hero} is carried back rather than walking, and the story that travels back to the wilds is not the one the post wanted told.',
+          outcomes: [outcome.health(-4), outcome.standing('BEASTFOLK', -1)],
         },
       },
       {
+        type: 'flat',
         label: 'Wave her off — there\'s work to do.',
-        outcomes: {
-          success: {
-            text: '{hero} turns {his} back on the shouting, which is its own kind of answer. The orc calls {him} a coward once, for form\'s sake, and loses interest by midday.',
-            outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: -1 }],
-          },
-        },
+        text: '{hero} turns {his} back on the shouting, which is its own kind of answer. The orc calls {him} a coward once, for form\'s sake, and loses interest by midday.',
+        outcomes: [outcome.standing('BEASTFOLK', -1)],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'orc_battle_of_wits',
     category: 'post',
     illustration: 'beastfolk_dare',
@@ -199,48 +161,35 @@ export const ORC_FLAVOR_EVENTS: GameEvent[] = [
     arc: 'beastfolk_flavor',
     choices: [
       {
+        type: 'checked',
         label: 'Play the game.',
         check: { skill: 'lore', stat: 'wits', difficulty: 10, tags: ['BEASTFOLK', 'gamble'] },
-        outcomes: {
-          critSuccess: {
-            text: '{hero} reads her tells three moves before she makes them and takes the wager clean. She doesn\'t look angry about losing — she looks like she\'s already telling the story wrong on purpose, the better version, the one where the post has someone worth reckoning with.',
-            outcomes: [
-              { type: 'standing', faction: 'BEASTFOLK', delta: 4 },
-              { type: 'history', text: 'Out-thought an orc tactician at her own game and earned the wilds\' respect.' },
-            ],
-          },
-          success: {
-            text: '{hero} scrapes out a win by a margin neither of them is proud of, and the tactician concedes it with a short, genuine nod — the kind she doesn\'t hand out for free.',
-            outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: 2 }],
-          },
-          failure: {
-            text: 'She reads {hero} easily and takes the wager without much of a fight. It stings more than losing a wrestle would have.',
-            outcomes: [
-              { type: 'silver', delta: -6 },
-              { type: 'stress', delta: 1 },
-            ],
-          },
-          critFailure: {
-            text: '{hero} never sees the trap in the wager until it\'s already sprung, and the tactician collects with the particular satisfaction of someone who expected exactly this.',
-            outcomes: [
-              { type: 'silver', delta: -14 },
-              { type: 'standing', faction: 'BEASTFOLK', delta: -1 },
-            ],
-          },
+        critSuccess: {
+          text: '{hero} reads her tells three moves before she makes them and takes the wager clean. She doesn\'t look angry about losing — she looks like she\'s already telling the story wrong on purpose, the better version, the one where the post has someone worth reckoning with.',
+          outcomes: [outcome.standing('BEASTFOLK', 4), outcome.history('Out-thought an orc tactician at her own game and earned the wilds\' respect.')],
+        },
+        success: {
+          text: '{hero} scrapes out a win by a margin neither of them is proud of, and the tactician concedes it with a short, genuine nod — the kind she doesn\'t hand out for free.',
+          outcomes: [outcome.standing('BEASTFOLK', 2)],
+        },
+        failure: {
+          text: 'She reads {hero} easily and takes the wager without much of a fight. It stings more than losing a wrestle would have.',
+          outcomes: [outcome.silver(-6), outcome.stress(1)],
+        },
+        critFailure: {
+          text: '{hero} never sees the trap in the wager until it\'s already sprung, and the tactician collects with the particular satisfaction of someone who expected exactly this.',
+          outcomes: [outcome.silver(-14), outcome.standing('BEASTFOLK', -1)],
         },
       },
       {
+        type: 'flat',
         label: 'Decline — it\'s a game built for her to win.',
-        outcomes: {
-          success: {
-            text: '{hero} begs off, and the tactician doesn\'t press it. She simply files the answer away, unimpressed, and turns back to whatever she was doing before {hero} interrupted it.',
-            outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: -1 }],
-          },
-        },
+        text: '{hero} begs off, and the tactician doesn\'t press it. She simply files the answer away, unimpressed, and turns back to whatever she was doing before {hero} interrupted it.',
+        outcomes: [outcome.standing('BEASTFOLK', -1)],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'beastfolk_visitors',
     category: 'post',
     illustration: 'beastfolk_visitors',
@@ -259,26 +208,20 @@ export const ORC_FLAVOR_EVENTS: GameEvent[] = [
     arc: 'beastfolk_flavor',
     choices: [
       {
+        type: 'flat',
         label: 'Let them look — a post with nothing to hide has nothing to fear.',
-        outcomes: {
-          success: {
-            text: '{hero} tells the guards to stand easy and let the visitors wander. Whatever they came here to decide, they\'ll decide it with better information than rumor gives them.',
-            outcomes: [
-              { type: 'addTransient', kind: 'beastfolkVisitors', count: 4, turns: 3 },
-              { type: 'history', text: 'Let a handful of orcs and goblins linger at market to size the post up.' },
-            ],
-          },
-        },
+        text: '{hero} tells the guards to stand easy and let the visitors wander. Whatever they came here to decide, they\'ll decide it with better information than rumor gives them.',
+        outcomes: [
+          { type: 'addTransient', kind: 'beastfolkVisitors', count: 4, turns: 3 },
+          outcome.history('Let a handful of orcs and goblins linger at market to size the post up.'),
+        ],
       },
       {
+        type: 'flat',
         label: 'Keep them at the market gate and no further.',
-        outcomes: {
-          success: {
-            text: '{hero} draws a line they\'re welcome up to and not past. They take the boundary without complaint — maybe that was the actual test.',
-            outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: 1 }],
-          },
-        },
+        text: '{hero} draws a line they\'re welcome up to and not past. They take the boundary without complaint — maybe that was the actual test.',
+        outcomes: [outcome.standing('BEASTFOLK', 1)],
       },
     ],
-  },
+  }),
 ];

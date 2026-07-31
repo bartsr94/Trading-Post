@@ -202,6 +202,16 @@ export function evalCondition(
       const hero = state.heroes.find((h) => h.id === heroId);
       return (hero?.counters?.[cond.key] ?? 0) <= cond.value;
     }
+    case 'figureExists':
+      return state.factionFigures[cond.figureId] !== undefined;
+    case 'figureNotExists':
+      return state.factionFigures[cond.figureId] === undefined;
+    case 'figureCounterAtLeast':
+      return (state.factionFigures[cond.figureId]?.counters?.[cond.key] ?? 0) >= cond.value;
+    case 'figureCounterAtMost':
+      return (state.factionFigures[cond.figureId]?.counters?.[cond.key] ?? 0) <= cond.value;
+    case 'figureHeldByPost':
+      return state.factionFigures[cond.figureId]?.heldByPost !== undefined;
     case 'expeditionKind':
       return ctx.travel !== undefined && ctx.travel.expedition.kind === cond.kind;
     case 'expeditionLeg':

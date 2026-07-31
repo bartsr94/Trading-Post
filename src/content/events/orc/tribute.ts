@@ -3,9 +3,10 @@
 // moved to ../../goblin/tribute.ts (2026-07-27).
 
 import type { GameEvent } from '../../../engine/events/types';
+import { makeChoiceEvent, outcome } from '../eventHelpers';
 
 export const ORC_TRIBUTE_EVENTS: GameEvent[] = [
-  {
+  makeChoiceEvent({
     id: 'beastfolk_orc_tribute',
     category: 'post',
     illustration: 'orc_demand',
@@ -23,55 +24,38 @@ export const ORC_TRIBUTE_EVENTS: GameEvent[] = [
     arc: 'orc_tribute',
     choices: [
       {
+        type: 'flat',
         label: 'Pay what she asks — buy this season\'s quiet.',
-        outcomes: {
-          success: {
-            text: 'You count it out yourself, in the open, and make the bargain plain: this season’s due in exchange for a season’s peace. She takes it without thanks, but with understanding. So long as the due keeps coming, her band will leave the post alone.',
-            outcomes: [
-              { type: 'silver', delta: -25 },
-              { type: 'good', good: 'grain', delta: -5 },
-              { type: 'tribute', faction: 'BEASTFOLK', direction: 'pay', silver: 12, goods: { grain: 3 } },
-              { type: 'standing', faction: 'BEASTFOLK', delta: 2 },
-              { type: 'history', text: 'Paid an orc war-band to leave the post in peace.' },
-            ],
-          },
-        },
+        text: 'You count it out yourself, in the open, and make the bargain plain: this season’s due in exchange for a season’s peace. She takes it without thanks, but with understanding. So long as the due keeps coming, her band will leave the post alone.',
+        outcomes: [
+          outcome.silver(-25),
+          outcome.good('grain', -5),
+          { type: 'tribute', faction: 'BEASTFOLK', direction: 'pay', silver: 12, goods: { grain: 3 } },
+          outcome.standing('BEASTFOLK', 2),
+          outcome.history('Paid an orc war-band to leave the post in peace.'),
+        ],
       },
       {
+        type: 'checked',
         label: 'Send {hero} to face her down and refuse.',
         check: { skill: 'leadership', stat: 'resolve', difficulty: 11, tags: ['BEASTFOLK'] },
-        outcomes: {
-          critSuccess: {
-            text: '{hero} doesn\'t flinch, doesn\'t reach for a weapon, simply says no in a voice that ends the conversation. The spokeswoman studies {hero} a long moment — then laughs, once, and walks her band off without a backward look. That kind of nerve, it turns out, is its own currency here.',
-            outcomes: [
-              { type: 'standing', faction: 'BEASTFOLK', delta: 3 },
-              { type: 'history', text: 'Refused an orc war-band\'s demand and won their grudging respect.' },
-            ],
-          },
-          success: {
-            text: '{hero} holds the line. The spokeswoman spits, mutters something uncomplimentary, and the camp breaks by evening — nothing taken, nothing given.',
-            outcomes: [{ type: 'standing', faction: 'BEASTFOLK', delta: 1 }],
-          },
-          failure: {
-            text: 'The refusal doesn\'t land the way {hero} meant it to. By the time the war-band moves on, the storehouse is short more than they ever asked for, and the point has been made the hard way.',
-            outcomes: [
-              { type: 'good', good: 'grain', delta: -10 },
-              { type: 'silver', delta: -15 },
-              { type: 'standing', faction: 'BEASTFOLK', delta: -3 },
-              { type: 'stress', delta: 1 },
-            ],
-          },
-          critFailure: {
-            text: 'Refusing turns out to have been exactly the wrong read. What the war-band takes on the way out costs far more than the price {hero} wouldn\'t pay, and they leave certain the post is theirs to lean on whenever they like.',
-            outcomes: [
-              { type: 'good', good: 'grain', delta: -18 },
-              { type: 'silver', delta: -30 },
-              { type: 'standing', faction: 'BEASTFOLK', delta: -6 },
-              { type: 'stress', delta: 2 },
-            ],
-          },
+        critSuccess: {
+          text: '{hero} doesn\'t flinch, doesn\'t reach for a weapon, simply says no in a voice that ends the conversation. The spokeswoman studies {hero} a long moment — then laughs, once, and walks her band off without a backward look. That kind of nerve, it turns out, is its own currency here.',
+          outcomes: [outcome.standing('BEASTFOLK', 3), outcome.history('Refused an orc war-band\'s demand and won their grudging respect.')],
+        },
+        success: {
+          text: '{hero} holds the line. The spokeswoman spits, mutters something uncomplimentary, and the camp breaks by evening — nothing taken, nothing given.',
+          outcomes: [outcome.standing('BEASTFOLK', 1)],
+        },
+        failure: {
+          text: 'The refusal doesn\'t land the way {hero} meant it to. By the time the war-band moves on, the storehouse is short more than they ever asked for, and the point has been made the hard way.',
+          outcomes: [outcome.good('grain', -10), outcome.silver(-15), outcome.standing('BEASTFOLK', -3), outcome.stress(1)],
+        },
+        critFailure: {
+          text: 'Refusing turns out to have been exactly the wrong read. What the war-band takes on the way out costs far more than the price {hero} wouldn\'t pay, and they leave certain the post is theirs to lean on whenever they like.',
+          outcomes: [outcome.good('grain', -18), outcome.silver(-30), outcome.standing('BEASTFOLK', -6), outcome.stress(2)],
         },
       },
     ],
-  },
+  }),
 ];

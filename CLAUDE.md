@@ -218,6 +218,33 @@ cross-reference.
   field (`engine/events/types.ts`, cataloging-only like `peoples`/
   `factions`/`loreRef`) with `<prefix>_<arc-name>` so `npm run catalog`'s
   "Arcs" section groups events across file boundaries.
+- **Event construction helpers** (`content/events/eventHelpers.ts`,
+  `docs/EVENT_TEXT_SEPARATION_SPEC.md` has the full rationale/measurements):
+  every content file builds events through this shared, domain-agnostic
+  layer rather than hand-written object literals — `makeChoiceEvent` (one
+  function for every event shape, taking an ordered `choices: ChoiceSpec[]`
+  array — `ChoiceSpec` is a discriminated union, `{type:'checked',...}` for
+  a check-gated choice or `{type:'flat',...}` for a no-check "success"-only
+  choice, following the same `type`-as-discriminant convention as
+  `Outcome`/`Condition`/`HeroBinding` — and defaulting `category`/`weight`/
+  `binding` to the common chain-reaction values), plus an `outcome` object
+  of one-line builders for the dominant simple `Outcome` shapes (`silver`/
+  `good`/`cargo`/`expeditionSilver`/`standing`/`stress`/`health`/`history`/
+  `heroCounter`/`setFlag`/`continueChain`/`captureHero`/`contentment`/
+  `friction`/`figureCounter`). Both are pure syntactic sugar — return types
+  are still `Outcome`/`GameEvent`/`Choice`, so `tsc` still catches mistakes,
+  and no prose is ever externalized. **Choice order is significant** (it's
+  the on-screen order) — `ChoiceSpec[]` is deliberately order-agnostic (any
+  mix of `checked`/`flat` in any sequence) specifically so no event shape
+  needs to fall back to a plain literal for ordering reasons; a prior
+  two-helper split (`makeCheckChoiceEvent`/`makeFlatChoice`, retired
+  2026-07-31) assumed one checked choice first, which excluded 23% of the
+  corpus purely on ordering — don't reintroduce that constraint. Add a new
+  `outcome.*` case only once a shape has actually recurred 3+ times in real
+  content, not speculatively for every `Outcome` variant — the same
+  discipline applies to adding a per-file local factory (like
+  `goblin/ambush.ts`'s `makeAmbushReactionEvent`) for a shape `makeChoiceEvent`
+  doesn't cover on its own.
 - **Chain events** (see `docs/GAME_FEATURES.md` §3): `EventPanel.tsx`/
   `advancePendingEvent` needed no change for `continueChain` since both
   already just operate on `pendingEvents[0]`. `ConditionContext` gained one

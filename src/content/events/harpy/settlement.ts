@@ -2,9 +2,10 @@
 // watch and hunters. See ./index.ts for shared context.
 
 import type { GameEvent } from '../../../engine/events/types';
+import { makeChoiceEvent, outcome } from '../eventHelpers';
 
 export const HARPY_SETTLEMENT_EVENTS: GameEvent[] = [
-  {
+  makeChoiceEvent({
     id: 'harpy_settlement',
     category: 'post',
     illustration: 'harpy_settlers',
@@ -22,32 +23,26 @@ export const HARPY_SETTLEMENT_EVENTS: GameEvent[] = [
     arc: 'harpy_settlement',
     choices: [
       {
+        type: 'flat',
         label: 'Give them the wall and the hunting grounds.',
-        outcomes: {
-          success: {
-            text: 'They roost along the highest points of the palisade and take to the sky at dawn and dusk, and nothing crosses the open ground for a mile without the watch knowing. Some of the post\'s own are slow to sleep easy under that shadow — but the walls have keener eyes on them than they have ever had.',
-            outcomes: [
-              { type: 'addResidents', role: 'guards', count: 2, tag: 'harpy', group: 'native' },
-              { type: 'addResidents', role: 'hunters', count: 1, tag: 'harpy', group: 'native' },
-              { type: 'standing', faction: 'HARPY', delta: 4 },
-              { type: 'contentment', delta: -1 },
-              // A roost is not yet a welcome — settling in is its own slow arc
-              // (harpy_integration), not resolved by this one yes.
-              { type: 'friction', heritage: 'harpy', delta: 7 },
-              { type: 'history', text: 'A flight of harpies settled at the post as watch and hunters.' },
-            ],
-          },
-        },
+        text: 'They roost along the highest points of the palisade and take to the sky at dawn and dusk, and nothing crosses the open ground for a mile without the watch knowing. Some of the post\'s own are slow to sleep easy under that shadow — but the walls have keener eyes on them than they have ever had.',
+        outcomes: [
+          { type: 'addResidents', role: 'guards', count: 2, tag: 'harpy', group: 'native' },
+          { type: 'addResidents', role: 'hunters', count: 1, tag: 'harpy', group: 'native' },
+          outcome.standing('HARPY', 4),
+          outcome.contentment(-1),
+          // A roost is not yet a welcome — settling in is its own slow arc
+          // (harpy_integration), not resolved by this one yes.
+          outcome.friction('harpy', 7),
+          outcome.history('A flight of harpies settled at the post as watch and hunters.'),
+        ],
       },
       {
+        type: 'flat',
         label: 'Decline — the post is not ready to sleep under their wings.',
-        outcomes: {
-          success: {
-            text: '{hero} turns them away as gently as the thing allows. They take it without rancor, spread their wings, and are gone on the next gust to try their luck over country less crowded with reasons to say no.',
-            outcomes: [{ type: 'standing', faction: 'HARPY', delta: -2 }],
-          },
-        },
+        text: '{hero} turns them away as gently as the thing allows. They take it without rancor, spread their wings, and are gone on the next gust to try their luck over country less crowded with reasons to say no.',
+        outcomes: [outcome.standing('HARPY', -2)],
       },
     ],
-  },
+  }),
 ];

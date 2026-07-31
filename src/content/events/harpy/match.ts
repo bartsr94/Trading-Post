@@ -2,9 +2,10 @@
 // for shared context.
 
 import type { GameEvent } from '../../../engine/events/types';
+import { makeChoiceEvent, outcome } from '../eventHelpers';
 
 export const HARPY_MATCH_EVENTS: GameEvent[] = [
-  {
+  makeChoiceEvent({
     id: 'harpy_match',
     category: 'post',
     illustration: 'harpy_arrival',
@@ -25,28 +26,22 @@ export const HARPY_MATCH_EVENTS: GameEvent[] = [
     arc: 'harpy_match',
     choices: [
       {
+        type: 'flat',
         label: 'Welcome her into the household.',
-        outcomes: {
-          success: {
-            text: 'There is no rite the Company would name a marriage — only her word and {hero}\'s, and a roof that now shelters one of the crag-born. Word of it will reach the aeries on the wind, and reach them as proof the post keeps faith with those who come down to it.',
-            outcomes: [
-              { type: 'formUnion', source: 'alliance', heritage: 'harpy' },
-              { type: 'standing', faction: 'HARPY', delta: 8 },
-              { type: 'addTrait', trait: 'wed_harpy' },
-              { type: 'history', text: 'Wed a harpy who came down from the crags and chose the post.' },
-            ],
-          },
-        },
+        text: 'There is no rite the Company would name a marriage — only her word and {hero}\'s, and a roof that now shelters one of the crag-born. Word of it will reach the aeries on the wind, and reach them as proof the post keeps faith with those who come down to it.',
+        outcomes: [
+          { type: 'formUnion', source: 'alliance', heritage: 'harpy' },
+          outcome.standing('HARPY', 8),
+          { type: 'addTrait', trait: 'wed_harpy' },
+          outcome.history('Wed a harpy who came down from the crags and chose the post.'),
+        ],
       },
       {
+        type: 'flat',
         label: 'Send her back to the wind — this is not a bond you are ready to make.',
-        outcomes: {
-          success: {
-            text: 'She hears the refusal out, unblinking, and takes it the way the crag-born take most things — without argument and without forgetting. She is airborne before {hero} finishes speaking, and does not come down again.',
-            outcomes: [{ type: 'standing', faction: 'HARPY', delta: -3 }],
-          },
-        },
+        text: 'She hears the refusal out, unblinking, and takes it the way the crag-born take most things — without argument and without forgetting. She is airborne before {hero} finishes speaking, and does not come down again.',
+        outcomes: [outcome.standing('HARPY', -3)],
       },
     ],
-  },
+  }),
 ];

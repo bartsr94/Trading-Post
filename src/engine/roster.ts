@@ -5,7 +5,7 @@
 
 import { TUNING } from '../content/tuning';
 import { activeHeroes, awayHeroIds, defaultSubPeople, SKILL_IDS } from './types';
-import type { Dependant, GameState, Hero, RecruitDef, SkillId } from './types';
+import type { Dependant, FactionFigure, GameState, Hero, RecruitDef, SkillId } from './types';
 
 // ------------------------------------------------------------- selectors
 
@@ -108,6 +108,41 @@ export function recruitCharacter(state: GameState, def: RecruitDef, toActive = f
     state.assignments[hero.id] = 'unassigned';
   }
   if (def.joinFlag) state.flags[def.joinFlag] = true;
+  return hero;
+}
+
+/**
+ * Promotes a named faction figure (NAMED_NPCS_SPEC.md) into a real roster
+ * Hero, carrying over its *current* identity/condition (stats, skills,
+ * traits, health) rather than template defaults — unlike `recruitCharacter`,
+ * which always builds fresh from a `RecruitDef`. Caller (the `recruitFigure`
+ * outcome) is responsible for removing the figure from `state.factionFigures`.
+ */
+export function recruitFactionFigure(state: GameState, figure: FactionFigure, toActive = false): Hero {
+  const id = `c${state.nextCharacterId}`;
+  state.nextCharacterId += 1;
+  const hero: Hero = {
+    id,
+    name: figure.name,
+    epithet: figure.epithet,
+    bio: figure.bio,
+    stats: { ...figure.stats },
+    skills: { ...figure.skills },
+    skillMarks: [],
+    traits: [...figure.traits],
+    health: figure.health,
+    stress: 0,
+    status: 'active',
+    heritage: figure.heritage,
+    subPeople: figure.subPeople ?? defaultSubPeople(figure.heritage),
+    gender: figure.gender,
+    history: [`Joined the company in turn ${state.turn}.`],
+  };
+  state.heroes.push(hero);
+  if (toActive && activeHeroes(state).length < activeCap(state)) {
+    state.activePartyIds.push(hero.id);
+    state.assignments[hero.id] = 'unassigned';
+  }
   return hero;
 }
 

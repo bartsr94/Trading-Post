@@ -43,6 +43,7 @@ function outcomeCtx(state: GameState): OutcomeContext {
     locationDefs: TEST_CONTENT.locationDefs,
     buildingNames: new Map(),
     recruitDefs: new Map(),
+    factionFigureDefs: new Map(),
     dependantName: () => 'Test',
   };
 }

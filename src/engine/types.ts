@@ -542,6 +542,61 @@ export interface Hero {
   counters?: Record<string, number>;
 }
 
+/**
+ * Data to instantiate a named individual belonging to a faction/people
+ * (NAMED_NPCS_SPEC.md) — met in events, and possibly recruited, antagonized/
+ * captured, or married into the family over the course of a chain. Content
+ * provides instances (content/factionFigures.ts); the engine builds the
+ * runtime `FactionFigure`, injected via TurnContext, same split as `RecruitDef`.
+ */
+export interface FactionFigureDef {
+  id: string;
+  name: string;
+  epithet: string;
+  bio: string;
+  heritage: Heritage;
+  subPeople?: string;
+  gender: Gender;
+  faction: FactionId;
+  stats: Record<StatId, number>;
+  skills: Partial<Record<SkillId, number>>;
+  traits: TraitId[];
+  portraitKey?: string;
+}
+
+/**
+ * A named individual belonging to a faction/people, not (yet) part of the
+ * player's roster (NAMED_NPCS_SPEC.md). Deliberately not folded into `Hero`/
+ * `HeroStatus`: doing so would need every `status === 'active'` selector
+ * (`livingHeroes`, grain, `brokenCompany`, ...) to carve out "exists, but
+ * isn't really here." Instead a figure only ever becomes a real `Hero` via
+ * the `recruitFigure` outcome. Recruiting, marrying out (`marryFigure`), or
+ * ransoming (`ransomFigure`) one removes it from `GameState.factionFigures`
+ * for good — a one-shot arc, not a repopulating slot.
+ */
+export interface FactionFigure {
+  id: string;
+  name: string;
+  epithet: string;
+  bio: string;
+  portraitKey?: string;
+  stats: Record<StatId, number>;
+  skills: Record<SkillId, number>;
+  traits: TraitId[];
+  health: number;
+  gender: Gender;
+  heritage: Heritage;
+  subPeople?: string;
+  faction: FactionId;
+  /** Free-form named counters, same idiom as `Hero.counters` — the personal
+   *  antagonize/rapport track, entirely separate from faction `standing`.
+   *  Absent key === 0; content invents keys, the engine never branches on one. */
+  counters?: Record<string, number>;
+  /** Set while the post holds them — an antagonize-escalation capture,
+   *  mirroring `Hero.captivity` in reverse (the post is the captor here). */
+  heldByPost?: { capturedTurn: number };
+}
+
 /** A trait definition (content provides instances; engine only consumes). */
 export interface TraitDef {
   id: TraitId;
@@ -865,6 +920,10 @@ export interface GameState {
   nextDependantId: number;
   /** Monotonic counter for recruited-character runtime ids (CHARACTERS_SPEC.md §3.1). */
   nextCharacterId: number;
+  /** Named individuals belonging to a faction/people, keyed by id, not yet
+   *  recruited/married out/ransomed (NAMED_NPCS_SPEC.md). Starts empty; a
+   *  figure only ever enters via the `introduceFigure` outcome. */
+  factionFigures: Record<string, FactionFigure>;
   /** The post's unnamed population (RESIDENTS_SPEC.md). */
   residents: ResidentState;
   /** Forced labor held by the post — thralls/"indentured labor" (THRALLS_SPEC.md). */

@@ -67,6 +67,7 @@ import {
 import type {
   BuildingId,
   ExpeditionState,
+  FactionFigureDef,
   GameState,
   Gender,
   GoodId,
@@ -95,6 +96,9 @@ export interface TurnContext {
   locationNames: ReadonlyMap<LocationId, string>;
   buildingNames: ReadonlyMap<BuildingId, string>;
   recruitDefs: ReadonlyMap<string, RecruitDef>;
+  /** Named faction-figure templates by id (NAMED_NPCS_SPEC.md), injected the
+   *  same way as recruitDefs. */
+  factionFigureDefs: ReadonlyMap<string, FactionFigureDef>;
   /** A dependant name for a people + gender, picked deterministically by seed. */
   dependantName: (heritage: Heritage, gender: Gender, seed: number) => string;
 }
@@ -117,6 +121,7 @@ export function outcomeCtx(
     locationDefs: ctx.locationDefs,
     buildingNames: ctx.buildingNames,
     recruitDefs: ctx.recruitDefs,
+    factionFigureDefs: ctx.factionFigureDefs,
     dependantName: ctx.dependantName,
     rng,
   };
@@ -751,6 +756,9 @@ export interface ChoiceResolution {
   tier: keyof Choice['outcomes'];
   resultText: string;
   log: string[];
+  /** The resolved tier's `illustration` override, else the choice's, else
+   *  the event's own. */
+  illustration: string;
 }
 
 /** Resolves a player's event choice: roll the check (if any), apply outcomes.
@@ -812,7 +820,13 @@ export function resolveChoice(
   state.rngState = rng.getState();
   checkBrokenCompany(state);
 
-  return { check, tier, resultText: result.text, log };
+  return {
+    check,
+    tier,
+    resultText: result.text,
+    log,
+    illustration: result.illustration ?? choice.illustration ?? event.illustration,
+  };
 }
 
 /** Missing tiers fall back sensibly: crit→normal, failure→success. */

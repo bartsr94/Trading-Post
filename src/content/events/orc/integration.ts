@@ -4,9 +4,10 @@
 // counterpart moved to ../../goblin/integration.ts (2026-07-27).
 
 import type { GameEvent } from '../../../engine/events/types';
+import { makeChoiceEvent, outcome } from '../eventHelpers';
 
 export const ORC_INTEGRATION_EVENTS: GameEvent[] = [
-  {
+  makeChoiceEvent({
     id: 'beastfolk_integration_orc',
     category: 'post',
     illustration: 'beastfolk_friction',
@@ -24,49 +25,39 @@ export const ORC_INTEGRATION_EVENTS: GameEvent[] = [
     arc: 'orc_integration',
     choices: [
       {
+        type: 'checked',
         label: 'Sit both sides down and clear the air.',
         check: { skill: 'leadership', stat: 'resolve', difficulty: 10, tags: ['BEASTFOLK', 'diplomacy'] },
-        outcomes: {
-          critSuccess: {
-            text: '{hero} doesn\'t lecture anyone — just makes both sides say their piece in front of each other, then makes them agree on one thing before they leave. It\'s a small thing, but it\'s the first small thing that\'s gone right between them.',
-            outcomes: [
-              { type: 'friction', heritage: 'orc', delta: -5 },
-              { type: 'contentment', delta: 1 },
-              { type: 'history', text: 'Talked down a flare-up between residents and the post\'s orcs.' },
-            ],
-          },
-          success: {
-            text: 'It\'s an awkward hour, but {hero} keeps both sides talking instead of stewing, and something eases, a little.',
-            outcomes: [{ type: 'friction', heritage: 'orc', delta: -3 }],
-          },
-          failure: {
-            text: 'The conversation goes nowhere — both sides say their piece and neither one hears it. If anything, saying it out loud made the grudge more official.',
-            outcomes: [
-              { type: 'friction', heritage: 'orc', delta: 1 },
-              { type: 'stress', delta: 1 },
-            ],
-          },
-          critFailure: {
-            text: '{hero} says the wrong thing to the wrong person, and what was grumbling becomes a shouting match half the post overhears. Nobody comes out of this looking reasonable.',
-            outcomes: [
-              { type: 'friction', heritage: 'orc', delta: 2 },
-              { type: 'contentment', delta: -1 },
-            ],
-          },
+        critSuccess: {
+          text: '{hero} doesn\'t lecture anyone — just makes both sides say their piece in front of each other, then makes them agree on one thing before they leave. It\'s a small thing, but it\'s the first small thing that\'s gone right between them.',
+          outcomes: [
+            outcome.friction('orc', -5),
+            outcome.contentment(1),
+            outcome.history('Talked down a flare-up between residents and the post\'s orcs.'),
+          ],
+        },
+        success: {
+          text: 'It\'s an awkward hour, but {hero} keeps both sides talking instead of stewing, and something eases, a little.',
+          outcomes: [outcome.friction('orc', -3)],
+        },
+        failure: {
+          text: 'The conversation goes nowhere — both sides say their piece and neither one hears it. If anything, saying it out loud made the grudge more official.',
+          outcomes: [outcome.friction('orc', 1), outcome.stress(1)],
+        },
+        critFailure: {
+          text: '{hero} says the wrong thing to the wrong person, and what was grumbling becomes a shouting match half the post overhears. Nobody comes out of this looking reasonable.',
+          outcomes: [outcome.friction('orc', 2), outcome.contentment(-1)],
         },
       },
       {
+        type: 'flat',
         label: 'Let them work it out themselves.',
-        outcomes: {
-          success: {
-            text: '{hero} decides this isn\'t worth spending authority on yet. Whether that\'s wisdom or just avoidance, the grumbling doesn\'t go anywhere on its own.',
-            outcomes: [{ type: 'friction', heritage: 'orc', delta: 1 }],
-          },
-        },
+        text: '{hero} decides this isn\'t worth spending authority on yet. Whether that\'s wisdom or just avoidance, the grumbling doesn\'t go anywhere on its own.',
+        outcomes: [outcome.friction('orc', 1)],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'beastfolk_integration_settled_orc',
     category: 'post',
     illustration: 'beastfolk_settled',
@@ -84,18 +75,15 @@ export const ORC_INTEGRATION_EVENTS: GameEvent[] = [
     arc: 'orc_integration',
     choices: [
       {
+        type: 'flat',
         label: 'Good. Let it stand.',
-        outcomes: {
-          success: {
-            text: 'The post is a little more itself for it — one less line dividing who belongs and who\'s merely tolerated.',
-            outcomes: [
-              { type: 'standing', faction: 'BEASTFOLK', delta: 2 },
-              { type: 'contentment', delta: 1 },
-              { type: 'history', text: 'The post\'s orc residents finished settling in, grudge-free.' },
-            ],
-          },
-        },
+        text: 'The post is a little more itself for it — one less line dividing who belongs and who\'s merely tolerated.',
+        outcomes: [
+          outcome.standing('BEASTFOLK', 2),
+          outcome.contentment(1),
+          outcome.history('The post\'s orc residents finished settling in, grudge-free.'),
+        ],
       },
     ],
-  },
+  }),
 ];

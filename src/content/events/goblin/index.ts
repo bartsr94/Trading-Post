@@ -21,6 +21,7 @@ import { GOBLIN_AMBUSH_EVENTS } from './ambush';
 import { GOBLIN_FIRST_ENCOUNTER_EVENTS } from './firstEncounter';
 import { GOBLIN_INTEGRATION_EVENTS } from './integration';
 import { GOBLIN_MATCH_EVENTS } from './match';
+import { GOBLIN_TALLYKEEPER_EVENTS } from './tallykeeper';
 import { GOBLIN_TRIBUTE_EVENTS } from './tribute';
 
 export const GOBLIN_EVENTS: GameEvent[] = [
@@ -29,4 +30,5 @@ export const GOBLIN_EVENTS: GameEvent[] = [
   ...GOBLIN_FIRST_ENCOUNTER_EVENTS,
   ...GOBLIN_INTEGRATION_EVENTS,
   ...GOBLIN_AMBUSH_EVENTS,
+  ...GOBLIN_TALLYKEEPER_EVENTS,
 ];

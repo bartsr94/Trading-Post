@@ -98,6 +98,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     dependants: [],
     nextDependantId: 1,
     nextCharacterId: 1,
+    factionFigures: {},
     residents,
     thralls: freshThralls(),
     claim: freshClaim(),

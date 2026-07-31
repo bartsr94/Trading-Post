@@ -9,6 +9,7 @@ import { LOCATION_DEFS, LOCATION_NAMES } from './locations';
 import { dependantName } from './names';
 import { MAP_FEATURES, MAP_REGIONS } from './map';
 import { RECRUIT_DEFS } from './recruits';
+import { FACTION_FIGURE_DEFS } from './factionFigures';
 import { TRAIT_DEFS, TRAIT_NAMES } from './traits';
 
 export const CONTENT: TurnContext = {
@@ -24,5 +25,6 @@ export const CONTENT: TurnContext = {
   locationNames: LOCATION_NAMES,
   buildingNames: BUILDING_NAMES,
   recruitDefs: RECRUIT_DEFS,
+  factionFigureDefs: FACTION_FIGURE_DEFS,
   dependantName,
 };

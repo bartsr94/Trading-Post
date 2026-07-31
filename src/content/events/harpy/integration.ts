@@ -2,9 +2,10 @@
 // ./settlement.ts starts, it opens one. See ./index.ts for shared context.
 
 import type { GameEvent } from '../../../engine/events/types';
+import { makeChoiceEvent, outcome } from '../eventHelpers';
 
 export const HARPY_INTEGRATION_EVENTS: GameEvent[] = [
-  {
+  makeChoiceEvent({
     id: 'harpy_integration',
     category: 'post',
     illustration: 'harpy_friction',
@@ -22,49 +23,39 @@ export const HARPY_INTEGRATION_EVENTS: GameEvent[] = [
     arc: 'harpy_integration',
     choices: [
       {
+        type: 'checked',
         label: 'Make both sides share a watch and a fire.',
         check: { skill: 'leadership', stat: 'resolve', difficulty: 10, tags: ['HARPY', 'diplomacy'] },
-        outcomes: {
-          critSuccess: {
-            text: '{hero} does not lecture anyone — just pairs a crag-born to a homeland watch and makes them get through one cold night together. By dawn they are trading the flask and complaining about the same officer. It is a small thing, and it is the first small thing that has gone right between them.',
-            outcomes: [
-              { type: 'friction', heritage: 'harpy', delta: -5 },
-              { type: 'contentment', delta: 1 },
-              { type: 'history', text: 'Thawed the standoff between the post and its harpy watch.' },
-            ],
-          },
-          success: {
-            text: 'It is an awkward few nights, but {hero} keeps them working the same wall instead of avoiding it, and something eases, a little.',
-            outcomes: [{ type: 'friction', heritage: 'harpy', delta: -3 }],
-          },
-          failure: {
-            text: 'The pairing goes nowhere — both sides do the work and neither says a word to the other, and the silence sets harder than before.',
-            outcomes: [
-              { type: 'friction', heritage: 'harpy', delta: 1 },
-              { type: 'stress', delta: 1 },
-            ],
-          },
-          critFailure: {
-            text: '{hero} pushes the wrong pair together on the wrong night, and a shouted quarrel on the wall-walk wakes half the post. Nobody comes out of it looking reasonable, least of all {him}.',
-            outcomes: [
-              { type: 'friction', heritage: 'harpy', delta: 2 },
-              { type: 'contentment', delta: -1 },
-            ],
-          },
+        critSuccess: {
+          text: '{hero} does not lecture anyone — just pairs a crag-born to a homeland watch and makes them get through one cold night together. By dawn they are trading the flask and complaining about the same officer. It is a small thing, and it is the first small thing that has gone right between them.',
+          outcomes: [
+            outcome.friction('harpy', -5),
+            outcome.contentment(1),
+            outcome.history('Thawed the standoff between the post and its harpy watch.'),
+          ],
+        },
+        success: {
+          text: 'It is an awkward few nights, but {hero} keeps them working the same wall instead of avoiding it, and something eases, a little.',
+          outcomes: [outcome.friction('harpy', -3)],
+        },
+        failure: {
+          text: 'The pairing goes nowhere — both sides do the work and neither says a word to the other, and the silence sets harder than before.',
+          outcomes: [outcome.friction('harpy', 1), outcome.stress(1)],
+        },
+        critFailure: {
+          text: '{hero} pushes the wrong pair together on the wrong night, and a shouted quarrel on the wall-walk wakes half the post. Nobody comes out of it looking reasonable, least of all {him}.',
+          outcomes: [outcome.friction('harpy', 2), outcome.contentment(-1)],
         },
       },
       {
+        type: 'flat',
         label: 'Let them find their own footing.',
-        outcomes: {
-          success: {
-            text: '{hero} decides this is not worth spending authority on yet. Whether that is patience or avoidance, the muttering does not fade on its own.',
-            outcomes: [{ type: 'friction', heritage: 'harpy', delta: 1 }],
-          },
-        },
+        text: '{hero} decides this is not worth spending authority on yet. Whether that is patience or avoidance, the muttering does not fade on its own.',
+        outcomes: [outcome.friction('harpy', 1)],
       },
     ],
-  },
-  {
+  }),
+  makeChoiceEvent({
     id: 'harpy_integration_settled',
     category: 'post',
     illustration: 'harpy_settled',
@@ -82,18 +73,15 @@ export const HARPY_INTEGRATION_EVENTS: GameEvent[] = [
     arc: 'harpy_integration',
     choices: [
       {
+        type: 'flat',
         label: 'Good. Let it stand.',
-        outcomes: {
-          success: {
-            text: 'The post is a little more itself for it — one less line dividing who belongs and who is only tolerated, and a watch that now trusts its own eyes in the sky.',
-            outcomes: [
-              { type: 'standing', faction: 'HARPY', delta: 2 },
-              { type: 'contentment', delta: 1 },
-              { type: 'history', text: 'The post\'s harpy watch finished settling in, grudge-free.' },
-            ],
-          },
-        },
+        text: 'The post is a little more itself for it — one less line dividing who belongs and who is only tolerated, and a watch that now trusts its own eyes in the sky.',
+        outcomes: [
+          outcome.standing('HARPY', 2),
+          outcome.contentment(1),
+          outcome.history('The post\'s harpy watch finished settling in, grudge-free.'),
+        ],
       },
     ],
-  },
+  }),
 ];

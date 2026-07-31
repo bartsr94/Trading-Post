@@ -2,9 +2,10 @@
 // shared context.
 
 import type { GameEvent } from '../../../engine/events/types';
+import { makeChoiceEvent, outcome } from '../eventHelpers';
 
 export const GOBLIN_TRIBUTE_EVENTS: GameEvent[] = [
-  {
+  makeChoiceEvent({
     id: 'beastfolk_goblin_tribute',
     category: 'post',
     illustration: 'goblin_demand',
@@ -22,58 +23,47 @@ export const GOBLIN_TRIBUTE_EVENTS: GameEvent[] = [
     arc: 'goblin_tribute',
     choices: [
       {
+        type: 'flat',
         label: 'Fill the wagon — it is cheaper than a grudge.',
-        outcomes: {
-          success: {
-            text: '{hero} loads the wagon without ceremony, and makes the understanding explicit: the wagon now, and a smaller due each season after, so long as the clan keeps its word. The clan-mother counts the goods with a practiced eye and agrees.',
-            outcomes: [
-              { type: 'good', good: 'cloth', delta: -6 },
-              { type: 'good', good: 'tools', delta: -3 },
-              { type: 'tribute', faction: 'BEASTFOLK', direction: 'pay', goods: { cloth: 2, tools: 1 } },
-              { type: 'standing', faction: 'BEASTFOLK', delta: 2 },
-              { type: 'history', text: 'Paid a goblin clan to keep the peace.' },
-            ],
-          },
-        },
+        text: '{hero} loads the wagon without ceremony, and makes the understanding explicit: the wagon now, and a smaller due each season after, so long as the clan keeps its word. The clan-mother counts the goods with a practiced eye and agrees.',
+        outcomes: [
+          outcome.good('cloth', -6),
+          outcome.good('tools', -3),
+          { type: 'tribute', faction: 'BEASTFOLK', direction: 'pay', goods: { cloth: 2, tools: 1 } },
+          outcome.standing('BEASTFOLK', 2),
+          outcome.history('Paid a goblin clan to keep the peace.'),
+        ],
       },
       {
+        type: 'checked',
         label: 'Haggle her down to a fraction of what she asked.',
         check: { skill: 'bargain', stat: 'charm', difficulty: 10, tags: ['BEASTFOLK'] },
-        outcomes: {
-          critSuccess: {
-            text: 'The clan-mother laughs outright at {hero}\'s counter-offer — and then, to everyone\'s surprise, accepts something close to it. "You bargain like one of us," she says, which is either a compliment or a warning. Possibly both.',
-            outcomes: [
-              { type: 'good', good: 'cloth', delta: -1 },
-              { type: 'standing', faction: 'BEASTFOLK', delta: 3 },
-              { type: 'history', text: 'Out-haggled a goblin clan-mother and earned her respect.' },
-            ],
-          },
-          success: {
-            text: '{hero} talks the price down to something the storehouse won\'t miss. The clan-mother grumbles but takes the deal — a fair trade, by her own lights.',
-            outcomes: [
-              { type: 'good', good: 'cloth', delta: -2 },
-              { type: 'standing', faction: 'BEASTFOLK', delta: 1 },
-            ],
-          },
-          failure: {
-            text: 'She doesn\'t bargain so much as wait {hero} out, and it works. The wagon leaves fuller than it needed to, and the lesson — that this post can be talked into more than it meant to give — is the real price paid.',
-            outcomes: [
-              { type: 'good', good: 'cloth', delta: -9 },
-              { type: 'good', good: 'tools', delta: -4 },
-              { type: 'standing', faction: 'BEASTFOLK', delta: -2 },
-            ],
-          },
-          critFailure: {
-            text: 'The haggling turns sour; the clan-mother decides {hero} has been wasting her time and helps herself to a good deal more on the way out, calling it interest.',
-            outcomes: [
-              { type: 'good', good: 'cloth', delta: -14 },
-              { type: 'good', good: 'tools', delta: -6 },
-              { type: 'silver', delta: -10 },
-              { type: 'standing', faction: 'BEASTFOLK', delta: -4 },
-            ],
-          },
+        critSuccess: {
+          text: 'The clan-mother laughs outright at {hero}\'s counter-offer — and then, to everyone\'s surprise, accepts something close to it. "You bargain like one of us," she says, which is either a compliment or a warning. Possibly both.',
+          outcomes: [
+            outcome.good('cloth', -1),
+            outcome.standing('BEASTFOLK', 3),
+            outcome.history('Out-haggled a goblin clan-mother and earned her respect.'),
+          ],
+        },
+        success: {
+          text: '{hero} talks the price down to something the storehouse won\'t miss. The clan-mother grumbles but takes the deal — a fair trade, by her own lights.',
+          outcomes: [outcome.good('cloth', -2), outcome.standing('BEASTFOLK', 1)],
+        },
+        failure: {
+          text: 'She doesn\'t bargain so much as wait {hero} out, and it works. The wagon leaves fuller than it needed to, and the lesson — that this post can be talked into more than it meant to give — is the real price paid.',
+          outcomes: [outcome.good('cloth', -9), outcome.good('tools', -4), outcome.standing('BEASTFOLK', -2)],
+        },
+        critFailure: {
+          text: 'The haggling turns sour; the clan-mother decides {hero} has been wasting her time and helps herself to a good deal more on the way out, calling it interest.',
+          outcomes: [
+            outcome.good('cloth', -14),
+            outcome.good('tools', -6),
+            outcome.silver(-10),
+            outcome.standing('BEASTFOLK', -4),
+          ],
         },
       },
     ],
-  },
+  }),
 ];

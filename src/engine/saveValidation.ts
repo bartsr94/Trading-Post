@@ -238,6 +238,29 @@ function validateDependant(value: unknown, path: string): string {
   return id;
 }
 
+function validateFactionFigure(value: unknown, path: string): string {
+  const figure = record(value, path);
+  const id = string(figure.id, `${path}.id`);
+  string(figure.name, `${path}.name`);
+  string(figure.epithet, `${path}.epithet`);
+  if (typeof figure.bio !== 'string') invalid(`${path}.bio`, 'must be a string');
+  validateNumericRecord(figure.stats, STAT_IDS, `${path}.stats`);
+  validateNumericRecord(figure.skills, SKILL_IDS, `${path}.skills`);
+  stringArray(figure.traits, `${path}.traits`);
+  finite(figure.health, `${path}.health`);
+  enumValue(figure.gender, GENDERS, `${path}.gender`);
+  enumValue(figure.heritage, HERITAGES, `${path}.heritage`);
+  enumValue(figure.faction, FACTION_IDS, `${path}.faction`);
+  if (figure.subPeople !== undefined) string(figure.subPeople, `${path}.subPeople`);
+  if (figure.portraitKey !== undefined) string(figure.portraitKey, `${path}.portraitKey`);
+  if (figure.counters !== undefined) validateIntegerRecord(figure.counters, `${path}.counters`, true);
+  if (figure.heldByPost !== undefined) {
+    const held = record(figure.heldByPost, `${path}.heldByPost`);
+    nonNegativeInteger(held.capturedTurn, `${path}.heldByPost.capturedTurn`);
+  }
+  return id;
+}
+
 function validateSurvey(value: unknown, path: string, maxCell: number): void {
   const survey = record(value, path);
   enumValue(survey.tier, CHECK_TIERS, `${path}.tier`);
@@ -406,6 +429,12 @@ export function validateGameState(value: unknown): GameState {
   unique(dependantIds, 'save.dependants');
   nonNegativeInteger(state.nextDependantId, 'save.nextDependantId');
   nonNegativeInteger(state.nextCharacterId, 'save.nextCharacterId');
+
+  const factionFigures = record(state.factionFigures, 'save.factionFigures');
+  for (const [figureId, figureValue] of Object.entries(factionFigures)) {
+    const validatedId = validateFactionFigure(figureValue, `save.factionFigures.${figureId}`);
+    if (validatedId !== figureId) invalid(`save.factionFigures.${figureId}`, 'id must match its key');
+  }
 
   const residents = record(state.residents, 'save.residents');
   validateNumericRecord(residents.roles, RESIDENT_ROLES, 'save.residents.roles', true);
