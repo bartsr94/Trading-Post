@@ -20,7 +20,7 @@ checkout before making design/lore calls):
 - `docs/TODO_FEATURES.md` — the open design/feature backlog, organized by
   system. This and `GAME_FEATURES.md` are the only two places tracking
   shipped-vs-open status; don't duplicate that bookkeeping here.
-- `docs/*_SPEC.md` (a handful remain, e.g. `FAMILY_PHASE_D_SPEC.md`) — hold
+- `docs/*_SPEC.md` (a handful remain, e.g. `WILDS_FIRST_ENCOUNTER_SPEC.md`) — hold
   **only** still-open design for their area, not full specs to cross-check
   shipped behavior against (see **Feature workflow** below for how a spec
   starts full and ends up trimmed to this).
@@ -50,7 +50,7 @@ Once the feature ships, fold what was actually built into
 `docs/GAME_FEATURES.md` (and close the matching `docs/TODO_FEATURES.md`
 backlog item, if any). The spec file then either gets deleted or trimmed
 down to only whatever design is still genuinely open for that area — this
-is why the `docs/*_SPEC.md` files that remain (e.g. `FAMILY_PHASE_D_SPEC.md`)
+is why the `docs/*_SPEC.md` files that remain (e.g. `WILDS_FIRST_ENCOUNTER_SPEC.md`)
 hold open questions only, not full specs. The spec is the durable record of
 *why* a feature looks the way it does and what was considered along the
 way; `GAME_FEATURES.md` stays the always-current record of *what's true
@@ -203,8 +203,7 @@ cross-reference.
   `index.ts` barrel; Goblins got their own `content/events/goblin/`
   directory (2026-07-27) for tone reasons — see the next bullet for the
   mechanics and when/why a prefix becomes a directory like this.
-- **Event content organization** (`docs/EVENT_ORGANIZATION_SPEC.md` has the
-  full rationale): once a content prefix accumulates several distinct
+- **Event content organization**: once a content prefix accumulates several distinct
   narrative arcs, split it into a directory of one-file-per-arc +
   `index.ts` barrel re-exporting the combined array under the name other
   files already import — don't let a single prefix file keep growing

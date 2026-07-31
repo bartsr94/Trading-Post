@@ -28,7 +28,7 @@ regenerated, never hand-edited — see `docs/ADDING_EVENTS.md`).
 |---|---|
 | A feature/mechanic shipped, or existing behavior changed | `docs/GAME_FEATURES.md` — add or update its section. This is the only file under `docs/` actually tracked in git (see Gotchas below) and is the always-current "what's true now" reference. |
 | A backlog item got closed by this work | `docs/TODO_FEATURES.md` — remove or check off the closed item. |
-| Open design questions changed for a feature still in progress | The matching `docs/<FEATURE>_SPEC.md` (e.g. `FAMILY_PHASE_D_SPEC.md`, `TRADING_ECONOMY_SPEC.md`, `TURN_CADENCE_SPEC.md`, `ARCHITECTURE_CLEANUP_SPEC.md`). Trim it to only what's still genuinely open — once a feature fully ships, fold the built version into `GAME_FEATURES.md` and either delete the spec file or cut it down further. Don't let the two duplicate each other. |
+| Open design questions changed for a feature still in progress | The matching `docs/<FEATURE>_SPEC.md` (e.g. `WILDS_FIRST_ENCOUNTER_SPEC.md`, `TRADING_ECONOMY_SPEC.md`, `TURN_CADENCE_SPEC.md`, `EVENT_TEXT_SEPARATION_SPEC.md`). Trim it to only what's still genuinely open — once a feature fully ships, fold the built version into `GAME_FEATURES.md` and either delete the spec file or cut it down further. Don't let the two duplicate each other. |
 | A new cross-cutting architecture pattern, gotcha, or hard rule with no other home (not a feature description) | `CLAUDE.md` — keep it short; feature behavior belongs in `GAME_FEATURES.md`, not here. |
 | The event-authoring checklist or convention changed | `docs/ADDING_EVENTS.md`. |
 | Stack, setup steps, npm commands, or the high-level project description changed | `README.md`. |

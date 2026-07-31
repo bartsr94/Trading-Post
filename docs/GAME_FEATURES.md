@@ -302,6 +302,12 @@ only in orc range, etc. Orc and Goblin ranges both also keep the shared
 `beastfolk` tag (so the pooled `travel_beastfolk_toll` still fires); they
 replaced the single old `beast_wilds` overlay box.
 
+The Knights of St. Eirwen hold **two** separate `knights`-tagged polygons, not
+one: their main `knights_range` territory, plus a second, smaller
+`knights_enclave` hand-placed in the goblin/harpy borderland — deliberately
+below the overlay auto-tracer's noise floor and confirmed (Bartosz) as a real
+second enclave, not tracing artifact.
+
 ## 7. Residents & the Concession (settlement and farming)
 
 The post's unnamed population is a **typed role pool**
@@ -440,7 +446,21 @@ neither.
 
 **Dependants** (`GameState.dependants`) are named non-working family
 (spouse/child/kin) attached to a character — food only, no wages, uncapped,
-never counted in `residentTotal`.
+never counted in `residentTotal`. A mixed-heritage dependant gets its own
+display label (`mixedHeritageLabel`, `engine/family.ts`): Imanian × any native
+people reads as **"Townborn"**; two-or-more native peoples with no Imanian
+blood reads as **"Sauro"** (orc/goblin descent is never mixed, per the
+matrilineal-pure rule, so it never produces either label).
+`dependantHeritageBreakdown` buckets every dependant by this label (falling back to
+plain `Heritage` when pure) for the Outpost Overview's People column — a
+"Dependants" row (`ResidentsPanel.tsx`) shows the total plus the per-label
+breakdown, deliberately separate from `ResidentState.heritage`'s own tally
+(dependants stay outside `residentTotal`, so folding them in would break that
+field's sum-equals-`residentTotal` invariant). A parallel
+`dependantHeritageGroupCounts` folds dependants into the coarse homeland/
+native split for the same column's "Makeup" row (any native blood at all
+reads native, the same convention `recomputeBloodline` uses for the household
+bloodline marker).
 
 **Recruitment.** `RecruitDef` (content, `src/content/recruits.ts`, 7
 templates), injected via `TurnContext.recruitDefs`. `recruitCharacter`
@@ -457,16 +477,35 @@ unreachable outside the cheat console.
 `parentIds` and `spouseId`. Both `Hero` and `Dependant` carry a runtime
 `gender`; `Hero` gains an optional `bloodline` (`pure`/`mixed`); `Dependant`
 gains `ancestry.peoples` (dual-parentage: the deduped union of both parents'
-peoples), `union` (source), and `comeOfAge`.
+peoples), `union` (source), and `comeOfAge`. `Hero` also carries an optional
+`temperament?: string[]` — free-form personality-flavor tags (e.g.
+`steadfast`/`guarded`, `ambitious`/`sharp-tongued`), authored on 4 of the 12
+pool heroes (`content/heroes.ts`) and validated on save; not yet read by any
+condition, check, or binding — staged flavor data ahead of mechanical use.
 
-Three union sources, all via `formUnion`: **homeland** (a `courtship`
-expedition to Thornwatch — pays `homelandBridePrice` up front, bumps
-Company standing on arrival); **alliance** (an event chain with a Friendly+
-native faction, standing + culture-Frontier + a union trait); **informal**
-(a cheap at-post event, no faction boost, culture nudge only).
-`recomputeBloodline` marks a household `mixed` if any native blood is under
-the roof, else `pure`. Multiple spouses per hero are allowed
-(`maxSpousesPerHero`, 3).
+Four union sources. Three via `formUnion`, a hero marrying an outsider who
+joins as a new `Dependant`: **homeland** (a `courtship` expedition to
+Thornwatch — pays `homelandBridePrice` up front, bumps Company standing on
+arrival); **alliance** (an event chain with a Friendly+ native faction,
+standing + culture-Frontier + a union trait); **informal** (a cheap at-post
+event, no faction boost, culture nudge only). `recomputeBloodline` marks a
+household `mixed` if any native blood is under the roof, else `pure`.
+Multiple spouses per hero are allowed (`maxSpousesPerHero`, 3).
+
+The fourth, **hero-to-hero marriage** (`formHeroUnion`), is different in
+kind: two already-active roster heroes marry each other directly, with no
+new `Dependant` created — neither stops working or starts eating an extra
+ration, since both were already counted in `livingHeroes`. Each keeps their
+own household head (dependants are never re-parented); `recomputeBloodline`
+runs for both sides. `eligiblePartners(state, heroId)` finds other present,
+opposite-gender, `canWed`-eligible active heroes as candidates; the
+`partnerAvailable` condition gates on that list being non-empty. Content
+reaches it via the `pickPartner` outcome (stashes a random eligible partner's
+id as the chain var `formHeroUnion`'s `partnerId` defaults to) and the
+`{partner}` text token. Shipped example: **"Two Hearts at the Post"**
+(`family_party_spark` → `_ask`, `content/events/familyEvents.ts`) — a
+2-stage same-sitting chain where a successful ask marries the pair and grants
+the `wed_party` trait.
 
 **Children & coming of age.** `addChild` computes dual-parentage ancestry
 and a heritage-skewed gender roll. A season-end sweep
@@ -1122,7 +1161,8 @@ then Fire Now the queued follow-up instead of waiting out its `delayTurns`.
 
 ## 15. Failure states
 
-Four `GAME_OVER_KINDS`: `bankrupt` (3 consecutive missed-upkeep turns),
+Four `GAME_OVER_KINDS`: `bankrupt` (2 consecutive missed-upkeep turns,
+halved from 3 alongside the `turnsPerSeason` 6→3 cadence change — §1),
 `brokenCompany` (all heroes dead/departed — a captive hero is **not** counted
 as lost, since they may yet be ransomed or rescued, §17), `destroyed` (raid
 cascade, §11),
