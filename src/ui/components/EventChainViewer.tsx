@@ -49,26 +49,29 @@ function gatingSummary(node: ChainNode): string {
 function EdgeRow({ edge, nodesById }: { edge: ChainEdge; nodesById: Map<string, ChainNode> }) {
   const target = edge.targetId ? nodesById.get(edge.targetId) : undefined;
   return (
-    <div className="chain-edge">
-      <span className="chain-edge-choice" title={edge.choiceLabel}>
-        {edge.tier ? <span className="chain-edge-tier">{TIER_ABBR[edge.tier]}</span> : null}
-        {edge.choiceLabel}
-      </span>
-      {edge.illustrationOverridden && (
-        <span className="chain-edge-thumb" title={edge.illustration}>
-          <Illustration assetKey={edge.illustration} />
+    <>
+      <div className="chain-edge">
+        <span className="chain-edge-choice" title={edge.choiceLabel}>
+          {edge.tier ? <span className="chain-edge-tier">{TIER_ABBR[edge.tier]}</span> : null}
+          {edge.choiceLabel}
         </span>
-      )}
-      <AssetLabel assetKey={edge.illustration} />
-      {edge.kind ? (
-        <span className="chain-edge-arrow dim">
-          {edge.kind === 'queueEvent' ? `⏳ +${edge.delayTurns}t →` : '→'}{' '}
-          {target ? target.event.title : (edge.targetId ?? '?')}
-        </span>
-      ) : (
-        <span className="chain-edge-end dim">(ends here)</span>
-      )}
-    </div>
+        {edge.illustrationOverridden && (
+          <span className="chain-edge-thumb" title={edge.illustration}>
+            <Illustration assetKey={edge.illustration} />
+          </span>
+        )}
+        <AssetLabel assetKey={edge.illustration} />
+        {edge.kind ? (
+          <span className="chain-edge-arrow dim">
+            {edge.kind === 'queueEvent' ? `⏳ +${edge.delayTurns}t →` : '→'}{' '}
+            {target ? target.event.title : (edge.targetId ?? '?')}
+          </span>
+        ) : (
+          <span className="chain-edge-end dim">(ends here)</span>
+        )}
+      </div>
+      <div className="chain-edge-text">{edge.text}</div>
+    </>
   );
 }
 
@@ -85,6 +88,7 @@ function NodeCard({ node }: { node: ChainNode }) {
           {gatingSummary(node)}
         </div>
         <AssetLabel assetKey={node.event.illustration} />
+        <div className="chain-card-text">{node.event.text}</div>
       </div>
     </div>
   );

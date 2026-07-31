@@ -30,6 +30,10 @@ export function chainTargetIds(events: readonly GameEvent[]): Set<string> {
 export interface ChainEdge {
   choiceIndex: number;
   choiceLabel: string;
+  /** The resolution text a player actually reads for this choice/tier
+   *  (TierResult.text) — {hero}/pronoun tokens left uninterpolated, since
+   *  there's no bound hero in this static view. */
+  text: string;
   /** null for a flat (no-check) choice, which only ever populates `success`. */
   tier: CheckTier | null;
   /** Resolved tier ?? choice ?? event illustration (same fallback the game
@@ -64,6 +68,7 @@ function buildEdges(event: GameEvent): ChainEdge[] {
       edges.push({
         choiceIndex,
         choiceLabel: choice.label,
+        text: result.text,
         tier,
         illustration,
         illustrationOverridden: illustration !== event.illustration,

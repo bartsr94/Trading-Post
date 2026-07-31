@@ -165,7 +165,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
     category: 'travel',
     illustration: 'goblin_ambush_again',
     title: 'The Same Trick Twice',
-    text: 'Same stretch of scrub, same badly-hidden snare — and this time the giggling has names in it. "{hero}! {hero} again!" A goblin is actually keeping score on a stick. Whatever dignity survived the first time is not going to survive this one; they are delighted to see {hero}, and delight is not a good sign here.',
+    text: 'Same stretch of scrub, same badly-hidden snare — and this time the giggling has names in it. "{hero}! {hero} again!" A band this small forgets nothing, and they clearly haven\'t forgotten {hero}. Whatever dignity survived the first time is not going to survive this one; they are delighted to see {hero}, and delight is not a good sign here.',
     conditions: [
       ...AMBUSH_CONDITIONS,
       { type: 'heroCounterAtLeast', key: AMBUSH_COUNTER_KEY, value: 1 },
@@ -182,7 +182,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
         label: 'Watch the treeline as you walk.',
         check: { skill: 'survival', stat: 'wits', difficulty: 9, tags: ['BEASTFOLK'] },
         critSuccess: {
-          text: '{hero} finds the snare, the lookout, and the scorekeeper before any of them find {him}, and the look on their faces is worth almost as much as the toll they don\'t get to collect. The scoring-stick stays in a pocket, unmarked — for now, however {hero} decides to play it.',
+          text: '{hero} finds the snare and both lookouts before either of them finds {him}, and the look on their faces is worth almost as much as the toll they don\'t get to collect. They clearly expected this to go their way by now — whatever they end up remembering about today is entirely up to {hero}.',
           outcomes: [outcome.continueChain('travel_goblin_ambush_again_react')],
         },
         success: {
@@ -257,13 +257,13 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
           ],
         },
         critFailure: {
-          text: '"Enough," someone says, and it isn\'t a joke anymore. This isn\'t a robbery. The goblins bind {hero}, unhurried and entirely serious, and carry {him} into the deep scrub before the rest of the party can do much more than shout. They\'ve grown to enjoy having their way with {him} regularly; now they\'re taking {him} home so they can do it every day.',
+          text: '"Enough," someone says, and it isn\'t a joke anymore — it isn\'t unkind, either. This isn\'t a robbery. The goblins bind {hero}, careful about it in a way that\'s somehow worse than rough, and carry {him} into the deep scrub before the rest of the party can do much more than shout. Someone this bad at watching {his} own back, they\'ve clearly decided, is safer off the road entirely — better kept close by folk who\'ve grown fond of {him} than left to wander into whoever else {he}\'d find out here next.',
           illustration: 'goblin_ambush_captured',
           outcomes: [
             outcome.captureHero('BEASTFOLK'),
             outcome.heroCounter(AMBUSH_COUNTER_KEY, 1),
             ...exclusiveTrait('easy_target', otherReputationTraits('easy_target')),
-            outcome.history('Fell for the same goblin ambush one time too many, and was carried off for it.'),
+            outcome.history('Was judged too hapless to keep wandering, and was carried off by goblins for {his} own good.'),
           ],
         },
       },
@@ -318,10 +318,10 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
     id: 'travel_goblin_ambush_again_react',
     illustration: 'goblin_encounter_01',
     title: 'Your Move, Again',
-    text: 'Caught fair and square for once, the scorekeeper and the rest of the band look almost giddy at the novelty of it — {hero} beating the game they thought they had figured out. They wait, delighted, to see what {he} does with the win.',
+    text: 'Caught fair and square for once, the whole band looks almost giddy at the novelty of it — {hero} beating a game they thought they\'d long since figured out. They wait, delighted, to see what {he} does with the win.',
     turnTables: {
       critSuccess: {
-        text: '{hero} doesn\'t even have to raise a voice — the band that knows {him} by name knows better than to test this. The scoring-stick and a fair bit besides changes hands without a fight.',
+        text: '{hero} doesn\'t even have to raise a voice — the band that knows {him} by name knows better than to test this. A generous share of their own take changes hands without a fight.',
         silver: 14,
         cloth: 2,
         tools: 1,
@@ -349,7 +349,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
       historyText: 'Beat the goblins at their own repeat trick.',
     },
     springBack: {
-      text: '{hero} plays the mark on purpose this time, and the band howls with laughter at getting to run their own trick after all. They don\'t just "collect the toll" — they take their time with {him}, hands and mouths and eager little bodies pressing in, treating the whole thing like a reunion they\'ve been looking forward to. {hero} gives as good as {he} gets, and by the end the scorekeeper is making a very different kind of mark on that stick. The goblins leave grinning, already talking about next time.',
+      text: '{hero} plays the mark on purpose this time, and the band howls with laughter at getting to run their own trick after all. They don\'t just "collect the toll" — they take their time with {him}, hands and mouths and eager little bodies pressing in, treating the whole thing like a reunion they\'ve been looking forward to. {hero} gives as good as {he} gets, and by the end even the ones sourest about losing are laughing along with the rest. The goblins leave grinning, already talking about next time.',
       standing: 3,
       illustration: 'goblin_tumble_again',
     },
@@ -467,7 +467,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
     category: 'travel',
     illustration: 'goblin_arrival',
     title: 'They\'ve Had Enough',
-    text: 'No snare this time — just the same dozen goblins standing in plain sight on the trail, hands empty and raised, and none of the usual giggling. "{hero} wins," one announces, like a verdict the whole band already argued out and agreed on. They\'re done springing traps that never work. What they\'d rather do, they say, now that the joke\'s run its course, is trade.',
+    text: 'No snare this time — just the same dozen goblins standing in plain sight on the trail, hands empty and raised, and none of the usual giggling. Nobody\'s smiling, either. "{hero} again," one says, and it doesn\'t sound delighted anymore — it sounds like something they\'ve been dreading. They\'re done testing {hero}. What they want now, plainly, is for this to stop costing them anything at all.',
     conditions: [...AMBUSH_CONDITIONS, { type: 'heroCounterAtLeast', key: AMBUSH_WINS_KEY, value: AMBUSH_WINS_THRESHOLD }],
     weight: 10,
     once: true,
@@ -479,18 +479,18 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
       {
         type: 'flat',
         label: 'Accept the truce — let this be over.',
-        text: '{hero} takes the offer, and that seems to be all the ceremony goblins need for something this big — a lot of nodding, a bit of shoving, and then it\'s settled. Word of it will beat the party home.',
+        text: '{hero} takes the offer, and the relief on their faces is almost insulting — like {he}\'d been some looming disaster they\'d finally talked their way out of. A little silver and a lot of nodding later, it\'s settled: {hero} leaves them be, and in exchange, they never have to work up the nerve to cross {him} again.',
         outcomes: [
           outcome.standing('BEASTFOLK', 5),
           outcome.setFlag(AMBUSH_TRUCE_FLAG),
-          outcome.history('Beat the goblin ambushers so consistently they gave up the game and offered a truce instead.'),
+          outcome.history('Frightened the goblin ambushers badly enough that they offered silver just to be left alone.'),
         ],
       },
       {
         type: 'flat',
         label: 'Wave them off — the game\'s too good to give up.',
-        text: '{hero} isn\'t ready to let a good rivalry die that easily, and shrugs the offer off. The goblins take it with more delight than offense — if {hero} wants another round, they\'re happy to keep obliging.',
-        outcomes: [outcome.history('Was offered a truce by the goblin ambushers and turned it down to keep the game going.')],
+        text: '{hero} isn\'t ready to let it end on their terms, and waves the offer off. The goblins take it about as well as {he}\'d expect from something already afraid of {him} — a lot of nervous glancing, no argument at all, and clearly already dreading the next time.',
+        outcomes: [outcome.history('Turned down a fearful truce offer from the goblin ambushers, content to let them keep dreading the next encounter.')],
       },
     ],
   }),
@@ -499,7 +499,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
     category: 'travel',
     illustration: 'goblin_encounter_01',
     title: 'An Honest Toll',
-    text: 'The same stretch of scrub, and the same goblins — but the only thing waiting in the trail this time is a blanket spread with dried herbs, odd little carvings, and whatever else the band has scavenged since the truce. {hero} gets a wave rather than a snare. Old habits die hard for them in one way, at least: they still drive a hard bargain.',
+    text: 'The same stretch of scrub, and the same goblins — but the wariness that used to hang over these meetings is long gone, worn away into something like real fondness. A blanket\'s spread with dried herbs, odd little carvings, and whatever else the band has scavenged since the truce, and {hero} gets a proper greeting rather than a snare. Someone always repeats the standing invitation to come sit at their fires sometime — they\'d clearly love to have {him}. Old habits die hard in one way, at least: they still drive a hard bargain.',
     conditions: [{ type: 'destinationTag', tag: 'goblin' }, { type: 'flag', flag: AMBUSH_TRUCE_FLAG }],
     weight: 10,
     cooldownTurns: 4,
@@ -512,11 +512,11 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
         label: 'Trade fairly with them.',
         check: { skill: 'bargain', stat: 'wits', difficulty: 8, tags: ['BEASTFOLK'] },
         critSuccess: {
-          text: '{hero} haggles them down to something close to a giveaway, and they take it with good humor rather than grumbling — the old rivalry apparently still counts for something on their side of the ledger.',
+          text: '{hero} haggles them down to something close to a giveaway, and they take it with real good humor rather than grumbling — happy just to have {him} lingering a while longer.',
           outcomes: [outcome.cargo('herbs', 3), outcome.expeditionSilver(-5), outcome.standing('BEASTFOLK', 2)],
         },
         success: {
-          text: 'It\'s a fair trade, haggled out with more theater than it strictly needs, and both sides walk away satisfied.',
+          text: 'It\'s a fair trade, haggled out with more theater than it strictly needs — mostly because they enjoy the back-and-forth with {hero} almost as much as the goods themselves.',
           outcomes: [outcome.cargo('herbs', 2), outcome.expeditionSilver(-8), outcome.standing('BEASTFOLK', 1)],
         },
         failure: {
@@ -531,7 +531,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
       {
         type: 'flat',
         label: 'Keep it brief — a quick trade and move on.',
-        text: '{hero} doesn\'t linger over it, and neither do they — a quick exchange, no haggling, and the party is back on the road before the blanket\'s even folded up again.',
+        text: '{hero} doesn\'t linger over it this time, and neither do they, though someone still calls after {him} to remember the invitation. A quick exchange, no haggling, and the party is back on the road before the blanket\'s even folded up again.',
         outcomes: [outcome.cargo('herbs', 1), outcome.expeditionSilver(-6)],
       },
     ],
