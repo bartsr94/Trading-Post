@@ -70,6 +70,7 @@ export function CheatConsole({ game, onClose }: { game: GameState; onClose: () =
   const forceFireAndResolveEvent = useGameStore((s) => s.forceFireAndResolveEvent);
   const fireQueuedEvent = useGameStore((s) => s.fireQueuedEvent);
   const setCheatConsoleOpen = useGameStore((s) => s.setCheatConsoleOpen);
+  const setEventChainViewerOpen = useGameStore((s) => s.setEventChainViewerOpen);
 
   const heroes = livingHeroes(game);
   const [actingHeroId, setActingHeroId] = useState(heroes[0]?.id ?? '');
@@ -101,7 +102,10 @@ export function CheatConsole({ game, onClose }: { game: GameState; onClose: () =
       <div className="ft-modal cc-modal" onClick={(e) => e.stopPropagation()}>
         <div className="ft-header">
           <h3 style={{ margin: 0 }}>Cheat Console</h3>
-          <button className="small" onClick={onClose}>Close</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="small" onClick={() => setEventChainViewerOpen(true)}>Event Chains</button>
+            <button className="small" onClick={onClose}>Close</button>
+          </div>
         </div>
         <div className="ft-canvas cc-canvas">
           <label className="dim" style={{ display: 'block', marginBottom: 10 }}>

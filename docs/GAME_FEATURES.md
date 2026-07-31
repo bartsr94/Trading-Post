@@ -1159,6 +1159,32 @@ unpinned queued event). This is the tool for stepping through a multi-stage
 time without ending turns or losing branch state — play a stage for real,
 then Fire Now the queued follow-up instead of waiting out its `delayTurns`.
 
+**Event Chain Viewer** (2026-07-31, `EventChainViewer.tsx`, opened via an
+"Event Chains" button in the console's header — same `cheatModeEnabled`
+gate, its own `eventChainViewerOpen` store flag): answers "what does this
+authored chain actually look like, and what art does each branch need,"
+which `docs/EVENT_CATALOG.md`'s "Arcs" section only shows as a flat id list.
+Modeled directly on `FamilyTree.tsx`'s recursive-branch overlay (same
+`ft-overlay`/`ft-modal`/`ft-canvas` shell and cycle-guard discipline) rather
+than a graph-layout library — a chain is a small tree, same shape as a
+family branch. `content/events/chainGraph.ts` (pure, no UI/test
+dependencies) is the shared source of truth for both this tool and the
+catalog generator's unreachable-event check: `chainTargetIds` traces every
+`continueChain`/`queueEvent` outcome (the catalog generator used to keep its
+own copy of this — now imports it), and `buildArcGraphs` additionally
+resolves each choice/tier's edge — target event, illustration key (tier ??
+choice ?? event, the same fallback `engine/turn.ts` uses), and whether that
+illustration diverges from the node's own base image. One arc can render the
+same target event more than once if multiple tiers of one choice
+`continueChain` to it (e.g. both `critSuccess` and `success` on a "Watch the
+treeline" check) — each edge draws its own branch rather than deduping
+targets, so you see exactly which tier leads where. This is a **different**
+arc-grouper from Force Event's `groupByArc` above: that one buckets *every*
+event (including a trailing "no arc" catch-all) for a flat dropdown menu,
+while `buildArcGraphs` only covers `arc`-tagged events and additionally
+builds the edge graph — kept separate rather than merged since the two
+consumers need different shapes.
+
 ## 15. Failure states
 
 Four `GAME_OVER_KINDS`: `bankrupt` (2 consecutive missed-upkeep turns,

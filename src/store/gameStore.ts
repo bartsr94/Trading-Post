@@ -82,6 +82,8 @@ interface GameStore {
   cheatModeEnabled: boolean;
   /** Whether the cheat console overlay is currently open. */
   cheatConsoleOpen: boolean;
+  /** Whether the Event Chain Viewer overlay (opened from the cheat console) is open. */
+  eventChainViewerOpen: boolean;
 
   hasAutosave: () => boolean;
   newGame: (heroIds: string[]) => void;
@@ -146,6 +148,7 @@ interface GameStore {
   /** Unlock/lock the cheat console (persisted across reloads). */
   setCheatMode: (enabled: boolean) => void;
   setCheatConsoleOpen: (open: boolean) => void;
+  setEventChainViewerOpen: (open: boolean) => void;
   /** Apply arbitrary testing outcomes against a cloned draft. Returns the log lines. */
   applyCheatOutcomes: (outcomes: Outcome[], heroId: string) => string[];
   /** Force an event to fire immediately, bypassing selection/eligibility.
@@ -246,6 +249,7 @@ export const useGameStore = create<GameStore>((set, get) => {
   growthLines: [],
   cheatModeEnabled: typeof localStorage !== 'undefined' && localStorage.getItem(CHEAT_MODE_KEY) === 'true',
   cheatConsoleOpen: false,
+  eventChainViewerOpen: false,
 
   hasAutosave: () => loadAutosave() !== null,
 
@@ -446,10 +450,15 @@ export const useGameStore = create<GameStore>((set, get) => {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(CHEAT_MODE_KEY, enabled ? 'true' : 'false');
     }
-    set({ cheatModeEnabled: enabled, cheatConsoleOpen: enabled ? get().cheatConsoleOpen : false });
+    set({
+      cheatModeEnabled: enabled,
+      cheatConsoleOpen: enabled ? get().cheatConsoleOpen : false,
+      eventChainViewerOpen: enabled ? get().eventChainViewerOpen : false,
+    });
   },
 
   setCheatConsoleOpen: (open) => set({ cheatConsoleOpen: open }),
+  setEventChainViewerOpen: (open) => set({ eventChainViewerOpen: open }),
 
   applyCheatOutcomes: (outcomes, heroId) => {
     const { game } = get();

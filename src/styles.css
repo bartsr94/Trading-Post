@@ -1508,6 +1508,103 @@ select:focus {
 .ft-mixed { color: var(--good); }
 .ft-role { font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.03em; }
 
+/* Event Chain Viewer (dev tool, ui/components/EventChainViewer.tsx) — same
+   ft-overlay/ft-modal/ft-canvas shell as the Family Tree, chain- prefixed
+   rules for its own branch/card layout. Own width cap (wider than
+   cc-modal's 1100px) so bigger thumbnails have room to stay inline with
+   their choice text instead of wrapping. */
+.chain-viewer-modal { width: min(1600px, 97vw); }
+.chain-filter {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 16px;
+  padding: 7px 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: inherit;
+  font-size: 0.82rem;
+}
+.chain-arc { margin-bottom: 22px; }
+.chain-arc h4 {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+.chain-roots { display: flex; flex-direction: column; gap: 16px; }
+.chain-branch { display: flex; flex-direction: column; gap: 8px; }
+.chain-card {
+  display: flex;
+  gap: 10px;
+  width: fit-content;
+  max-width: 840px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}
+.chain-thumb { width: 405px; flex-shrink: 0; border-radius: 6px; overflow: hidden; }
+.chain-card-body { min-width: 0; }
+.chain-card-title { font-size: 0.78rem; font-weight: 600; }
+.chain-card-id { font-size: 0.6rem; }
+.chain-card-gating {
+  font-size: 0.6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 380px;
+}
+.chain-edges {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 24px;
+  padding-left: 14px;
+  border-left: 1px dashed var(--border);
+}
+.chain-edge-group { display: flex; flex-direction: column; gap: 6px; }
+.chain-edge { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; flex-wrap: wrap; }
+.chain-edge-tier {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 0.58rem;
+  background: var(--accent-dim);
+  color: var(--panel);
+}
+.chain-edge-choice { font-style: italic; }
+.chain-edge-thumb { width: 240px; display: inline-block; border-radius: 4px; overflow: hidden; vertical-align: middle; }
+.chain-thumb .event-illustration {
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  padding: 6px;
+  text-align: center;
+  line-height: 1.15;
+  overflow: hidden;
+}
+.chain-edge-thumb .event-illustration {
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  padding: 3px;
+  text-align: center;
+  line-height: 1.15;
+  overflow: hidden;
+}
+.chain-asset-label {
+  font-size: 0.6rem;
+  font-family: monospace;
+  color: var(--good);
+  opacity: 0.85;
+}
+.chain-asset-label.chain-asset-missing { color: var(--bad); opacity: 1; }
+
 /* Small family portrait tiles in the Hero Sheet (FAMILY_SPEC.md §10) */
 .fam-row {
   display: flex;

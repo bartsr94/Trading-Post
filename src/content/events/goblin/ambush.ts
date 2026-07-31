@@ -48,7 +48,9 @@ function makeAmbushReactionEvent(config: {
   text: string;
   turnTables: { critSuccess: AmbushToll; success: AmbushToll; failure: AmbushRebuff; critFailure: AmbushRebuff };
   leaveIt: { text: string; historyText: string };
-  springBack: { text: string; standing: number };
+  /** illustration defaults to 'goblin_tumble' — override once repeat
+   *  encounters warrant their own art (e.g. the "_again_react" tier). */
+  springBack: { text: string; standing: number; illustration?: string };
 }): GameEvent {
   const tollOutcomes = (tier: AmbushToll): Outcome[] => {
     const outcomes: Outcome[] = [outcome.expeditionSilver(tier.silver), outcome.cargo('cloth', tier.cloth)];
@@ -91,7 +93,7 @@ function makeAmbushReactionEvent(config: {
         type: 'flat',
         label: 'Spring it back on them — let them have the joke.',
         text: config.springBack.text,
-        illustration: 'goblin_tumble',
+        illustration: config.springBack.illustration ?? 'goblin_tumble',
         outcomes: [
           outcome.standing('BEASTFOLK', config.springBack.standing),
           outcome.heroCounter(AMBUSH_KINDNESS_KEY, 1),
@@ -189,7 +191,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
         },
         failure: {
           text: 'The snare works exactly as well as it did last time, which the goblins find hilarious. "Still doesn\'t look!" one shouts, delighted, while the rest empty pockets and take their time with the rest of {hero} — hands, mouths, and a great deal of enthusiastic commentary — before scrambling off with their prizes.',
-          illustration: 'goblin_ambush_caught',
+          illustration: 'goblin_ambush_caught_again',
           outcomes: [
             outcome.expeditionSilver(-14),
             outcome.cargo('cloth', -2),
@@ -199,7 +201,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
         },
         critFailure: {
           text: 'The whole band turns out for this one — word travels fast when there\'s a favorite to enjoy. {hero} goes down hard and stays down while they take everything they want: coin, cargo, and a thorough, cheerful working-over that leaves {him} lighter in every sense, to genuine applause.',
-          illustration: 'goblin_ambush_caught',
+          illustration: 'goblin_ambush_caught_again',
           outcomes: [
             outcome.expeditionSilver(-22),
             outcome.cargo('cloth', -4),
@@ -213,7 +215,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
         type: 'flat',
         label: 'Push on and pretend not to notice.',
         text: '"There {he} goes again," someone says, almost fondly, and the toll comes and goes with the easy familiarity of a running bit both sides know the shape of — a little silver, a little cloth, and a few familiar hands under the clothes before they wave the party on.',
-        illustration: 'goblin_ambush_caught',
+        illustration: 'goblin_ambush_caught_again',
         outcomes: [outcome.expeditionSilver(-8), outcome.cargo('cloth', -1)],
       },
     ],
@@ -349,6 +351,7 @@ export const GOBLIN_AMBUSH_EVENTS: GameEvent[] = [
     springBack: {
       text: '{hero} plays the mark on purpose this time, and the band howls with laughter at getting to run their own trick after all. They don\'t just "collect the toll" — they take their time with {him}, hands and mouths and eager little bodies pressing in, treating the whole thing like a reunion they\'ve been looking forward to. {hero} gives as good as {he} gets, and by the end the scorekeeper is making a very different kind of mark on that stick. The goblins leave grinning, already talking about next time.',
       standing: 3,
+      illustration: 'goblin_tumble_again',
     },
   }),
   makeAmbushReactionEvent({

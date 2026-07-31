@@ -14,6 +14,7 @@ import type { Choice, Condition, GameEvent, Outcome } from '../../engine/events/
 import { FACTION_IDS, type FactionId } from '../../engine/types';
 import { HERITAGES } from '../../engine/types';
 import { CAPTIVE_EVENTS } from './captiveEvents';
+import { chainTargetIds as computeChainTargetIds } from './chainGraph';
 import { DIPLOMACY_EVENTS } from './diplomacyEvents';
 import { FAMILY_EVENTS } from './familyEvents';
 import { GOBLIN_EVENTS } from './goblin';
@@ -75,23 +76,6 @@ type Trigger =
   | 'chain-continuation'
   | 'engine-hand-built'
   | 'unreachable?';
-
-function chainTargets(events: readonly GameEvent[]): Set<string> {
-  const targets = new Set<string>();
-  for (const event of events) {
-    for (const choice of event.choices) {
-      for (const tier of Object.values(choice.outcomes)) {
-        if (!tier) continue;
-        for (const outcome of tier.outcomes) {
-          if (outcome.type === 'queueEvent' || outcome.type === 'continueChain') {
-            targets.add(outcome.eventId);
-          }
-        }
-      }
-    }
-  }
-  return targets;
-}
 
 function classifyTrigger(event: GameEvent, chainTargetIds: Set<string>): Trigger {
   if (event.category === 'travel') return 'travel-arrival';
@@ -215,7 +199,7 @@ describe('event catalog generator', () => {
   it('builds docs/EVENT_CATALOG.md from the live registry', () => {
     expect(ALL_EVENTS.length).toBeGreaterThan(0);
 
-    const chainTargetIds = chainTargets(ALL_EVENTS);
+    const chainTargetIds = computeChainTargetIds(ALL_EVENTS);
     const oddities: string[] = [];
     const needsMetadata: string[] = [];
 
