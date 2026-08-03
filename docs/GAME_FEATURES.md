@@ -233,8 +233,10 @@ reads loyal (`partyHeritageShare(state, 'homeland') ≥ partyLoyalShare`) — wh
 leads the post signals loyalty as loudly as who works it. A wed active hero
 extends the same signal from the family side (§8): `bloodline: 'pure'`
 reassures, `bloodline: 'mixed'` adds to the compromise read, weighted heavier
-for an informal union than an alliance one and heavier still for a
-multi-spouse mixed household. A mixed active party (both homeland and native
+for an informal union than an alliance one, heavier still for a hero-to-hero
+marriage (the most visible "gone native" signal — two of the company's own,
+not a hired diplomat), and heavier still on top of either for a multi-spouse
+mixed household. A mixed active party (both homeland and native
 heroes present) also earns a small standing gain with every non-hostile
 faction in `TUNING.heritage.nativeFactions`. A season where the post reads
 compromised (`culture` past threshold, or a non-empty active party with zero
@@ -501,11 +503,13 @@ unreachable outside the cheat console.
 `gender`; `Hero` gains an optional `bloodline` (`pure`/`mixed`); `Dependant`
 gains `ancestry.peoples` (dual-parentage: the deduped union of both parents'
 peoples), `union` (source), and `comeOfAge`. A wed active hero's `bloodline`
-feeds the Company's judgment every season end (§5/§15,
-CHARTER_REVOKED_SPEC.md) — `worstNativeSpouseUnion` (`family.ts`) reads the
-"worst" (most compromising) union source among a `mixed` hero's native-blood
-spouses (`informal` outweighs `alliance`), and `spouseCount` flags a
-multi-spouse mixed household for a heavier weight still. `Hero` also carries
+feeds the Company's judgment every season end (§5/§15) —
+`worstNativeSpouseUnion` (`family.ts`) reads the "worst" (most compromising)
+union source among a `mixed` hero's native-blood spouses, worst to
+mildest: `party` (a hero-to-hero marriage, read off `spousesOf` rather than
+a `Dependant` record since there is none) outweighs `informal`, which
+outweighs `alliance`/`homeland`; `spouseCount` flags a multi-spouse mixed
+household for a heavier weight still. `Hero` also carries
 an optional
 `temperament?: string[]` — free-form personality-flavor tags (e.g.
 `steadfast`/`guarded`, `ambitious`/`sharp-tongued`), authored on 4 of the 12
@@ -1230,8 +1234,7 @@ halved from 3 alongside the `turnsPerSeason` 6→3 cadence change — §1),
 as lost, since they may yet be ransomed or rescued, §17), `destroyed` (raid
 cascade, §11), and `charterRevoked` — the Company's judgment on a post it
 reads as lost to the frontier; see §5 for the mechanism (culture drift, the
-active party's own heritage, and the bloodline-marriage signal all feed it)
-and CHARTER_REVOKED_SPEC.md for the design record.
+active party's own heritage, and the bloodline-marriage signal all feed it).
 
 ## 16. Save versioning
 
@@ -1356,10 +1359,10 @@ unchanged** — this system is only about the unnamed pool.
 - **Standing / Company judgment.** Season-end, while any thralls are held:
   a flat standing loss against every non-hostile faction in
   `TUNING.thralls.holding.nativeFactions` (deliberately not per-origin), plus
-  a `culture`-axis nudge toward Frontier (`applyHoldingPressure`) —
-  deliberately the input the still-unbuilt `charterRevoked` mechanism
-  (`TODO_FEATURES.md`) would read, without building that mechanism. The
-  Company's own purchase channel carries no separate penalty — holding
+  a `culture`-axis nudge toward Frontier (`applyHoldingPressure`) — one more
+  input into the `charterRevoked` mechanism's culture-drift read (§5/§15),
+  same as any other culture drift. The Company's own purchase channel
+  carries no separate penalty — holding
   thralls at all is what counts, not which euphemism they were bought under.
 
 **Acquisition — four vectors:**
@@ -1649,12 +1652,10 @@ files, one per area) covering: master-level open questions (bond values,
 difficulty modes, art pipeline, Cult-pressure mechanic, tier-4 endgame,
 in-fiction naming gaps), the Concession's land-conflict/forced-reallocation
 event content, buildings backlog (tier 4, true axis-gated buildings, storage
-caps, `activeCapBonus`), the unwired `charterRevoked`
-Company-judgment mechanism (heritage + family sides both), Peoples Phase C
-Company-town content, Family's remaining forks (matrilineal marry-out,
-per-people alliance flavor, dependant mortality, bride-price income),
-Beastfolk's remaining content (sub-clan depth — the named-recruit gap
-closed 2026-07-30, §20), the
+caps, `activeCapBonus`), Peoples Phase C Company-town content, Family's
+remaining forks (matrilineal marry-out, per-people alliance flavor,
+dependant mortality, bride-price income), Beastfolk's remaining content
+(sub-clan depth — the named-recruit gap closed 2026-07-30, §20), the
 Harpies' remaining content (in-fiction faction/eyrie naming, a distinct
 raid/abduction identity, lore + portrait art), and a separate engineering
 backlog (store-mutation helper, `SaveResult`/autosave warnings, lint

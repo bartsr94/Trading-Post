@@ -10,7 +10,7 @@ import { applyOutcomes } from '../events/outcomes';
 import type { OutcomeContext } from '../events/outcomes';
 import { advanceExpeditions, dispatchExpedition } from '../expeditions';
 import type { ExpeditionContext } from '../expeditions';
-import { formUnion } from '../family';
+import { formHeroUnion, formUnion } from '../family';
 import {
   addResidents,
   applyCultureDrift,
@@ -308,6 +308,33 @@ describe("the Company's judgment & the charterRevoked ending (CHARTER_REVOKED_SP
     tick(alliance); // turn 3
 
     expect(informal.factions.CHARTER_COMPANY.standing).toBeLessThan(
+      alliance.factions.CHARTER_COMPANY.standing,
+    );
+  });
+
+  it('weighs a hero-to-hero marriage heavier than an alliance one (§2)', () => {
+    const build = () => {
+      const s = testState(1, ['p1', 'p4']); // p1 homeland, p4 kiswani (native) — both must exist to wed
+      s.activePartyIds = ['p1']; // isolate the bloodline signal to p1 alone, as in the informal/alliance case
+      s.silver = 1_000_000;
+      s.axes.culture = 0;
+      s.factions.CHARTER_COMPANY.standing = -60;
+      return s;
+    };
+
+    const partyMarriage = build();
+    formHeroUnion(partyMarriage, 'p1', 'p4');
+    tick(partyMarriage);
+    tick(partyMarriage);
+    tick(partyMarriage); // turn 3
+
+    const alliance = build();
+    formUnion(alliance, 'p1', { source: 'alliance', heritage: 'kiswani', name: 'Nia' });
+    tick(alliance);
+    tick(alliance);
+    tick(alliance); // turn 3
+
+    expect(partyMarriage.factions.CHARTER_COMPANY.standing).toBeLessThan(
       alliance.factions.CHARTER_COMPANY.standing,
     );
   });

@@ -764,6 +764,11 @@ export const TUNING = {
       purePartyReassure: 1, // extra reassurance per wed 'pure' active hero
       mixedCompromiseAdd: 1, // extra compromise per wed 'mixed' active hero
       informalCompromiseMult: 1.5, // informal households weigh heavier than alliances
+      // A hero-to-hero marriage (CHARTER_REVOKED_SPEC.md §2) weighs heavier
+      // still: two of the company's own openly wedding across the line is a
+      // more damning "gone native" signal than a hired diplomat's alliance
+      // match, or even an unblessed hearth-companion out at the post.
+      partyCompromiseMult: 2,
       multiSpouseCompromiseMult: 1.25, // a multi-spouse mixed household heavier still
     },
   },

@@ -108,20 +108,21 @@ export function spouseCount(state: GameState, id: string): number {
 
 /**
  * The "worst" (most Company-compromising) union source among a hero's
- * native-blood spouses — `'informal'` outweighs `'alliance'`/`'homeland'`
- * (CHARTER_REVOKED_SPEC.md §2.2, the bloodline-marriage signal). Only
- * meaningful when the hero's `bloodline` is already `'mixed'`. A hero-to-hero
- * union (`formHeroUnion`) has no `Dependant` spouse record to read `.union`
- * from at all, so it isn't found here and falls through to `undefined` —
- * callers should treat that the same as `'alliance'` (a formal, at-post
- * union, not an unblessed hearth-companion arrangement).
+ * native-blood spouses (CHARTER_REVOKED_SPEC.md §2.2, the bloodline-marriage
+ * signal), worst to mildest: `'party'` (a hero-to-hero marriage — the most
+ * visible "gone native" signal, since it's two of the company's own, not a
+ * hired diplomat or a quiet frontier household) outweighs `'informal'`,
+ * which outweighs `'alliance'`/`'homeland'`. Only meaningful when the hero's
+ * `bloodline` is already `'mixed'`. A hero-to-hero union (`formHeroUnion`)
+ * has no `Dependant` spouse record, so it's read off `spousesOf` instead
+ * (which also covers `Hero.spouseIds`) rather than `householdMembers`.
  */
 export function worstNativeSpouseUnion(state: GameState, heroId: string): UnionSource | undefined {
-  const nativeSpouses = householdMembers(state, heroId).filter(
-    (m) => m.kind === 'spouse' && nodePeoples(m).some(isNativeHeritage),
-  );
-  if (nativeSpouses.some((m) => m.union === 'informal')) return 'informal';
-  return nativeSpouses[0]?.union;
+  const nativeSpouses = spousesOf(state, heroId).filter((m) => nodePeoples(m).some(isNativeHeritage));
+  if (nativeSpouses.some((m) => isHeroNode(m))) return 'party';
+  const nativeDependants = nativeSpouses.filter((m): m is Dependant => !isHeroNode(m));
+  if (nativeDependants.some((m) => m.union === 'informal')) return 'informal';
+  return nativeDependants[0]?.union;
 }
 
 export function isMarried(state: GameState, id: string): boolean {

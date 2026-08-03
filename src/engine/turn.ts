@@ -672,7 +672,11 @@ function evaluateCharterJudgment(
     } else if (hero.bloodline === 'mixed') {
       const union = worstNativeSpouseUnion(state, hero.id);
       const unionMult =
-        union === 'informal' ? TUNING.family.company.informalCompromiseMult : 1;
+        union === 'party'
+          ? TUNING.family.company.partyCompromiseMult
+          : union === 'informal'
+            ? TUNING.family.company.informalCompromiseMult
+            : 1;
       const multiSpouseMult =
         spouseCount(state, hero.id) > 1 ? TUNING.family.company.multiSpouseCompromiseMult : 1;
       bloodlineCompromise += TUNING.family.company.mixedCompromiseAdd * unionMult * multiSpouseMult;
@@ -1033,7 +1037,7 @@ export function declareGameOver(
       state.gameOver = {
         kind,
         title: 'The Charter Forfeit',
-        text: 'Word comes upriver, sealed and final: Thornwatch reads this post as lost to the frontier, and the Company will not go on lending its name to what it no longer recognizes as its own. The charter is void; whatever stands here now stands on its own, unentitled to the Ansberry name or the ships that once served it.',
+        text: "Word comes upriver sealed with the Company's own mark: the charter is void, the post struck from the Ansberry rolls as though it had never flown their colors. No ship will call at this landing again, no factor in Thornwatch will vouch for what it owes. Whatever stands here now stands alone — Ashmark's business, not the homeland's.",
       };
       break;
   }
