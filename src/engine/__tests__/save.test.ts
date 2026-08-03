@@ -109,6 +109,36 @@ describe('saves', () => {
     expect(() => deserialize(JSON.stringify(stale))).toThrow(/current/);
   });
 
+  it('rejects a POV hero id that references an unknown hero', () => {
+    const unknownPov = testState();
+    unknownPov.povHeroId = 'not_a_real_hero';
+    expect(() => deserialize(serialize(unknownPov))).toThrow(/povHeroId/);
+  });
+
+  it('rejects an active POV hero missing from the active party', () => {
+    const s = testState();
+    s.activePartyIds = s.activePartyIds.filter((id) => id !== s.povHeroId);
+    expect(() => deserialize(serialize(s))).toThrow(/povHeroId/);
+  });
+
+  it('allows a captive POV hero to be absent from the active party (reconcileRoster parity)', () => {
+    const s = testState();
+    const pov = s.heroes.find((h) => h.id === s.povHeroId)!;
+    pov.status = 'captive';
+    pov.captivity = { faction: 'RIVER_CLANS', capturedTurn: 1 };
+    s.activePartyIds = s.activePartyIds.filter((id) => id !== s.povHeroId);
+    const restored = deserialize(serialize(s));
+    expect(restored).toEqual(s);
+  });
+
+  it('round-trips a POV hero portrait key', () => {
+    const s = testState();
+    const pov = s.heroes.find((h) => h.id === s.povHeroId)!;
+    pov.portraitKey = 'imanian_male_02';
+    const restored = deserialize(serialize(s));
+    expect(restored).toEqual(s);
+  });
+
   it('round-trips a captive hero, including captivity', () => {
     const s = testState(2024);
     const p1 = s.heroes.find((h) => h.id === 'p1')!;
