@@ -1321,6 +1321,10 @@ select:focus {
 .report-lines { margin: 10px 0 16px; }
 .report-lines .line { padding: 3px 0; font-size: 0.95rem; }
 .hero-sheet { width: min(620px, 94vw); }
+.dependant-sheet { width: min(460px, 92vw); }
+/* Any family-graph node reference that opens a sheet on click (DEPENDANT_SHEET_SPEC.md). */
+.person-link { cursor: pointer; }
+.person-link:hover { text-decoration: underline; }
 .hero-sheet-head {
   display: flex;
   gap: 14px;

@@ -19,7 +19,7 @@ const DEPENDANT_LABEL: Record<Dependant['kind'], string> = {
   kin: 'Kin',
 };
 
-const HERITAGE_LABEL: Record<Heritage, string> = {
+export const HERITAGE_LABEL: Record<Heritage, string> = {
   imanian: 'Imanian (homeland)',
   kiswani: 'Kiswani',
   hanjoda: 'Hanjoda',
@@ -30,7 +30,7 @@ const HERITAGE_LABEL: Record<Heritage, string> = {
 };
 
 /** Tribe/region → display label (PEOPLES_SPEC.md §2). Unknown keys title-case. */
-const SUBPEOPLE_LABEL: Record<string, string> = {
+export const SUBPEOPLE_LABEL: Record<string, string> = {
   ansberrian: 'Ansberrian',
   creole: 'Creole',
   tributary: 'Tributary Towns',
@@ -45,7 +45,7 @@ const SUBPEOPLE_LABEL: Record<string, string> = {
 };
 
 /** "People — Tribe/Region", omitting a redundant or default sub-identity. */
-function heritageText(hero: { heritage: Heritage; subPeople?: string }): string {
+export function heritageText(hero: { heritage: Heritage; subPeople?: string }): string {
   const people = HERITAGE_LABEL[hero.heritage];
   const sub = hero.subPeople ? (SUBPEOPLE_LABEL[hero.subPeople] ?? hero.subPeople) : undefined;
   return sub && sub !== people ? `${people} — ${sub}` : people;
@@ -58,14 +58,20 @@ function hueOf(key: string): number {
 }
 
 /** A small family portrait tile: real art from the person's people+gender pool
- *  where one exists, else the hash-hue initial tile. */
+ *  where one exists, else the hash-hue initial tile. Clicking opens the
+ *  dependant's own (lighter) sheet, DEPENDANT_SHEET_SPEC.md. */
 function DependantTile({ dep }: { dep: Dependant }) {
+  const openPerson = useGameStore((s) => s.openPerson);
   const key =
     dep.portraitKey ??
     pickDependantPortraitKey(`${dominantHeritage(dep)}_${dep.gender}`, dep.id, dep.kind === 'child');
   const url = portraitUrl(key);
   return (
-    <div className="fam-tile" title={`${DEPENDANT_LABEL[dep.kind]} — fed, does no work`}>
+    <div
+      className="fam-tile person-link"
+      title={`${DEPENDANT_LABEL[dep.kind]} — fed, does no work`}
+      onClick={() => openPerson(dep.id, 'dependant')}
+    >
       <div className="fam-face">
         {url ? (
           <img className="portrait-art" src={url} alt="" draggable={false} />

@@ -464,6 +464,11 @@ export interface Dependant {
   bornTurn?: number;
   /** False until coming-of-age promotes a child to grown kin; then true (FAMILY_SPEC.md §7). */
   comeOfAge?: boolean;
+  /** Personal history lines (mirrors `Hero.history`, DEPENDANT_SHEET_SPEC.md).
+   *  No writer exists yet — added ahead of the first spousal-interaction
+   *  event chain so that content has somewhere to append without another
+   *  save-version bump just for this field. */
+  history?: string[];
 }
 
 /**

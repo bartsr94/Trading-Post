@@ -229,6 +229,7 @@ function validateDependant(value: unknown, path: string): string {
   if (dep.heritage !== undefined) enumValue(dep.heritage, HERITAGES, `${path}.heritage`);
   if (dep.bornTurn !== undefined) nonNegativeInteger(dep.bornTurn, `${path}.bornTurn`);
   if (dep.comeOfAge !== undefined) boolean(dep.comeOfAge, `${path}.comeOfAge`);
+  if (dep.history !== undefined) stringArray(dep.history, `${path}.history`);
   if (dep.ancestry !== undefined) {
     const ancestry = record(dep.ancestry, `${path}.ancestry`);
     const peoples = array(ancestry.peoples, `${path}.ancestry.peoples`);
