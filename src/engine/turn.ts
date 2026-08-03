@@ -919,6 +919,7 @@ export function resolveChoice(
 
   state.rngState = rng.getState();
   checkBrokenCompany(state);
+  checkPovLost(state);
 
   return {
     check,
@@ -994,6 +995,7 @@ export function advanceTurn(state: GameState): string[] {
   state.phase = 'assignment';
   state.rngState = rng.getState();
   checkBrokenCompany(state);
+  checkPovLost(state);
   return growthLines;
 }
 
@@ -1007,9 +1009,33 @@ function checkBrokenCompany(state: GameState): void {
   }
 }
 
+/**
+ * The POV hero (POV_CHARACTER_SPEC.md §4.6) is a full Hero with no special
+ * mechanics — death, departure, and captivity all run through the entirely
+ * unmodified normal paths. This just watches the outcome: dead/departed is
+ * always game over, and captivity becomes one too if it drags past the same
+ * one-in-game-year mark that already governs a late ransom/rescue attempt's
+ * "refuses to return" risk — capture itself is never an instant loss.
+ */
+function checkPovLost(state: GameState): void {
+  if (state.gameOver) return;
+  const pov = state.heroes.find((h) => h.id === state.povHeroId);
+  if (!pov) return;
+  if (pov.status === 'dead' || pov.status === 'departed') {
+    declareGameOver(state, 'povLost');
+    return;
+  }
+  if (pov.status === 'captive' && pov.captivity) {
+    const turnsHeld = state.turn - pov.captivity.capturedTurn;
+    if (turnsHeld >= TUNING.abduction.refuseReturnThresholdTurns) {
+      declareGameOver(state, 'povLost');
+    }
+  }
+}
+
 export function declareGameOver(
   state: GameState,
-  kind: 'bankrupt' | 'brokenCompany' | 'destroyed' | 'charterRevoked',
+  kind: 'bankrupt' | 'brokenCompany' | 'destroyed' | 'charterRevoked' | 'povLost',
 ): void {
   switch (kind) {
     case 'bankrupt':
@@ -1038,6 +1064,13 @@ export function declareGameOver(
         kind,
         title: 'The Charter Forfeit',
         text: "Word comes upriver sealed with the Company's own mark: the charter is void, the post struck from the Ansberry rolls as though it had never flown their colors. No ship will call at this landing again, no factor in Thornwatch will vouch for what it owes. Whatever stands here now stands alone — Ashmark's business, not the homeland's.",
+      };
+      break;
+    case 'povLost':
+      state.gameOver = {
+        kind,
+        title: "The Founder's End",
+        text: "The post was never really the tents or the palisade — it was the one who came out here and decided it should exist. Dead, vanished, or gone somewhere no ransom will reach now, they are not coming back to see what became of it. Others will keep the ledgers a while longer out of habit, but the story that mattered ended with them.",
       };
       break;
   }

@@ -11,12 +11,15 @@ import type { GameState } from '../types';
 export const TEST_CONTENT = CONTENT;
 export const TEST_LOCATIONS = LOCATIONS;
 
-export function testState(seed = 12345, heroIds?: string[]): GameState {
+export function testState(seed = 12345, heroIds?: string[], povHeroId?: string): GameState {
   const ids = heroIds ?? ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
   const heroes = HERO_POOL.filter((t) => ids.includes(t.id)).map(createHero);
   return createInitialState({
     seed,
     heroes,
+    // No dedicated POV test fixture exists — the first hero stands in as
+    // "the POV hero" for tests that don't care which one it is.
+    povHeroId: povHeroId ?? ids[0],
     startingStandings: STARTING_STANDINGS,
     locationDefs: LOCATIONS,
     mapRegionDefs: MAP_REGIONS,

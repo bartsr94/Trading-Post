@@ -1,8 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { PovHeroBuild } from '../content/heroes';
 import { TUNING } from '../content/tuning';
 import { testState } from '../engine/__tests__/helpers';
 import type { ChoiceResolution } from '../engine/turn';
 import { flushAutosave, useGameStore } from './gameStore';
+
+const TEST_POV_BUILD: PovHeroBuild = {
+  name: 'Test Founder',
+  gender: 'male',
+  heritage: 'imanian',
+  backgroundId: 'company_factor',
+  stats: { might: 3, agility: 3, wits: 3, charm: 3, resolve: 3 },
+  skills: {
+    bargain: 0,
+    diplomacy: 0,
+    combat: 0,
+    survival: 0,
+    leadership: 0,
+    lore: 0,
+    craft: 0,
+    stealth: 0,
+  },
+};
 
 function makeLocalStorage() {
   const data = new Map<string, string>();
@@ -52,7 +71,7 @@ describe('gameStore', () => {
     vi.spyOn(Date, 'now').mockReturnValue(123);
     vi.spyOn(Math, 'random').mockReturnValue(0.5);
 
-    useGameStore.getState().newGame(['p1', 'p2']);
+    useGameStore.getState().newGame(['p1', 'p2'], TEST_POV_BUILD);
     const { game, screen } = useGameStore.getState();
 
     expect(screen).toBe('assignments');
@@ -70,7 +89,7 @@ describe('gameStore', () => {
     vi.spyOn(Date, 'now').mockReturnValue(1);
     vi.spyOn(Math, 'random').mockReturnValue(0.25);
 
-    useGameStore.getState().newGame(['p1']);
+    useGameStore.getState().newGame(['p1'], TEST_POV_BUILD);
     expect(localStorage.getItem(TUNING.save.autosaveKey)).toBeTruthy();
 
     useGameStore.setState({ game: null, screen: 'post' });

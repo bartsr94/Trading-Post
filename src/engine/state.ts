@@ -26,6 +26,8 @@ import type {
 export interface NewGameOptions {
   seed: number;
   heroes: Hero[];
+  /** Id of the player-embodied hero within `heroes` (POV_CHARACTER_SPEC.md). */
+  povHeroId: string;
   startingStandings?: Partial<Record<FactionId, number>>;
   locationDefs?: readonly LocationDef[];
   mapRegionDefs?: readonly MapRegionDef[];
@@ -83,6 +85,7 @@ export function createInitialState(options: NewGameOptions): GameState {
     phase: 'assignment',
     heroes: options.heroes,
     activePartyIds: options.heroes.map((h) => h.id),
+    povHeroId: options.povHeroId,
     assignments,
     silver: TUNING.start.silver,
     goods,

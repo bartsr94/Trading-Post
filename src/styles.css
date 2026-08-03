@@ -255,6 +255,14 @@ h4 {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
   pointer-events: none;
 }
+.pov-marker {
+  position: absolute;
+  left: -6px;
+  top: -6px;
+  color: #ffd76a;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+  pointer-events: none;
+}
 .hero-tooltip {
   display: none;
   position: absolute;
@@ -358,6 +366,107 @@ h4 {
   margin: 2px 3px 0 0;
   color: var(--text-dim);
 }
+
+/* ---------- pre-game: start screen & wizard nav ---------- */
+.start-screen {
+  max-width: 560px;
+  margin: 10vh auto 0;
+  text-align: center;
+}
+.start-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+.start-actions button { width: 240px; }
+.wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 18px;
+}
+.pov-section {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-top: 14px;
+}
+.pov-section:first-of-type { border-top: none; padding-top: 0; margin-top: 6px; }
+.pov-section h3 { margin: 0 0 8px; }
+.pov-section h4 { margin: 0 0 6px; font-size: 0.85rem; color: var(--text-dim); }
+.pov-abilities-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+}
+
+/* ---------- POV chargen ---------- */
+.pov-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 8px 0 12px;
+}
+.pov-field-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.pov-field-row input,
+.pov-field-row select {
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 4px 6px;
+}
+.pov-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pov-stat button {
+  padding: 0 6px;
+  line-height: 1.4;
+}
+.pov-background-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.pov-background-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.pov-background-card:hover { border-color: var(--accent-dim); }
+.pov-background-card.picked {
+  border-color: var(--accent);
+  background: var(--panel-2);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.pov-background-card .name { color: var(--accent); font-size: 1.05rem; }
+.pov-background-card .bio { font-size: 0.85rem; color: var(--text-dim); margin: 6px 0; }
+.pov-portrait-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.pov-portrait-option {
+  width: 64px;
+  height: 80px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+}
+.pov-portrait-option.picked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
 /* ---------- assignment board ---------- */
 .assign-row {

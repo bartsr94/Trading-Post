@@ -62,33 +62,33 @@ describe('activate / bench', () => {
   });
 
   it('refuses to bench a hero who is away on an expedition', () => {
-    const s = testState();
+    const s = testState(); // 'p1' is this state's stand-in POV hero — use 'p2' instead
     s.expeditions.push({
       id: 'exp_1',
       kind: 'caravan',
       destination: 'river_meet',
-      heroIds: ['p1'],
+      heroIds: ['p2'],
       leg: 'outbound',
       turnsLeft: 1,
       cargo: {},
       silver: 0,
       buyOrders: {},
     });
-    expect(benchError(s, 'p1')).toBe('They are away — recall them first.');
-    expect(benchHero(s, 'p1')).toBe(false);
+    expect(benchError(s, 'p2')).toBe('They are away — recall them first.');
+    expect(benchHero(s, 'p2')).toBe(false);
   });
 
   it('enforces the active-party cap when activating a reserve character', () => {
-    const s = testState(); // 6 active = cap
-    addReserve(s, 'p7');
-    expect(activateError(s, 'p7')).toBe('The party is full — bench someone first.');
-    expect(activateHero(s, 'p7')).toBe(false);
+    const s = testState(undefined, ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7']); // 7 active = cap
+    addReserve(s, 'p8');
+    expect(activateError(s, 'p8')).toBe('The party is full — bench someone first.');
+    expect(activateHero(s, 'p8')).toBe(false);
 
-    benchHero(s, 'p1'); // frees a slot
-    expect(activateError(s, 'p7')).toBeNull();
-    expect(activateHero(s, 'p7')).toBe(true);
-    expect(activeHeroes(s).map((h) => h.id)).toContain('p7');
-    expect(activeHeroes(s)).toHaveLength(6);
+    benchHero(s, 'p2'); // frees a slot (p1 is this state's stand-in POV hero, unbenchable)
+    expect(activateError(s, 'p8')).toBeNull();
+    expect(activateHero(s, 'p8')).toBe(true);
+    expect(activeHeroes(s).map((h) => h.id)).toContain('p8');
+    expect(activeHeroes(s)).toHaveLength(7);
   });
 
   it('rejects activating a dead or already-active hero', () => {
@@ -97,6 +97,13 @@ describe('activate / bench', () => {
     const ghost = addReserve(s, 'p7');
     ghost.status = 'dead';
     expect(activateError(s, 'p7')).toBe('They are not here to call up.');
+  });
+
+  it('refuses to bench the POV hero', () => {
+    const s = testState(); // 'p1' is this state's stand-in POV hero
+    expect(benchError(s, 'p1')).toBe('They lead the post — they cannot be benched.');
+    expect(benchHero(s, 'p1')).toBe(false);
+    expect(s.activePartyIds).toContain('p1');
   });
 
   it('reconcileRoster drops dead/departed heroes from the active party', () => {
@@ -144,9 +151,12 @@ describe('reserve upkeep and dependant food in the turn pipeline', () => {
 describe('broken company vs an empty active party', () => {
   it('an empty active party with living reserve is NOT game over', () => {
     const s = testState();
-    for (const id of [...s.activePartyIds]) benchHero(s, id);
-    expect(activeHeroes(s)).toHaveLength(0);
-    expect(heroesAtPost(s)).toHaveLength(0);
+    // The POV hero ('p1' in this state) can never be benched, so the active
+    // party bottoms out at 1 (just them), not 0 — still exercises the same
+    // "near-empty active party, full living reserve" distinction.
+    for (const id of s.activePartyIds.filter((id) => id !== s.povHeroId)) benchHero(s, id);
+    expect(activeHeroes(s)).toHaveLength(1);
+    expect(heroesAtPost(s)).toHaveLength(1);
     expect(livingHeroes(s)).toHaveLength(6);
 
     s.phase = 'report';
