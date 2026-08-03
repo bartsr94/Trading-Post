@@ -10,6 +10,7 @@ import { applyOutcomes } from '../events/outcomes';
 import type { OutcomeContext } from '../events/outcomes';
 import { advanceExpeditions, dispatchExpedition } from '../expeditions';
 import type { ExpeditionContext } from '../expeditions';
+import { formHeroUnion, formUnion } from '../family';
 import {
   addResidents,
   applyCultureDrift,
@@ -21,11 +22,23 @@ import {
   residentTotal,
 } from '../residents';
 import { Rng } from '../rng';
+import { resolveTurn } from '../turn';
 import { partyHeritageShare } from '../types';
 import type { GameState } from '../types';
 import { TEST_CONTENT, testState } from './helpers';
 
 const noop = () => {};
+
+/** Runs a turn and drops any pending events without resolving them
+ *  (mirrors transients.test.ts's `tick`). Leaves a game-over state as-is
+ *  rather than clobbering `phase`/`turn` past it. */
+function tick(s: GameState): void {
+  resolveTurn(s, TEST_CONTENT);
+  if (s.gameOver) return;
+  s.pendingEvents = [];
+  s.phase = 'assignment';
+  s.turn += 1;
+}
 
 /** The heritage tally must always sum to the number of heads the post feeds. */
 function expectTallyInvariant(s: GameState): void {
@@ -181,5 +194,148 @@ describe('party heritage & new event vocabulary', () => {
     applyOutcomes(s, [{ type: 'loseResidents', count: 1, group: 'native' }], outcomeCtx(s));
     expect(s.residents.heritage.native).toBe(1);
     expectTallyInvariant(s);
+  });
+});
+
+describe('group-targeted desertion (CHARTER_REVOKED_SPEC.md §3)', () => {
+  // Porters, not guards, for the native group — guards raise postDefense and
+  // suppress the desertion rate, which would confound the count asserted on.
+  it('biases desertion toward native residents once the post sits Aloof', () => {
+    const s = testState();
+    s.residents = freshResidents();
+    addResidents(s, 'farmers', 6, 'settlers', 'homeland');
+    addResidents(s, 'porters', 6, 'kiswani', 'native');
+    s.residents.contentment = 0; // force the unrest band
+    s.axes.integration = TUNING.residents.desertion.aloofIntegrationThreshold; // at the Aloof threshold
+
+    const lost = applyDesertion(s);
+    expect(lost).toBeGreaterThan(0);
+    expectTallyInvariant(s);
+    // Natives absorb the loss first; homeland stays untouched until natives run out.
+    expect(s.residents.heritage.native).toBe(6 - lost);
+    expect(s.residents.heritage.homeland).toBe(6);
+  });
+
+  it('splits proportionally when the post is not Aloof', () => {
+    const s = testState();
+    s.residents = freshResidents();
+    addResidents(s, 'farmers', 6, 'settlers', 'homeland');
+    addResidents(s, 'porters', 6, 'kiswani', 'native');
+    s.residents.contentment = 0;
+    s.axes.integration = TUNING.residents.desertion.aloofIntegrationThreshold + 1; // just short of Aloof
+
+    applyDesertion(s);
+    expectTallyInvariant(s);
+    expect(s.residents.heritage.homeland).toBeLessThan(6);
+  });
+});
+
+describe("the Company's judgment & the charterRevoked ending (CHARTER_REVOKED_SPEC.md)", () => {
+  it('a sustained compromised-and-hostile streak revokes the charter', () => {
+    // Both native heroes: homelandShare 0 keeps party reassurance out of the
+    // way, so the culture-driven compromise (and the "total break" read) is
+    // the only thing moving the streak.
+    const s = testState(1, ['p4', 'p5']);
+    s.silver = 1_000_000; // always affords the quota — keep that noise out
+    s.axes.culture = 10; // deep Frontier, past compromiseThreshold (5)
+    s.factions.CHARTER_COMPANY.standing = -60; // already Hostile
+
+    tick(s); // turn 1 — not a season end
+    tick(s); // turn 2 — not a season end
+    expect(s.charterCompromisedStreak).toBe(0);
+
+    tick(s); // turn 3 — season end #1
+    expect(s.charterCompromisedStreak).toBe(1);
+    expect(s.gameOver).toBeNull();
+
+    tick(s);
+    tick(s);
+    tick(s); // turn 6 — season end #2
+    expect(s.charterCompromisedStreak).toBe(2);
+    expect(s.gameOver).toBeNull();
+
+    tick(s);
+    tick(s);
+    tick(s); // turn 9 — season end #3: revokeStreak reached
+    expect(s.gameOver?.kind).toBe('charterRevoked');
+    expect(s.phase).toBe('gameover');
+  });
+
+  it('resets the streak once standing climbs clear of Hostile, not merely from paying the quota', () => {
+    const s = testState(1, ['p4', 'p5']);
+    s.silver = 1_000_000;
+    s.axes.culture = 10;
+    s.factions.CHARTER_COMPANY.standing = -60;
+
+    tick(s);
+    tick(s);
+    tick(s); // turn 3
+    expect(s.charterCompromisedStreak).toBe(1);
+
+    s.factions.CHARTER_COMPANY.standing = -60; // still Hostile despite the quota paid every season
+    tick(s);
+    tick(s);
+    tick(s); // turn 6
+    expect(s.charterCompromisedStreak).toBe(2);
+
+    s.factions.CHARTER_COMPANY.standing = 0; // climbs clear of Hostile
+    tick(s);
+    tick(s);
+    tick(s); // turn 9
+    expect(s.charterCompromisedStreak).toBe(0);
+    expect(s.gameOver).toBeNull();
+  });
+
+  it('weighs an informal native marriage heavier than an alliance one', () => {
+    const build = () => {
+      const s = testState(1, ['p1']); // one homeland hero, unwed until formUnion below
+      s.silver = 1_000_000;
+      s.axes.culture = 0; // isolate the bloodline signal from culture-driven compromise
+      s.factions.CHARTER_COMPANY.standing = -60;
+      return s;
+    };
+
+    const informal = build();
+    formUnion(informal, 'p1', { source: 'informal', heritage: 'kiswani', name: 'Nia' });
+    tick(informal);
+    tick(informal);
+    tick(informal); // turn 3
+
+    const alliance = build();
+    formUnion(alliance, 'p1', { source: 'alliance', heritage: 'kiswani', name: 'Nia' });
+    tick(alliance);
+    tick(alliance);
+    tick(alliance); // turn 3
+
+    expect(informal.factions.CHARTER_COMPANY.standing).toBeLessThan(
+      alliance.factions.CHARTER_COMPANY.standing,
+    );
+  });
+
+  it('weighs a hero-to-hero marriage heavier than an alliance one (§2)', () => {
+    const build = () => {
+      const s = testState(1, ['p1', 'p4']); // p1 homeland, p4 kiswani (native) — both must exist to wed
+      s.activePartyIds = ['p1']; // isolate the bloodline signal to p1 alone, as in the informal/alliance case
+      s.silver = 1_000_000;
+      s.axes.culture = 0;
+      s.factions.CHARTER_COMPANY.standing = -60;
+      return s;
+    };
+
+    const partyMarriage = build();
+    formHeroUnion(partyMarriage, 'p1', 'p4');
+    tick(partyMarriage);
+    tick(partyMarriage);
+    tick(partyMarriage); // turn 3
+
+    const alliance = build();
+    formUnion(alliance, 'p1', { source: 'alliance', heritage: 'kiswani', name: 'Nia' });
+    tick(alliance);
+    tick(alliance);
+    tick(alliance); // turn 3
+
+    expect(partyMarriage.factions.CHARTER_COMPANY.standing).toBeLessThan(
+      alliance.factions.CHARTER_COMPANY.standing,
+    );
   });
 });

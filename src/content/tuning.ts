@@ -270,6 +270,11 @@ export const TUNING = {
       unrestDesertRate: 0.2,
       /** Desertion rate reduced per point of post defense (guards). */
       guardSuppressionPerPoint: 0.02,
+      /** `integration` axis threshold (Aloof side) at/below which unrest
+       *  desertion is biased to take native residents first
+       *  (CHARTER_REVOKED_SPEC.md §3) — symmetric with axisGrowth's
+       *  integrationThreshold (+4) on the Integrated side. */
+      aloofIntegrationThreshold: -4,
     },
     growth: {
       /** Per-turn chance of +1 idle resident when content and under cap. */
@@ -710,6 +715,16 @@ export const TUNING = {
      *  end now falls twice as often per year, so halving keeps the annual
      *  total unchanged. */
     nativeRelationsGainPerSeason: 0.5,
+    /** Multiplier applied to the season's compromise loss when the active
+     *  party is loyal-reassuring (CHARTER_REVOKED_SPEC.md §2.2) — the
+     *  "dampens the compromise loss" half of party reassurance, distinct
+     *  from the flat partyReassureStanding add. */
+    partyReassureDampen: 0.5,
+    /** Native-heritage factions eligible for nativeRelationsGainPerSeason
+     *  (CHARTER_REVOKED_SPEC.md §2.2). Kept separate from
+     *  `TUNING.thralls.holding.nativeFactions` — that list predates Harpies
+     *  and was never revisited; don't assume the two stay in sync. */
+    nativeFactions: ['RIVER_CLANS', 'HILL_TRIBES', 'OLD_PEOPLE', 'BEASTFOLK', 'HARPY'] as FactionId[],
   },
 
   // Marriage, partners, children & the family line (FAMILY_SPEC.md §13). All
@@ -749,6 +764,11 @@ export const TUNING = {
       purePartyReassure: 1, // extra reassurance per wed 'pure' active hero
       mixedCompromiseAdd: 1, // extra compromise per wed 'mixed' active hero
       informalCompromiseMult: 1.5, // informal households weigh heavier than alliances
+      // A hero-to-hero marriage (CHARTER_REVOKED_SPEC.md §2) weighs heavier
+      // still: two of the company's own openly wedding across the line is a
+      // more damning "gone native" signal than a hired diplomat's alliance
+      // match, or even an unblessed hearth-companion out at the post.
+      partyCompromiseMult: 2,
       multiSpouseCompromiseMult: 1.25, // a multi-spouse mixed household heavier still
     },
   },

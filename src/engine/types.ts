@@ -146,7 +146,9 @@ export function oppositeGender(g: Gender): Gender {
 /** How a union was formed (FAMILY_SPEC.md §2.2). Set on the spouse record.
  *  'party' is two heroes already at the post marrying each other
  *  (FAMILY_PHASE_D_SPEC.md §2) — no new Dependant is created for it, so it
- *  never actually appears on a spouse *record*, only in `unionCultureNudge`. */
+ *  never appears on a spouse *record*; `unionCultureNudge` reads it directly,
+ *  and `worstNativeSpouseUnion` (`family.ts`) synthesizes it (worse than
+ *  `'informal'`) for the Company's bloodline-compromise read. */
 export type UnionSource = 'homeland' | 'alliance' | 'informal' | 'party';
 
 /** A named person's descent (FAMILY_SPEC.md §3.3). One people = a pure line;

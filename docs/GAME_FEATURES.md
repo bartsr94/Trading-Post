@@ -223,6 +223,31 @@ quotaSilver` to the Company if affordable; missing it escalates
 stress, and eventually silver seizure. This is deliberate ongoing economic
 pressure, not a new failure state — see §14.
 
+**The Company's judgment (CHARTER_REVOKED_SPEC.md).** `evaluateCharterJudgment`
+runs immediately after `payCharterQuota` each season end (`engine/turn.ts`) and
+reads whether the post itself, not just its ledger, still looks like the
+Company's foothold. The `culture` settlement axis (§9) past
+`TUNING.heritage.compromiseThreshold` costs `CHARTER_COMPANY` standing every
+season, dampened and partly offset when the *active party's own heritage*
+reads loyal (`partyHeritageShare(state, 'homeland') ≥ partyLoyalShare`) — who
+leads the post signals loyalty as loudly as who works it. A wed active hero
+extends the same signal from the family side (§8): `bloodline: 'pure'`
+reassures, `bloodline: 'mixed'` adds to the compromise read, weighted heavier
+for an informal union than an alliance one, heavier still for a hero-to-hero
+marriage (the most visible "gone native" signal — two of the company's own,
+not a hired diplomat), and heavier still on top of either for a multi-spouse
+mixed household. A mixed active party (both homeland and native
+heroes present) also earns a small standing gain with every non-hostile
+faction in `TUNING.heritage.nativeFactions`. A season where the post reads
+compromised (`culture` past threshold, or a non-empty active party with zero
+homeland heroes — a "total break") **and** `CHARTER_COMPANY`'s stance is
+already `Hostile` increments `GameState.charterCompromisedStreak`; any other
+season resets it to zero — note that paying the quota alone does not reset
+it, only standing actually climbing clear of Hostile does. Reaching
+`TUNING.heritage.revokeStreak` (3) declares the `charterRevoked` ending
+(§15); each season before that, escalating inspector-ultimatum report lines
+count down to it.
+
 **Diplomacy discovery & first contact.** Faction seats — and, more broadly,
 any market community (`isCommunity(def)`: `hasMarket && id !== homeLocationId`,
 not just faction seats) — stay off the Diplomacy screen's Communities tab
@@ -477,7 +502,15 @@ unreachable outside the cheat console.
 `parentIds` and `spouseId`. Both `Hero` and `Dependant` carry a runtime
 `gender`; `Hero` gains an optional `bloodline` (`pure`/`mixed`); `Dependant`
 gains `ancestry.peoples` (dual-parentage: the deduped union of both parents'
-peoples), `union` (source), and `comeOfAge`. `Hero` also carries an optional
+peoples), `union` (source), and `comeOfAge`. A wed active hero's `bloodline`
+feeds the Company's judgment every season end (§5/§15) —
+`worstNativeSpouseUnion` (`family.ts`) reads the "worst" (most compromising)
+union source among a `mixed` hero's native-blood spouses, worst to
+mildest: `party` (a hero-to-hero marriage, read off `spousesOf` rather than
+a `Dependant` record since there is none) outweighs `informal`, which
+outweighs `alliance`/`homeland`; `spouseCount` flags a multi-spouse mixed
+household for a heavier weight still. `Hero` also carries
+an optional
 `temperament?: string[]` — free-form personality-flavor tags (e.g.
 `steadfast`/`guarded`, `ambitious`/`sharp-tongued`), authored on 4 of the 12
 pool heroes (`content/heroes.ts`) and validated on save; not yet read by any
@@ -551,6 +584,14 @@ event outcomes, per-head hire nudges, and a season-end self-correcting drift
 (`applyCultureDrift`, pulling toward the residents' native/homeland
 balance, capped per season). `applyAxisArrivals` also reads `culture`
 thresholds to draw native-vs-homeland settlers.
+
+**Group-targeted desertion** (CHARTER_REVOKED_SPEC.md §3): unrest desertion
+(`applyDesertion`, §7) ordinarily debits the heritage tally proportionally,
+but once `integration` sits at or below
+`TUNING.residents.desertion.aloofIntegrationThreshold` (a post reading Aloof)
+it biases the loss toward native residents first, via `loseResidents`'s
+existing `group` parameter — no new mechanism, just a threshold check wired
+to a bias that already existed.
 
 **Hiring.** `TUNING.heritage.hireSources` is one lookup table keyed by
 `subPeople` → `{ people, faction, seat }`, letting one people supply from
@@ -1191,13 +1232,9 @@ Four `GAME_OVER_KINDS`: `bankrupt` (2 consecutive missed-upkeep turns,
 halved from 3 alongside the `turnsPerSeason` 6→3 cadence change — §1),
 `brokenCompany` (all heroes dead/departed — a captive hero is **not** counted
 as lost, since they may yet be ransomed or rescued, §17), `destroyed` (raid
-cascade, §11),
-and `charterRevoked` — this last one **exists only as a type literal**, with
-no code path anywhere that ever sets it. The Company's read of `culture` +
-`partyHeritageShare` + `bloodline`/multi-spouse composition that was meant
-to feed it is seeded in the save schema (v7) but not wired into
-`payCharterQuota`. See `docs/TODO_FEATURES.md` for the unbuilt
-mechanism as originally specced.
+cascade, §11), and `charterRevoked` — the Company's judgment on a post it
+reads as lost to the frontier; see §5 for the mechanism (culture drift, the
+active party's own heritage, and the bloodline-marriage signal all feed it).
 
 ## 16. Save versioning
 
@@ -1322,10 +1359,10 @@ unchanged** — this system is only about the unnamed pool.
 - **Standing / Company judgment.** Season-end, while any thralls are held:
   a flat standing loss against every non-hostile faction in
   `TUNING.thralls.holding.nativeFactions` (deliberately not per-origin), plus
-  a `culture`-axis nudge toward Frontier (`applyHoldingPressure`) —
-  deliberately the input the still-unbuilt `charterRevoked` mechanism
-  (`TODO_FEATURES.md`) would read, without building that mechanism. The
-  Company's own purchase channel carries no separate penalty — holding
+  a `culture`-axis nudge toward Frontier (`applyHoldingPressure`) — one more
+  input into the `charterRevoked` mechanism's culture-drift read (§5/§15),
+  same as any other culture drift. The Company's own purchase channel
+  carries no separate penalty — holding
   thralls at all is what counts, not which euphemism they were bought under.
 
 **Acquisition — four vectors:**
@@ -1615,12 +1652,10 @@ files, one per area) covering: master-level open questions (bond values,
 difficulty modes, art pipeline, Cult-pressure mechanic, tier-4 endgame,
 in-fiction naming gaps), the Concession's land-conflict/forced-reallocation
 event content, buildings backlog (tier 4, true axis-gated buildings, storage
-caps, `activeCapBonus`), the unwired `charterRevoked`
-Company-judgment mechanism (heritage + family sides both), Peoples Phase C
-Company-town content, Family's remaining forks (matrilineal marry-out,
-per-people alliance flavor, dependant mortality, bride-price income),
-Beastfolk's remaining content (sub-clan depth — the named-recruit gap
-closed 2026-07-30, §20), the
+caps, `activeCapBonus`), Peoples Phase C Company-town content, Family's
+remaining forks (matrilineal marry-out, per-people alliance flavor,
+dependant mortality, bride-price income), Beastfolk's remaining content
+(sub-clan depth — the named-recruit gap closed 2026-07-30, §20), the
 Harpies' remaining content (in-fiction faction/eyrie naming, a distinct
 raid/abduction identity, lore + portrait art), and a separate engineering
 backlog (store-mutation helper, `SaveResult`/autosave warnings, lint
