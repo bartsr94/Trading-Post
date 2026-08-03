@@ -558,11 +558,23 @@ condition pair, no engine mechanism beyond that; the matrilineal-pure
 daughter-only rule (`childAncestry`) already applied regardless of which of
 the three events fires the birth.
 
-**UI:** `CharactersScreen.tsx` (active/reserve/dependant family strip) and
-`FamilyTree.tsx` (the multi-generational tree modal).
+**UI:** `CharactersScreen.tsx` (active/reserve/dependant family strip),
+`FamilyTree.tsx` (the multi-generational tree modal), and `DependantSheet.tsx`
+(a lighter counterpart to `HeroSheet.tsx` for a married-in spouse/child/kin —
+name/portrait/heritage, a purely-flavor temperament pair picked deterministically
+by id (`content/temperament.ts`'s `pickDependantTemperament`, never stored),
+a union blurb, and clickable family links (spouse/children/parents) — no
+stats/skills/traits, since dependants don't have them). Every dependant tile,
+wherever shown (`CharactersScreen`, `HeroSheet`, `FamilyTree` — hero tiles in
+the tree stay non-clickable), opens it; a hero-to-hero spouse still opens the
+full `HeroSheet` instead, since it's a full `Hero`. All of it routes through
+one store action, `openPerson(id, 'hero' | 'dependant')`, so navigating a
+family link swaps modals instead of stacking them.
 
 **Save shape:** v5 added the roster/reserve split + dependants; v8 added
-`gender`/`bloodline`/`ancestry`/`union`/`comeOfAge`.
+`gender`/`bloodline`/`ancestry`/`union`/`comeOfAge`; v34 added
+`Dependant.history?: string[]` (mirrors `Hero.history`; no writer yet — staged
+for a future spousal-interaction event chain).
 
 ## 9. Peoples & heritage
 

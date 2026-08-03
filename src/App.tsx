@@ -5,6 +5,7 @@ import { EventChainViewer } from './ui/components/EventChainViewer';
 import { AssignmentBoard } from './ui/screens/AssignmentBoard';
 import { BuildingsScreen } from './ui/screens/BuildingsScreen';
 import { CharactersScreen } from './ui/screens/CharactersScreen';
+import { DependantSheet } from './ui/screens/DependantSheet';
 import { DiplomacyScreen } from './ui/screens/DiplomacyScreen';
 import { EventPanel } from './ui/screens/EventPanel';
 import { GameOver } from './ui/screens/GameOver';
@@ -30,6 +31,7 @@ export function App() {
   const game = useGameStore((s) => s.game);
   const screen = useGameStore((s) => s.screen);
   const selectedHeroId = useGameStore((s) => s.selectedHeroId);
+  const selectedDependantId = useGameStore((s) => s.selectedDependantId);
   const cheatModeEnabled = useGameStore((s) => s.cheatModeEnabled);
   const cheatConsoleOpen = useGameStore((s) => s.cheatConsoleOpen);
   const setCheatConsoleOpen = useGameStore((s) => s.setCheatConsoleOpen);
@@ -54,6 +56,9 @@ export function App() {
 
   const selectedHero = selectedHeroId
     ? game.heroes.find((h) => h.id === selectedHeroId) ?? null
+    : null;
+  const selectedDependant = selectedDependantId
+    ? game.dependants.find((d) => d.id === selectedDependantId) ?? null
     : null;
   const season = seasonOfTurn(game.turn);
 
@@ -95,6 +100,7 @@ export function App() {
       )}
       {game.phase === 'report' && !lastRaidResolution && <TurnReport game={game} />}
       {selectedHero && <HeroSheet hero={selectedHero} />}
+      {selectedDependant && <DependantSheet game={game} dep={selectedDependant} />}
       {cheatModeEnabled && cheatConsoleOpen && (
         <CheatConsole game={game} onClose={() => setCheatConsoleOpen(false)} />
       )}

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { formUnion } from '../family';
 import { deserialize, serialize } from '../save';
 import { testState } from './helpers';
 
@@ -155,6 +156,15 @@ describe('saves', () => {
     p1.spouseIds = ['p4'];
     p4.spouseIds = ['p1'];
     p1.temperament = ['warm', 'steadfast'];
+    const restored = deserialize(serialize(s));
+    expect(restored).toEqual(s);
+  });
+
+  it('round-trips a dependant history log (DEPENDANT_SHEET_SPEC.md)', () => {
+    const s = testState(2024);
+    const spouse = formUnion(s, 'p1', { source: 'informal', heritage: 'kiswani', name: 'Test Spouse' });
+    expect(spouse).not.toBeNull();
+    spouse!.history = ['Wed at the post, quietly.'];
     const restored = deserialize(serialize(s));
     expect(restored).toEqual(s);
   });

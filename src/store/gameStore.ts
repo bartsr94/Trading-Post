@@ -69,6 +69,9 @@ interface GameStore {
   screen: Screen;
   /** Hero sheet modal target. */
   selectedHeroId: string | null;
+  /** Dependant sheet modal target (DEPENDANT_SHEET_SPEC.md) — independent of
+   *  `selectedHeroId` since a Dependant is a different node type with its own sheet. */
+  selectedDependantId: string | null;
   /** Seat the Diplomacy screen should pre-select the next time it mounts/reads this. */
   diplomacySeatFocus: LocationId | null;
   /** Destination the Market screen should pre-select as the caravan target. */
@@ -95,6 +98,10 @@ interface GameStore {
 
   setScreen: (screen: Screen) => void;
   selectHero: (heroId: string | null) => void;
+  selectDependant: (dependantId: string | null) => void;
+  /** Open a family-graph node's sheet, whichever kind it is — clears the other
+   *  selection so navigating a family link swaps modals instead of stacking them. */
+  openPerson: (id: string, kind: 'hero' | 'dependant') => void;
   /** Switch to the Diplomacy screen with a specific seat pre-selected. */
   openDiplomacy: (seatId: LocationId) => void;
   /** Consume the pending seat focus (called once the Diplomacy screen applies it). */
@@ -243,6 +250,7 @@ export const useGameStore = create<GameStore>((set, get) => {
   game: null,
   screen: 'post',
   selectedHeroId: null,
+  selectedDependantId: null,
   diplomacySeatFocus: null,
   marketDestinationFocus: null,
   lastResolution: null,
@@ -283,7 +291,7 @@ export const useGameStore = create<GameStore>((set, get) => {
 
   abandonGame: () => {
     clearAutosave();
-    set({ game: null, screen: 'post', selectedHeroId: null, lastResolution: null });
+    set({ game: null, screen: 'post', selectedHeroId: null, selectedDependantId: null, lastResolution: null });
   },
 
   exportSave: () => {
@@ -304,6 +312,13 @@ export const useGameStore = create<GameStore>((set, get) => {
 
   setScreen: (screen) => set({ screen }),
   selectHero: (selectedHeroId) => set({ selectedHeroId }),
+  selectDependant: (selectedDependantId) => set({ selectedDependantId }),
+  openPerson: (id, kind) =>
+    set(
+      kind === 'hero'
+        ? { selectedHeroId: id, selectedDependantId: null }
+        : { selectedDependantId: id, selectedHeroId: null },
+    ),
   openDiplomacy: (seatId) => set({ screen: 'diplomacy', diplomacySeatFocus: seatId }),
   clearDiplomacyFocus: () => set({ diplomacySeatFocus: null }),
   openMarket: (destinationId) => set({ screen: 'market', marketDestinationFocus: destinationId }),

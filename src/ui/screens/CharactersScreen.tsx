@@ -35,6 +35,7 @@ function FamilyStrip({
   hero: Hero;
   onOpen: () => void;
 }) {
+  const openPerson = useGameStore((s) => s.openPerson);
   const spouses = spousesOf(game, hero.id);
   const household = householdMembers(game, hero.id);
   const children = childrenOf(game, hero.id);
@@ -49,8 +50,9 @@ function FamilyStrip({
         return (
           <span
             key={s.id}
-            className="char-dep"
+            className="char-dep person-link"
             title={isHeroSpouse ? 'Spouse — one of the company, still at work' : 'Spouse — eats grain, does no work'}
+            onClick={() => openPerson(s.id, isHeroSpouse ? 'hero' : 'dependant')}
           >
             {s.name}
             {!isHeroSpouse && s.union && <span className="union-badge"> {UNION_BADGE[s.union]}</span>}

@@ -15,6 +15,7 @@ import {
 import type { FamilyNode } from '../../engine/family';
 import { cap } from '../../engine/types';
 import type { Dependant, GameState, Heritage } from '../../engine/types';
+import { useGameStore } from '../../store/gameStore';
 import { pickDependantPortraitKey, portraitUrl } from '../portraits';
 import { Portrait } from './Portrait';
 
@@ -55,6 +56,7 @@ function DependantFace({ dep }: { dep: Dependant }) {
 }
 
 function PersonTile({ node }: { node: FamilyNode }) {
+  const openPerson = useGameStore((s) => s.openPerson);
   const peoples = nodePeoples(node);
   const mixed = isMixed(node);
   const dead = isHeroNode(node) && node.status !== 'active';
@@ -68,8 +70,17 @@ function PersonTile({ node }: { node: FamilyNode }) {
           ? 'grown kin'
           : 'kin';
 
+  // Only dependants open a sheet here (DEPENDANT_SHEET_SPEC.md) — hero tiles
+  // in the tree stay non-clickable this pass, they're already viewable from
+  // the Characters screen.
+  const clickable = !isHeroNode(node);
+
   return (
-    <div className={`ft-person${dead ? ' ft-dead' : ''}`} title={peopleLabel(peoples)}>
+    <div
+      className={`ft-person${dead ? ' ft-dead' : ''}${clickable ? ' person-link' : ''}`}
+      title={peopleLabel(peoples)}
+      onClick={clickable ? () => openPerson(node.id, 'dependant') : undefined}
+    >
       <div className="ft-face">
         {isHeroNode(node) ? <Portrait hero={node} /> : <DependantFace dep={node} />}
       </div>
