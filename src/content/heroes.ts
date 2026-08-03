@@ -4,6 +4,7 @@
 
 import { defaultSubPeople, HERITAGES } from '../engine/types';
 import type { Gender, Hero, Heritage, SkillId, StatId } from '../engine/types';
+import { POV_BACKGROUNDS } from './povBackgrounds';
 
 export interface HeroTemplate {
   id: string;
@@ -236,3 +237,45 @@ export const HERO_POOL: HeroTemplate[] = [
 export const PORTRAIT_KEYS: Map<string, string> = new Map(
   HERO_POOL.map((t) => [t.id, t.portraitKey]),
 );
+
+/** Chargen choices for the player-embodied 7th hero (POV_CHARACTER_SPEC.md §4.5). */
+export interface PovHeroBuild {
+  name: string;
+  gender: Gender;
+  heritage: Heritage;
+  /** Tribe/region within the people; defaults per-people like a pool hero's. */
+  subPeople?: string;
+  /** Chosen from `portraitKeysFor` against the picked heritage/gender. */
+  portraitKey?: string;
+  stats: Record<StatId, number>;
+  skills: Record<SkillId, number>;
+  backgroundId: string;
+}
+
+/**
+ * Builds the player-embodied 7th hero from chargen choices. Always minted
+ * with the fixed runtime id `'pov'` — there is ever exactly one, created
+ * once at game start, never re-minted (POV_CHARACTER_SPEC.md §4.1).
+ */
+export function createPovHero(build: PovHeroBuild): Hero {
+  const background =
+    POV_BACKGROUNDS.find((b) => b.id === build.backgroundId) ?? POV_BACKGROUNDS[0];
+  return {
+    id: 'pov',
+    name: build.name,
+    epithet: background.epithet,
+    bio: background.description,
+    stats: { ...build.stats },
+    skills: { ...NO_SKILLS, ...build.skills },
+    skillMarks: [],
+    traits: [...background.traits],
+    health: 10,
+    stress: 0,
+    status: 'active',
+    heritage: build.heritage,
+    subPeople: build.subPeople ?? defaultSubPeople(build.heritage),
+    gender: build.gender,
+    ...(build.portraitKey ? { portraitKey: build.portraitKey } : {}),
+    history: [background.openingHistory],
+  };
+}

@@ -194,6 +194,7 @@ function validateHero(value: unknown, path: string): string {
   enumValue(hero.status, HERO_STATUSES, `${path}.status`);
   enumValue(hero.heritage, HERITAGES, `${path}.heritage`);
   enumValue(hero.gender, GENDERS, `${path}.gender`);
+  if (hero.portraitKey !== undefined) string(hero.portraitKey, `${path}.portraitKey`);
   if (hero.bloodline !== undefined) enumValue(hero.bloodline, BLOODLINES, `${path}.bloodline`);
   if (hero.spouseIds !== undefined) {
     const spouseIds = stringArray(hero.spouseIds, `${path}.spouseIds`);
@@ -359,6 +360,22 @@ export function validateGameState(value: unknown): GameState {
   const activePartyIds = stringArray(state.activePartyIds, 'save.activePartyIds');
   unique(activePartyIds, 'save.activePartyIds');
   for (const id of activePartyIds) if (!heroIds.has(id)) invalid('save.activePartyIds', 'references an unknown hero');
+
+  const povHeroId = string(state.povHeroId, 'save.povHeroId');
+  const povIndex = heroIdList.indexOf(povHeroId);
+  if (povIndex === -1) {
+    invalid('save.povHeroId', 'references an unknown hero');
+  } else {
+    // Captive/dead/departed POV heroes fall out of activePartyIds the same
+    // way any hero does (reconcileRoster, roster.ts) — only require
+    // membership while actually active, matching how the party is dropped
+    // to (and later re-grown from) the reserve bench for anyone captured.
+    const povStatus = record(heroList[povIndex], `save.heroes[${povIndex}]`).status;
+    if (povStatus === 'active' && !activePartyIds.includes(povHeroId)) {
+      invalid('save.povHeroId', 'an active POV hero must be in the active party');
+    }
+  }
+
   validateStringRecord(state.assignments, ACTIVITY_IDS, 'save.assignments');
   for (const id of Object.keys(record(state.assignments, 'save.assignments'))) {
     if (!heroIds.has(id)) invalid(`save.assignments.${id}`, 'references an unknown hero');

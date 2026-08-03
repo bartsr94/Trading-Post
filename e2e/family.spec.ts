@@ -10,6 +10,8 @@ import { expect, test, type Page } from '@playwright/test';
 /** Picks the first 6 heroes and founds the post, landing on the Assignments screen. */
 async function foundPost(page: Page): Promise<void> {
   await page.goto('/');
+  await page.getByRole('button', { name: /Found a New Post/ }).click();
+  await page.getByRole('button', { name: /Choose Your Company/ }).click();
   const cards = page.locator('.hero-card');
   for (let i = 0; i < 6; i++) await cards.nth(i).click();
   await page.getByRole('button', { name: /Found the Post/ }).click();
@@ -31,15 +33,20 @@ test('a hero-to-hero marriage shows the partner on both Hero Sheets, the Charact
   await openCheatConsole(page);
 
   // The Family panel's hero-marriage row defaults to the first two eligible
-  // heroes — Berrin (p1) and Maela (p2), the founding party's first two.
+  // heroes, which now includes the POV hero — pick Berrin and Maela
+  // explicitly rather than relying on default ordering.
+  const marriageRow = page.locator('.cc-row', { has: page.getByRole('button', { name: 'Force Hero-Hero Marriage' }) });
+  await marriageRow.locator('select').nth(0).selectOption({ label: 'Berrin' });
+  await marriageRow.locator('select').nth(1).selectOption({ label: 'Maela' });
   await expect(page.getByRole('button', { name: 'Force Hero-Hero Marriage' })).toBeEnabled();
   await page.getByRole('button', { name: 'Force Hero-Hero Marriage' }).click();
   await expect(page.locator('.cc-canvas')).toContainText('weds');
   await page.getByRole('button', { name: 'Close' }).click();
 
-  // Hero Sheet: Berrin's Family section shows Maela as spouse.
-  const tiles = page.locator('.hero-tile');
-  await tiles.first().locator('.hero-portrait').click();
+  // Hero Sheet: Berrin's Family section shows Maela as spouse. The POV hero
+  // is pinned first in the hero bar, so target Berrin's tile by name.
+  const berrinTile = page.locator('.hero-tile').filter({ has: page.locator('[aria-label="Berrin"]') });
+  await berrinTile.locator('.hero-portrait').click();
   await expect(page.locator('.hero-sheet')).toContainText('the Old Sergeant');
   await expect(page.locator('.hero-sheet')).toContainText('Family');
   await expect(page.locator('.hero-sheet .fam-tile')).toContainText('Maela');

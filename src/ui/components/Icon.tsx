@@ -18,7 +18,8 @@ export type IconName =
   | 'diplomacy'
   | 'raid'
   | 'heart'
-  | 'gear';
+  | 'gear'
+  | 'crown';
 
 const PATHS: Record<IconName, ReactElement> = {
   post: (
@@ -122,6 +123,12 @@ const PATHS: Record<IconName, ReactElement> = {
     <>
       <circle cx="12" cy="12" r="3" />
       <path d="M12 3 V5.5 M12 18.5 V21 M21 12 H18.5 M5.5 12 H3 M18.5 5.5 L16.8 7.2 M7.2 16.8 L5.5 18.5 M18.5 18.5 L16.8 16.8 M7.2 7.2 L5.5 5.5" />
+    </>
+  ),
+  crown: (
+    <>
+      <path d="M4 18 L4 10 L8 13 L12 6 L16 13 L20 10 L20 18 Z" />
+      <line x1="4" y1="18" x2="20" y2="18" />
     </>
   ),
 };

@@ -10,6 +10,7 @@ import { HARPY_EVENTS } from './harpy';
 import { GENERIC_HERO_EVENTS, HERO_EVENTS } from './heroEvents';
 import { MARKET_EVENTS } from './marketEvents';
 import { ORC_EVENTS } from './orc';
+import { PETITION_EVENTS } from './petitions';
 import { POST_EVENTS } from './postEvents';
 import { RAID_EVENTS } from './raidEvents';
 import { RECRUIT_EVENTS } from './recruitEvents';
@@ -20,6 +21,7 @@ import { uniqueIdMap } from '../uniqueIdMap';
 
 export const ALL_EVENTS: GameEvent[] = [
   ...POST_EVENTS,
+  ...PETITION_EVENTS,
   ...MARKET_EVENTS,
   ...HERO_EVENTS,
   ...GENERIC_HERO_EVENTS,

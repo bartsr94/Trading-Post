@@ -14,7 +14,7 @@ function portraitHue(key: string): number {
 }
 
 export function Portrait({ hero }: { hero: Hero }) {
-  const key = PORTRAIT_KEYS.get(hero.id) ?? hero.id;
+  const key = hero.portraitKey ?? PORTRAIT_KEYS.get(hero.id) ?? hero.id;
   const url = portraitUrl(key);
   if (url) return <img className="portrait-art" src={url} alt="" draggable={false} />;
 

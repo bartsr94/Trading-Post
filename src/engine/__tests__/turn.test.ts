@@ -243,6 +243,28 @@ describe('turn advance & skill growth', () => {
     expect(s.phase).toBe('gameover');
   });
 
+  it('losing only the POV hero ends the game, even with the rest of the company alive', () => {
+    const s = testState(); // 'p1' is this state's stand-in POV hero
+    s.heroes.find((h) => h.id === 'p1')!.status = 'dead';
+    advanceTurn(s);
+    expect(s.gameOver?.kind).toBe('povLost');
+    expect(s.phase).toBe('gameover');
+  });
+
+  it('POV captivity is not game over on its own — only past the one-year mark', () => {
+    const s = testState();
+    const pov = s.heroes.find((h) => h.id === 'p1')!;
+    pov.status = 'captive';
+    pov.captivity = { faction: 'RIVER_CLANS', capturedTurn: s.turn };
+
+    advanceTurn(s);
+    expect(s.gameOver).toBeNull();
+
+    s.turn += TUNING.abduction.refuseReturnThresholdTurns;
+    advanceTurn(s);
+    expect(s.gameOver?.kind).toBe('povLost');
+  });
+
   it('drops dead heroes from the assignment board but keeps standing orders', () => {
     const s = testState();
     const [dead, alive] = s.heroes;

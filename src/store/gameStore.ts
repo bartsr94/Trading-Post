@@ -4,7 +4,8 @@
 
 import { create } from 'zustand';
 import { STARTING_STANDINGS } from '../content/factions';
-import { HERO_POOL, createHero } from '../content/heroes';
+import { HERO_POOL, createHero, createPovHero } from '../content/heroes';
+import type { PovHeroBuild } from '../content/heroes';
 import { LOCATIONS } from '../content/locations';
 import { MAP_FEATURES, MAP_REGIONS } from '../content/map';
 import { CONTENT } from '../content/registry';
@@ -86,7 +87,7 @@ interface GameStore {
   eventChainViewerOpen: boolean;
 
   hasAutosave: () => boolean;
-  newGame: (heroIds: string[]) => void;
+  newGame: (heroIds: string[], povBuild: PovHeroBuild) => void;
   continueGame: () => void;
   abandonGame: () => void;
   exportSave: () => string | null;
@@ -253,15 +254,18 @@ export const useGameStore = create<GameStore>((set, get) => {
 
   hasAutosave: () => loadAutosave() !== null,
 
-  newGame: (heroIds) => {
-    const heroes = heroIds
+  newGame: (heroIds, povBuild) => {
+    const poolHeroes = heroIds
       .map((id) => HERO_POOL.find((t) => t.id === id))
       .filter((t) => t !== undefined)
       .map(createHero);
+    const povHero = createPovHero(povBuild);
+    const heroes = [povHero, ...poolHeroes];
     const seed = (Date.now() ^ (Math.random() * 0xffffffff)) >>> 0;
     const game = createInitialState({
       seed,
       heroes,
+      povHeroId: povHero.id,
       startingStandings: STARTING_STANDINGS,
       locationDefs: LOCATIONS,
       mapRegionDefs: MAP_REGIONS,

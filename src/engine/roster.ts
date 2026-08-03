@@ -28,6 +28,7 @@ export function activateError(state: GameState, heroId: string): string | null {
 /** Why benching `heroId` is invalid, or null if it may proceed. */
 export function benchError(state: GameState, heroId: string): string | null {
   if (!state.activePartyIds.includes(heroId)) return 'Not in the active party.';
+  if (heroId === state.povHeroId) return 'They lead the post — they cannot be benched.';
   if (awayHeroIds(state).has(heroId)) return 'They are away — recall them first.';
   return null;
 }

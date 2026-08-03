@@ -512,6 +512,13 @@ export interface Hero {
   subPeople?: string;
   /** Gender (FAMILY_SPEC.md §3.1). Mechanical (marriage, child gender), so runtime. */
   gender: Gender;
+  /** Optional portrait asset key (mirrors `Dependant.portraitKey`/
+   *  `FactionFigure.portraitKey`). Pool heroes resolve their portrait from
+   *  the static `PORTRAIT_KEYS` map instead (`content/heroes.ts`) and never
+   *  set this — it exists for the player-built POV hero (POV_CHARACTER_SPEC.md),
+   *  whose portrait is a chargen choice with no static template to
+   *  re-derive it from later. */
+  portraitKey?: string;
   /** Set when a hero heads a union household (FAMILY_SPEC.md §3.4): 'pure' = only
    *  homeland blood under the roof; 'mixed' = any native partner/descendant.
    *  Absent = unwed. The lean marker the Company reads — not a floating meter. */
@@ -806,7 +813,13 @@ export interface TurnReport {
 export const PHASES = ['assignment', 'event', 'report', 'gameover'] as const;
 export type GamePhase = (typeof PHASES)[number];
 
-export const GAME_OVER_KINDS = ['bankrupt', 'brokenCompany', 'charterRevoked', 'destroyed'] as const;
+export const GAME_OVER_KINDS = [
+  'bankrupt',
+  'brokenCompany',
+  'charterRevoked',
+  'destroyed',
+  'povLost',
+] as const;
 
 export interface GameOverInfo {
   kind: (typeof GAME_OVER_KINDS)[number];
@@ -896,6 +909,12 @@ export interface GameState {
    * (CHARACTERS_SPEC.md §3). Party membership is a separate axis from `status`.
    */
   activePartyIds: string[];
+  /** The player-embodied 7th hero (POV_CHARACTER_SPEC.md) — a full `Hero` like
+   *  any other, always present in `activePartyIds`, never benchable
+   *  (`roster.ts`'s `benchError`). Set once at game start, never reassigned:
+   *  losing this hero (death/departure, or captivity past one in-game year)
+   *  is the `povLost` game over, not a succession. */
+  povHeroId: string;
   assignments: Record<string, ActivityId>; // heroId -> standing order
   silver: number;
   goods: Record<GoodId, number>;

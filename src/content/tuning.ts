@@ -5,7 +5,7 @@ import type { BuildingDefData, FactionId, Heritage, TierRequirement } from '../e
 
 export const TUNING = {
   save: {
-    version: 32,
+    version: 33,
     autosaveKey: 'trading-post-save',
     /** Manual import guard; current saves are far smaller than five MiB. */
     maxImportBytes: 5 * 1024 * 1024,
@@ -15,11 +15,24 @@ export const TUNING = {
     silver: 200,
     goods: { grain: 30, timber: 10, tools: 4, salt: 4 } as Partial<Record<string, number>>,
     partySize: 6,
+    // POV chargen stat point-buy (POV_CHARACTER_SPEC.md §4.5) — pool/min/max
+    // chosen to land in the same range the 12 authored pool heroes occupy
+    // (most sum to 13-16 across the 5 stats).
+    povStatPool: 15,
+    povStatMin: 1,
+    povStatMax: 5,
+    // POV chargen skill point-buy — every authored pool hero starts with
+    // exactly 3 skills at 3/2/1 (6 points, 3 max in any one skill); matched
+    // here rather than starting flat at 0 like an unbuilt recruit.
+    povSkillPool: 6,
+    povSkillMax: 3,
   },
 
   // The active party ↔ reserve roster (CHARACTERS_SPEC.md).
   roster: {
-    activeCap: 6, // in-game party ceiling; a building raises this later (Phase C).
+    // 6 pool heroes + the always-active POV hero (POV_CHARACTER_SPEC.md §4.2).
+    // A building raises this further later (Phase C).
+    activeCap: 7,
     retainerWagePerReserve: 8, // a reserve named character's seasonal retainer.
   },
 

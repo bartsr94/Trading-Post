@@ -2,6 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function foundPost(page: Page): Promise<void> {
   await page.goto('/');
+  await page.getByRole('button', { name: /Found a New Post/ }).click();
+  await page.getByRole('button', { name: /Choose Your Company/ }).click();
   const cards = page.locator('.hero-card');
   for (let i = 0; i < 6; i++) await cards.nth(i).click();
   await page.getByRole('button', { name: /Found the Post/ }).click();

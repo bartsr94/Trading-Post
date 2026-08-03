@@ -1228,13 +1228,15 @@ consumers need different shapes.
 
 ## 15. Failure states
 
-Four `GAME_OVER_KINDS`: `bankrupt` (2 consecutive missed-upkeep turns,
+Five `GAME_OVER_KINDS`: `bankrupt` (2 consecutive missed-upkeep turns,
 halved from 3 alongside the `turnsPerSeason` 6→3 cadence change — §1),
 `brokenCompany` (all heroes dead/departed — a captive hero is **not** counted
 as lost, since they may yet be ransomed or rescued, §17), `destroyed` (raid
-cascade, §11), and `charterRevoked` — the Company's judgment on a post it
+cascade, §11), `charterRevoked` — the Company's judgment on a post it
 reads as lost to the frontier; see §5 for the mechanism (culture drift, the
-active party's own heritage, and the bloodline-marriage signal all feed it).
+active party's own heritage, and the bloodline-marriage signal all feed it) —
+and `povLost`, the POV hero's death, permanent departure, or an un-recovered
+captivity past one in-game year (§22).
 
 ## 16. Save versioning
 
@@ -1245,12 +1247,13 @@ never used against real saves). `deserialize` validates and nothing more;
 so a stale autosave just fails to load and the player starts fresh. On any
 `GameState` shape change, **bump `TUNING.save.version`** so stale saves are
 cleanly rejected — there is no migration function to add, and no
-`MigrationContext`. Current version: **v29**. (Historic bumps once carried
+`MigrationContext`. (Historic bumps once carried
 migrations — roster/reserve split, buildings, heritage/culture, gender/family,
 peoples restructure, Beastfolk, raiding, the Concession, captivity, thralls,
 price intel, market shocks; v28 the Harpies, v29 faction discovery, v30
 `Hero.captivity.source` widened to allow `'event'` — but those migration
-paths no longer exist, only the version numbers they landed at.)
+paths no longer exist, only the version numbers they landed at.) **Current
+version: v33** (`GameState.povHeroId` and `Hero.portraitKey`, §22).
 
 ## 17. Captivity — abduction & ransom
 
@@ -1641,6 +1644,102 @@ free-form/content-defined already (`TraitId = string`,
 
 **Still open**: rolling the pattern out to a second reputation axis or
 people beyond this Goblin pilot.
+
+---
+
+## 22. The POV character — a 7th, player-embodied hero
+
+*(POV_CHARACTER_SPEC.md, shipped 2026-08-03 — Bartosz asked for a 7th,
+player-built hero standing in the fiction as the post's leader, rather than
+the player remaining a faceless abstract entity. Genre precedent runs the
+full range here, from King of Dragon Pass/Six Ages' deliberate *no* player
+character to Suzerain's fully embodied one; this lands on the Total War:
+Warhammer "Legendary Lord" model — full `Hero`, no bespoke mechanics.)*
+
+**Data model.** `GameState.povHeroId: string` is the sole source of truth —
+a foreign key into `state.heroes`, set once at game start, never
+reassigned. No flag lives on `Hero` itself; the POV hero is a full `Hero`
+like the other 6 — same stats/skills/traits/checks, eligible for any
+standing order or expedition, bound by any `HeroBinding`, can marry and
+raise children (feeding straight into the heritage/bloodline judgment, §5/§8
+— the POV hero's own marriage is now literally the founder's). `Hero` also
+gained an optional `portraitKey` (mirroring `Dependant`/`FactionFigure`) —
+pool heroes still resolve their portrait from the static `PORTRAIT_KEYS` map
+(`content/heroes.ts`) and never set it; it exists because the POV hero's
+portrait is a chargen choice with no static template to re-derive it from
+later.
+
+**Roster**: `TUNING.roster.activeCap` is now **7** (6 pool heroes + the
+always-active POV hero). `roster.ts`'s `benchError` gained one guard: the
+POV hero can never be benched. Everything else about the active
+party ↔ reserve bench (§8) is unchanged and generic — including that a
+captured POV hero drops out of `activePartyIds` the same way any captured
+hero does (`reconcileRoster`), and is re-activated the same way after
+recovery.
+
+**Chargen**: `PartySelect.tsx` (the pre-game flow) is a 3-step wizard rather
+than one long page — a title screen (New Game/Continue/Import), then "Your
+Character," then "Choose Your Company" — each its own screen with its own
+Back/forward action, since starting a game, building a character, and
+picking a company are three separate decisions. "Your Character" (a full
+build-your-own, Suzerain-style — not a pick-from-template like the 12 pool
+heroes) is itself sectioned into **Identity** (name, gender, heritage — any
+of the 7, no restriction — plus a portrait chosen from the existing
+race-pool registry filtered to that heritage/gender), **Background**
+(`content/povBackgrounds.ts` — 5 authored options, each granting an epithet,
+a trait or two, and an opening `history` line, the same shape as a
+`RecruitDef`), and **Abilities**: a stat point-buy (`TUNING.start.povStatPool`
+= 15 points redistributed across the 5 stats, 1–5 each — matched to the
+range the 12 authored pool heroes occupy) and a skill point-buy
+(`TUNING.start.povSkillPool` = 6 points spent upward across the 8 skills,
+0–3 each, unspent points allowed — every authored pool hero starts with
+exactly 3 skills at 3/2/1, unlike a fresh recruit's flat zero).
+`content/heroes.ts`'s `createPovHero` builds the runtime `Hero` from these
+choices, always minted with the fixed runtime id `'pov'`. All fields default
+to a valid pre-filled build, so founding a post with no customization at all
+still works.
+
+**Event binding — deliberately generic, not POV-exclusive.** No `pov`
+`HeroBinding` variant exists. Bartosz's call: no existing event is
+retrofitted to feature the POV hero, and new content is written *universal*
+— the same discipline CLAUDE.md already requires for hero-personal content
+generally (don't lock a scene to one hero; bind via
+`highestSkill`/`highestStat`/`weightedStat` against the normal pool instead).
+Since the POV hero sits in `heroesAtPost` like anyone else, they're already
+a valid candidate for every existing binding type with zero engine change —
+and since event text already writes `{hero}` in second person, "this is
+literally you" falls out of the existing pipeline for free whenever they
+come up.
+
+**Petitions** (`content/events/petitions.ts`, category `post`, id prefix
+`petition_`): the actual "people bring you their problems instead of it
+only ever being numbers" content — four events hanging off signals the
+engine already tracked but never surfaced as a scene: `petition_wages`
+(low `contentment`), `petition_company_standing` (sour `CHARTER_COMPANY`
+standing), `petition_raid_aftermath` (`raidedRecently`), and
+`petition_overclaim` (`overClaim`). Pure content against existing
+`Condition`s — no new mechanism, and (per the binding rule above) not bound
+to the POV hero specifically; more are welcome following the same pattern.
+
+**Stakes**: death or permanent departure of the POV hero is the new
+`povLost` game over (§15) — checked generically (`checkPovLost` in
+`turn.ts`, alongside the existing `checkBrokenCompany`) rather than
+special-cased at every place a hero can die. **Capture is explicitly not**
+an instant loss: a captured POV hero runs through the entirely unmodified
+captivity system (§17) — same odds, same `captive_quick_release`/
+`captive_check_in` chain, same ransom/rescue missions. The only POV-specific
+rule is a deterministic clock: still captive one in-game year
+(`TUNING.abduction.refuseReturnThresholdTurns`, 12 turns) after capture, and
+it's `povLost` — recovered or not attempted. A female POV hero isn't at risk
+of capture at all, same as any female hero, per the existing
+Sauromatian/Beastfolk-grounded `isCapturable` restriction (`captivity.ts`).
+
+**UI**: the POV hero's Hero Bar tile is pinned first and marked with a
+crown badge (new `Icon` glyph); the Hero Sheet shows the same badge by its
+name.
+
+**Save shape:** v33 (`GameState.povHeroId`, `Hero.portraitKey`, additive, no
+migration).
 
 ---
 

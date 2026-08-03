@@ -52,12 +52,18 @@ function StatusLine({
 function HeroTile({ game, hero }: { game: GameState; hero: Hero }) {
   const selectHero = useGameStore((s) => s.selectHero);
   const expedition = game.expeditions.find((e) => e.heroIds.includes(hero.id));
+  const isPov = hero.id === game.povHeroId;
 
   return (
     <div className={`hero-tile${expedition ? ' away' : ''}`}>
       <button className="hero-portrait" aria-label={hero.name} onClick={() => selectHero(hero.id)}>
         <Portrait hero={hero} />
       </button>
+      {isPov && (
+        <span className="pov-marker" aria-hidden="true" title="You">
+          <Icon name="crown" size={16} />
+        </span>
+      )}
       {expedition && (
         <span className="away-marker" aria-hidden="true">
           <Icon name={KIND_ICONS[expedition.kind]} size={16} />
@@ -93,9 +99,11 @@ export function HeroBar({ game }: { game: GameState }) {
         </div>
       </div>
       <div className="hero-bar-roster">
-        {activeHeroes(game).map((hero) => (
-          <HeroTile key={hero.id} game={game} hero={hero} />
-        ))}
+        {[...activeHeroes(game)]
+          .sort((a, b) => (a.id === game.povHeroId ? -1 : b.id === game.povHeroId ? 1 : 0))
+          .map((hero) => (
+            <HeroTile key={hero.id} game={game} hero={hero} />
+          ))}
       </div>
     </footer>
   );

@@ -9,6 +9,7 @@ import { cap, SKILL_IDS, STAT_IDS } from '../../engine/types';
 import type { Dependant, Hero, Heritage } from '../../engine/types';
 import { useGameStore } from '../../store/gameStore';
 import { ConditionBars } from '../components/ConditionBars';
+import { Icon } from '../components/Icon';
 import { Portrait } from '../components/Portrait';
 import { pickDependantPortraitKey, portraitUrl } from '../portraits';
 
@@ -136,6 +137,9 @@ export function HeroSheet({ hero }: { hero: Hero }) {
           </div>
           <div>
             <h2>
+              {game?.povHeroId === hero.id && (
+                <Icon name="crown" size={16} style={{ verticalAlign: '-2px', marginRight: 4, color: '#ffd76a' }} />
+              )}
               {hero.name} <span className="dim">{hero.epithet}</span>
             </h2>
             <p className="dim" style={{ fontSize: '0.78rem', margin: '0 0 4px' }}>
