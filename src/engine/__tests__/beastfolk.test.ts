@@ -8,6 +8,7 @@ import { LOCATIONS } from '../../content/locations';
 import { evalConditions } from '../events/conditions';
 import { applyOutcomes } from '../events/outcomes';
 import type { TravelContext } from '../events/types';
+import { advanceExpeditions, dispatchExpedition } from '../expeditions';
 import { addChild, formUnion, isMixed, nodePeoples, spouseCount, spousesOf } from '../family';
 import { isEligible } from '../events/selection';
 import { addResidents, residentTotal } from '../residents';
@@ -265,12 +266,34 @@ describe('"A Patrol at the Treeline" chain', () => {
     return s;
   }
 
-  it('is eligible only once beast_wilds is discovered', () => {
+  // Directly queued on discovery (LocationDef.discoveryEventId,
+  // WILDS_FIRST_ENCOUNTER_SPEC.md) rather than drawn from the weighted pool
+  // — weight 0 means it is never eligible there, discovered or not.
+  it('is never eligible via the weighted pool, discovered or not', () => {
     const s = testState();
     const entry = TEST_CONTENT.events.get('beastfolk_first_encounter')!;
     expect(isEligible(s, entry)).toBe(false);
     s.locations.beast_wilds.discovery = 'visited';
-    expect(isEligible(s, entry)).toBe(true);
+    expect(isEligible(s, entry)).toBe(false);
+  });
+
+  it('is queued directly, pinned to the survival-led hero, when an explore party discovers beast_wilds', () => {
+    const s = testState(705);
+    expect(s.locations.beast_wilds.discovery).toBe('rumored');
+    expect(
+      dispatchExpedition(
+        s,
+        { kind: 'explore', destination: 'beast_wilds', heroIds: ['p1'] },
+        TEST_CONTENT.locationDefs,
+      ),
+    ).toBe(true);
+    while (s.expeditions.length > 0) advanceExpeditions(s, TEST_CONTENT, new Rng(13), () => {});
+    expect(s.locations.beast_wilds.discovery).toBe('visited');
+    const queued = s.queuedEvents.find((q) => q.locationId === 'beast_wilds');
+    expect(queued).toBeDefined();
+    expect(queued!.eventId).toBe('beastfolk_first_encounter');
+    expect(queued!.heroId).toBe('p1');
+    expect(queued!.fireOnTurn).toBe(s.turn);
   });
 
   it('walks the speak-first branch through all three stages to a standing/tribute payoff', () => {

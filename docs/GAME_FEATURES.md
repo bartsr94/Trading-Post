@@ -105,10 +105,13 @@ threading an `events` lookup map into `OutcomeContext`; not built because
 nothing needs it yet.
 
 Shipped example: "A Patrol at the Treeline" — `beastfolk_first_encounter` →
-`_talks` → `_close`, 3 stages, `content/events/orc/firstEncounter.ts`, gated
-on `beast_wilds` discovery (orc-only since the Goblin split, §10 — the
-Goblin equivalent is `content/events/goblin/firstEncounter.ts`'s
-independently-structured `goblin_first_encounter`, also §10).
+`_talks` → `_close`, 3 stages, `content/events/orc/firstEncounter.ts`,
+directly queued the instant `beast_wilds` reaches `visited` (`weight: 0`,
+§5/§10's discovery-moment mechanism — orc-only since the Goblin split, §10 —
+the Goblin equivalent is `content/events/goblin/firstEncounter.ts`'s
+independently-structured `goblin_first_encounter`, also §10; the Harpy
+equivalent is `content/events/harpy/firstEncounter.ts`'s
+`harpy_first_encounter` → `_talks` → `_close`, §19).
 
 **Hero binding** (`HeroBinding`, `engine/events/binding.ts`): besides the
 deterministic `highestStat`/`highestSkill`/`lowestSkill`/`highestStress`/
@@ -268,6 +271,27 @@ section; that's a real design expansion to ask about, not a bug.
 
 Per-seat `startingStanding` overrides exist on `LocationDef` (e.g.
 Kalasha-Tora starts at 30, friendlier than `RIVER_CLANS`' faction baseline).
+
+**Discovery-moment events beyond market communities**
+(WILDS_FIRST_ENCOUNTER_SPEC.md). `post_first_contact` only fires for
+`isCommunity(def)` locations (`hasMarket`), so a hostile, seatless wilds
+camp — never a diplomacy seat — got nothing but a generic survey line on
+first discovery. `LocationDef.discoveryEventId?: string` generalizes the
+mechanism: any location can name a content-authored event to queue directly
+the instant its discovery first reaches `visited`, sitting as a sibling
+branch to the `isFirstContact` check in `resolveHomecoming`'s survey loop.
+`queueDiscoveryEvent(state, eventId, heroId, locationId)` (`engine/
+diplomacy.ts`) is the shared primitive underneath both paths —
+`queueFirstContact` is now just `queueDiscoveryEvent` called with `TUNING.
+diplomacy.firstContactEventId`. The pinned `heroId` is the party's
+`survival`-led hero (`leadHero(state, exp, 'survival')`), distinct from
+`post_first_contact`'s `diplomacy`-led one. `beast_wilds`/`goblin_wilds`/
+`harpy_eyrie` each carry a `discoveryEventId` pointing at their own
+3-stage same-sitting first-encounter chain (§10/§19) — content, not a
+new mechanism, and the chains ship at `weight: 0` so they're never drawn
+from the ordinary weighted pool, only ever reached via the direct queue.
+An existing save where a camp is already `'visited'` will not retroactively
+queue its chain — consistent with the project's no-migration save policy.
 
 ## 6. Map, knowledge & expeditions
 
@@ -774,6 +798,17 @@ still can't split cleanly by people, kept here as the default/joint home.
 Exported array names followed (`BEASTFOLK_EVENTS` → `ORC_EVENTS`, etc.);
 event ids, the `BEASTFOLK` `FactionId`, and illustration keys were untouched
 — this was a pure directory/identifier rename, not a content change.
+
+**First-encounter chains now fire at the actual moment of discovery**
+(WILDS_FIRST_ENCOUNTER_SPEC.md, §5/§6): `beastfolk_first_encounter`
+(orc) and `goblin_first_encounter` moved from `weight: 7` weighted-pool
+draws — which could fire long after the camp was found, or never win the
+draw at all — to `weight: 0`, directly queued via `beast_wilds`'/
+`goblin_wilds`' new `LocationDef.discoveryEventId`. Their opening beats
+were retextured to read as the exploring party's own arrival at the camp
+rather than an ambient nearby encounter. Bound via the party's
+`survival`-led hero rather than `heroesAtPost`, since it's the exploring
+party's moment, not the whole post's.
 
 **Goblin match reworked into a 3-stage group-marriage chain**
 (`goblin_match_skulking` → `_intrusion` → `_offer`, `content/events/goblin/
@@ -1483,6 +1518,12 @@ band, pay/refuse), `harpy_match` (rising standing — a harpy comes down to wed 
 hero via `formUnion(source:'alliance', heritage:'harpy')` + the `wed_harpy`
 trait), `harpy_settlement` (high standing — a flight settles as guards/hunters,
 setting `friction` 7), and the `harpy_integration`/`_settled` friction arc.
+`harpy_first_encounter` → `_talks` → `_close` (`firstEncounter.ts`,
+WILDS_FIRST_ENCOUNTER_SPEC.md) is the discovery-moment chain, directly
+queued via `harpy_eyrie`'s `discoveryEventId` the instant it reaches
+`visited` — mirrors the orc chain's structure (§10: a shared `_talks`
+checkpoint, `approach`/`outcome` chain vars) beat-for-beat, retextured for
+height/wind/wings instead of treeline/spears.
 A `travel_harpy_toll` (`destinationTag: 'harpy'`) mirrors the beastfolk toll
 as an aerial sky-toll. Harpy names live in `content/names.ts`; the portrait
 pool (`src/assets/portraits/harpy/`) isn't painted yet, so harpy faces use the

@@ -30,14 +30,26 @@ export function isFirstContact(def: LocationDef, priorDiscovery: DiscoveryState)
   return isCommunity(def) && (priorDiscovery === 'unknown' || priorDiscovery === 'rumored');
 }
 
-/** Queues the generic first-contact event for `def`, bound to `heroId`. */
-export function queueFirstContact(state: GameState, def: LocationDef, heroId: string): void {
+/** Queues `eventId` to fire this turn, pinned to `heroId` and `locationId` —
+ *  the shared mechanism behind both `post_first_contact` and any content-
+ *  authored `LocationDef.discoveryEventId` (WILDS_FIRST_ENCOUNTER_SPEC.md). */
+export function queueDiscoveryEvent(
+  state: GameState,
+  eventId: string,
+  heroId: string,
+  locationId: LocationId,
+): void {
   state.queuedEvents.push({
-    eventId: TUNING.diplomacy.firstContactEventId,
+    eventId,
     fireOnTurn: state.turn,
     heroId,
-    locationId: def.id,
+    locationId,
   });
+}
+
+/** Queues the generic first-contact event for `def`, bound to `heroId`. */
+export function queueFirstContact(state: GameState, def: LocationDef, heroId: string): void {
+  queueDiscoveryEvent(state, TUNING.diplomacy.firstContactEventId, heroId, def.id);
 }
 
 export function diplomacySeatDefs(defs: Iterable<LocationDef>): LocationDef[] {

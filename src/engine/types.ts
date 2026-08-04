@@ -276,6 +276,11 @@ export interface LocationDef {
    *  faction *known* (TERRITORY_DISCOVERY_SPEC.md §5) — e.g. a Beastfolk camp
    *  or the Harpy eyrie. Distinct from `faction` (a diplomacy seat). */
   discoversFaction?: FactionId;
+  /** Content-authored event to queue the first time this location reaches
+   *  `visited` — the discovery-moment beat for locations that aren't a
+   *  market community (so don't qualify for `post_first_contact`) but still
+   *  deserve one, e.g. a hostile wilds camp (WILDS_FIRST_ENCOUNTER_SPEC.md). */
+  discoveryEventId?: string;
   /** Seat-level standing override at game start; falls back to the faction default (spec §8). */
   startingStanding?: number;
   hasMarket: boolean;

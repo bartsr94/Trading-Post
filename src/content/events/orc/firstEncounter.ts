@@ -1,10 +1,12 @@
 // "A Patrol at the Treeline" — a 3-stage same-sitting chain
 // (CHAIN_EVENTS_SPEC.md §5), the showcase for continueChain/chainVar.
-// Stage 1 is the only one drawn by the weighted pool; stages 2-3 are
-// category 'chain' (weight 0) and are only ever reached via continueChain,
-// so their own `conditions` are decorative (never re-checked at fire time
-// — same convention as the existing post_amber_find chain stage). See
-// ./index.ts for shared context.
+// Stage 1 is directly queued the instant `beast_wilds` reaches `visited`
+// (`LocationDef.discoveryEventId`, WILDS_FIRST_ENCOUNTER_SPEC.md — weight 0,
+// never drawn by the weighted pool); stages 2-3 are category 'chain'
+// (weight 0) and are only ever reached via continueChain, so their own
+// `conditions` are decorative (never re-checked at fire time — same
+// convention as the existing post_amber_find chain stage). See ./index.ts
+// for shared context.
 //
 // Orc-only (narrowed 2026-07-27 when Goblins got their own first-encounter
 // chain, ../../goblin/firstEncounter.ts, with a deliberately different,
@@ -21,11 +23,11 @@ export const ORC_FIRST_ENCOUNTER_EVENTS: GameEvent[] = [
     category: 'post',
     illustration: 'beastfolk_patrol',
     title: 'Eyes at the Treeline',
-    text: 'The treeline breaks without warning: an orc patrol, spears low but not raised, watching from twenty paces like they\'ve been watching longer than that. No war-band flag, no clan token — just eyes on {hero}, waiting to see what the post\'s people do with a moment like this. Whatever happens next, they\'ll carry the telling of it home.',
+    text: 'The deadfall the party has been picking through for the better part of a day stops answering back — no birdsong, no wind through the brush, just the bone-hung stakes of a camp nobody marked on any chart. An orc patrol is already there, spears low but not raised, watching from twenty paces like they\'ve been watching longer than that. No war-band flag, no clan token — just eyes on {hero}, waiting to see what these strangers who just walked into the wilds actually are. Whatever happens next, they\'ll carry the telling of it home.',
     conditions: [
       { type: 'locationDiscovery', location: 'beast_wilds', atLeast: 'visited' },
     ],
-    weight: 7,
+    weight: 0,
     once: true,
     binding: { type: 'highestStat', stat: 'resolve' },
     factions: ['BEASTFOLK'],

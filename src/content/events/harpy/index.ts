@@ -10,16 +10,20 @@
 // events carry no `loreRef` (nothing to point at yet) — add one once it lands.
 //
 // Split by narrative arc across this directory (EVENT_ORGANIZATION_SPEC.md),
-// mirroring ../beastfolk/'s layout. No first-encounter chain or flavor arc yet
-// (see docs/WILDS_FIRST_ENCOUNTER_SPEC.md) — add new arc files here as they land.
+// mirroring ../beastfolk/'s layout. No flavor arc yet — add new arc files
+// here as they land. `firstEncounter.ts` is the discovery-moment chain
+// (WILDS_FIRST_ENCOUNTER_SPEC.md), directly queued via `harpy_eyrie`'s
+// `LocationDef.discoveryEventId`, not drawn by the weighted pool.
 
 import type { GameEvent } from '../../../engine/events/types';
+import { HARPY_FIRST_ENCOUNTER_EVENTS } from './firstEncounter';
 import { HARPY_INTEGRATION_EVENTS } from './integration';
 import { HARPY_MATCH_EVENTS } from './match';
 import { HARPY_SETTLEMENT_EVENTS } from './settlement';
 import { HARPY_TRIBUTE_EVENTS } from './tribute';
 
 export const HARPY_EVENTS: GameEvent[] = [
+  ...HARPY_FIRST_ENCOUNTER_EVENTS,
   ...HARPY_TRIBUTE_EVENTS,
   ...HARPY_MATCH_EVENTS,
   ...HARPY_SETTLEMENT_EVENTS,

@@ -9,6 +9,11 @@
 // EVENT_ORGANIZATION_SPEC.md). See ../goblin/index.ts for shared context.
 // New content — uses the `goblin_` prefix (mirrors `harpy_`), unlike the
 // legacy `beastfolk_goblin_*` ids elsewhere in this directory.
+//
+// Stage 1 is directly queued the instant `goblin_wilds` reaches `visited`
+// (`LocationDef.discoveryEventId`, WILDS_FIRST_ENCOUNTER_SPEC.md — weight 0,
+// never drawn by the weighted pool); its `binding`/`conditions` are
+// decorative from that point on, same convention as the orc chain above.
 
 import type { GameEvent } from '../../../engine/events/types';
 import { makeChoiceEvent, outcome } from '../eventHelpers';
@@ -19,9 +24,9 @@ export const GOBLIN_FIRST_ENCOUNTER_EVENTS: GameEvent[] = [
     category: 'post',
     illustration: 'goblin_mischief',
     title: 'A Committee of One Bad Idea',
-    text: 'A knot of goblins crouches in the branches over the trail, mid-argument over a rope-and-bucket rig swaying gently above the path — and over which of them deserves to be under it when it drops. Nobody has noticed {hero} yet. Then all of them do, at once, and the argument stops dead. Whatever they decide next, {hero} has just become a very convenient tiebreaker.',
+    text: 'The Tangle\'s deadfall walls close in around the trail the party is picking through when a knot of goblins overhead — first sight of the place, and they are already mid-argument — freezes over a rope-and-bucket rig swaying above the path, arguing over which of them deserves to be under it when it drops. Nobody has noticed {hero} yet. Then all of them do, at once, and the argument stops dead. Whatever they decide next, {hero} has just become a very convenient tiebreaker.',
     conditions: [{ type: 'locationDiscovery', location: 'goblin_wilds', atLeast: 'visited' }],
-    weight: 7,
+    weight: 0,
     once: true,
     binding: { type: 'random' },
     factions: ['BEASTFOLK'],

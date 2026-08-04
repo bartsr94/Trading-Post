@@ -12,6 +12,7 @@ import {
   effectiveDiplomacyStanding,
   ensureDiplomacySeat,
   isFirstContact,
+  queueDiscoveryEvent,
   queueFirstContact,
   setDiplomacyPact,
 } from './diplomacy';
@@ -1229,6 +1230,13 @@ function resolveHomecoming(
         const seatDef = ctx.locationDefs.get(locationId);
         if (seatDef && isFirstContact(seatDef, priorDiscovery)) {
           queueFirstContact(state, seatDef, leadHero(state, exp, 'diplomacy').id);
+        } else if (seatDef?.discoveryEventId) {
+          queueDiscoveryEvent(
+            state,
+            seatDef.discoveryEventId,
+            leadHero(state, exp, 'survival').id,
+            seatDef.id,
+          );
         }
       }
     }

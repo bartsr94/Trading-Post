@@ -20,7 +20,7 @@ checkout before making design/lore calls):
 - `docs/TODO_FEATURES.md` — the open design/feature backlog, organized by
   system. This and `GAME_FEATURES.md` are the only two places tracking
   shipped-vs-open status; don't duplicate that bookkeeping here.
-- `docs/*_SPEC.md` (a handful remain, e.g. `WILDS_FIRST_ENCOUNTER_SPEC.md`) — hold
+- `docs/*_SPEC.md` (a handful remain, e.g. `TURN_CADENCE_SPEC.md`) — hold
   **only** still-open design for their area, not full specs to cross-check
   shipped behavior against (see **Feature workflow** below for how a spec
   starts full and ends up trimmed to this).
@@ -50,7 +50,7 @@ Once the feature ships, fold what was actually built into
 `docs/GAME_FEATURES.md` (and close the matching `docs/TODO_FEATURES.md`
 backlog item, if any). The spec file then either gets deleted or trimmed
 down to only whatever design is still genuinely open for that area — this
-is why the `docs/*_SPEC.md` files that remain (e.g. `WILDS_FIRST_ENCOUNTER_SPEC.md`)
+is why the `docs/*_SPEC.md` files that remain (e.g. `TURN_CADENCE_SPEC.md`)
 hold open questions only, not full specs. The spec is the durable record of
 *why* a feature looks the way it does and what was considered along the
 way; `GAME_FEATURES.md` stays the always-current record of *what's true
@@ -137,6 +137,11 @@ cross-reference.
   `communityPact` outcomes can default their `location` from it;
   `TextContext` gained `factionName`; `LocationDef` gained an optional
   `startingStanding` as a generic per-seat override (not a special case).
+  `queueDiscoveryEvent(state, eventId, heroId, locationId)` is the shared
+  primitive underneath first contact and the more general
+  `LocationDef.discoveryEventId` (any location can queue its own
+  discovery-moment event, not just market communities — reach for this
+  before adding a second location→event queuing path).
 - **Residents** (`engine/residents.ts`; see `docs/GAME_FEATURES.md` §7):
   pure module — selectors (`residentTotal`/`residentCap`/`residentsAvailable`/
   `postDefense`/`contentmentBand`/`outputMultiplier`/`residentTagCounts`)

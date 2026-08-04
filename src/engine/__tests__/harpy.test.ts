@@ -9,7 +9,7 @@ import { spousesOf, nodePeoples } from '../family';
 import { tagsAt } from '../map';
 import { frictionFor } from '../residents';
 import { getHero, heritageGroup, isNativeHeritage } from '../types';
-import { resolveChoice } from '../turn';
+import { advancePendingEvent, resolveChoice } from '../turn';
 import { TEST_CONTENT, TEST_LOCATIONS, testState } from './helpers';
 
 /** A state with the Windward Crags discovered and HARPY at `standing`. */
@@ -88,6 +88,60 @@ describe('Harpies (TERRITORY_DISCOVERY_SPEC.md §6)', () => {
     expect(isEligible(s, settled)).toBe(false);
     s.residents.friction = { harpy: 1 };
     expect(isEligible(s, settled)).toBe(true);
+  });
+
+  // "Wings Against the Wind" (WILDS_FIRST_ENCOUNTER_SPEC.md) — directly
+  // queued via harpy_eyrie's LocationDef.discoveryEventId, not drawn from
+  // the weighted pool. See beastfolk.test.ts's "A Patrol at the Treeline"
+  // block for the generic dispatch-level wiring test; this covers the
+  // harpy-specific content and its own chain.
+  it('harpy_eyrie carries the discoveryEventId wiring the discovery-moment chain', () => {
+    const eyrie = LOCATION_DEFS.get('harpy_eyrie')!;
+    expect(eyrie.discoveryEventId).toBe('harpy_first_encounter');
+  });
+
+  it('is never eligible via the weighted pool, discovered or not', () => {
+    const s = testState();
+    const entry = TEST_CONTENT.events.get('harpy_first_encounter')!;
+    expect(isEligible(s, entry)).toBe(false);
+    s.locations.harpy_eyrie.discovery = 'visited';
+    expect(isEligible(s, entry)).toBe(false);
+  });
+
+  it('walks the speak-first branch through all three stages to a standing/tribute payoff', () => {
+    const s = cr(0);
+    const entry = TEST_CONTENT.events.get('harpy_first_encounter')!;
+    s.pendingEvents = [{ eventId: entry.id, heroId: 'p1' }];
+    for (const hero of s.heroes) hero.stats.charm = 10;
+
+    resolveChoice(s, TEST_CONTENT, entry, 0, 'p1');
+    expect(s.pendingEvents).toHaveLength(2);
+    advancePendingEvent(s);
+    const stage2 = s.pendingEvents[0];
+    expect(stage2.eventId).toBe('harpy_first_encounter_talks');
+    expect(stage2.vars?.approach).toBe('peace');
+
+    const talks = TEST_CONTENT.events.get('harpy_first_encounter_talks')!;
+    resolveChoice(s, TEST_CONTENT, talks, 0, stage2.heroId, undefined, stage2.locationId);
+    advancePendingEvent(s);
+    const stage3 = s.pendingEvents[0];
+    expect(stage3.eventId).toBe('harpy_first_encounter_close');
+    expect(stage3.vars?.outcome).toBe('alliance');
+
+    const before = s.factions.HARPY.standing;
+    const close = TEST_CONTENT.events.get('harpy_first_encounter_close')!;
+    resolveChoice(s, TEST_CONTENT, close, 0, stage3.heroId, undefined, stage3.locationId);
+    expect(s.factions.HARPY.standing).toBe(before + 6);
+    expect(s.tributes.some((t) => t.faction === 'HARPY' && t.direction === 'receive')).toBe(true);
+  });
+
+  it('the withdraw choice ends the encounter without spawning a continuation', () => {
+    const s = cr(0);
+    const entry = TEST_CONTENT.events.get('harpy_first_encounter')!;
+    s.pendingEvents = [{ eventId: entry.id, heroId: 'p1' }];
+
+    resolveChoice(s, TEST_CONTENT, entry, 2, 'p1');
+    expect(s.pendingEvents).toHaveLength(1);
   });
 
   it('the sky-toll travel event gates on being in harpy country', () => {
